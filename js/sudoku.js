@@ -552,4 +552,13 @@ document.addEventListener('keydown', e => {
 });
 
 /* kick off */
+function updateCellSize() {
+  const wrap = document.querySelector('.board-wrap');
+  if (!wrap) return;
+  const avail = wrap.clientWidth;
+  const cell = Math.floor((avail - 8 * 1 - 4) / 9); // 8 one-px gaps + 2px border each side
+  document.documentElement.style.setProperty('--cell', Math.max(30, cell) + 'px');
+}
+window.addEventListener('resize', updateCellSize);
+updateCellSize();
 startGame();
