@@ -34,8 +34,8 @@ body {
 
 .options-bar {
   width: 100%; max-width: 420px;
-  display: flex; align-items: center; gap: 8px;
-  margin-bottom: 12px;
+  display: flex; justify-content: flex-end; align-items: center; gap: 8px;
+  margin-top: 8px;
 }
 
 .btn {
@@ -70,8 +70,8 @@ body {
 .anim-menu {
   display: none;
   position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
+  bottom: calc(100% + 6px);
+  right: 0;
   background: var(--surface);
   border: 1px solid var(--surface2);
   border-radius: 10px;
