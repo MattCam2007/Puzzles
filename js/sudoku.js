@@ -396,7 +396,7 @@ function applySettingsToUI() {
   }
 
   // pencil toggle button
-  const pencilBtn = $('#pencilToggleBtn');
+  const pencilBtn = $('#notesBtn');
   pencilBtn.textContent = pencilMode ? '🔹 Pencil' : '✏️ Normal';
   pencilBtn.classList.toggle('active', pencilMode);
 
@@ -514,12 +514,12 @@ $('#hintBtn').addEventListener('click', giveHint);
 
 function setPencilMode(on) {
   pencilMode = on;
-  const btn = $('#pencilToggleBtn');
+  const btn = $('#notesBtn');
   btn.textContent = on ? '🔹 Pencil' : '✏️ Normal';
   btn.classList.toggle('active', on);
 }
 
-$('#pencilToggleBtn').addEventListener('click', () => setPencilMode(!pencilMode));
+$('#notesBtn').addEventListener('click', () => setPencilMode(!pencilMode));
 
 $('#modeToggleBtn').addEventListener('click', () => {
   cfg.inputMode = cfg.inputMode === 'cell' ? 'number' : 'cell';

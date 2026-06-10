@@ -165,7 +165,7 @@ let   fxParticles = [];
 let   fxRaf       = null;
 
 function resizeFxCanvas() {
-  const wrap = $('.wrap');
+  const wrap = $('.board-wrap');
   const r    = wrap.getBoundingClientRect();
   fxCanvas.width  = r.width;
   fxCanvas.height = r.height;

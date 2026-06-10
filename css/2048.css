@@ -100,7 +100,7 @@ body {
 }
 
 /* board */
-.wrap { position: relative; width: 100%; max-width: 420px; }
+.board-wrap { position: relative; width: 100%; max-width: 420px; }
 
 .bg-grid {
   background: var(--surface);
