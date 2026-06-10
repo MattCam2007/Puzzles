@@ -163,3 +163,42 @@ body {
 
 .touch-only { display:none; }
 @media (pointer:coarse) { .touch-only{display:inline;} .kb-only{display:none;} }
+
+html[data-theme="midnight"] .tile-v2    { background: #0d1e38; color: #5a8ab8; }
+html[data-theme="midnight"] .tile-v4    { background: #0f2548; color: #7aaad8; }
+html[data-theme="midnight"] .tile-v8    { background: #113060; color: #9ac8f0; }
+html[data-theme="midnight"] .tile-v16   { background: #133c7a; color: #b8deff; }
+html[data-theme="midnight"] .tile-v32   { background: #154896; color: #c8eaff; }
+html[data-theme="midnight"] .tile-v64   { background: #1756b0; color: #fff;    }
+html[data-theme="midnight"] .tile-v128  { background: #1a68cc; color: #fff;    }
+html[data-theme="midnight"] .tile-v256  { background: #1e7ce0; color: #fff;    }
+html[data-theme="midnight"] .tile-v512  { background: #2292f0; color: #fff;    }
+html[data-theme="midnight"] .tile-v1024 { background: #2aaaf8; color: #07090f; }
+html[data-theme="midnight"] .tile-v2048 { background: #38bdf8; color: #07090f; }
+html[data-theme="midnight"] .tile-vmax  { background: #38bdf8; color: #07090f; }
+
+html[data-theme="sakura"] .tile-v2    { background: #fce8ee; color: #c06080; }
+html[data-theme="sakura"] .tile-v4    { background: #f9d0dc; color: #a04060; }
+html[data-theme="sakura"] .tile-v8    { background: #f5b0c4; color: #802040; }
+html[data-theme="sakura"] .tile-v16   { background: #f090ac; color: #fff;    }
+html[data-theme="sakura"] .tile-v32   { background: #e87098; color: #fff;    }
+html[data-theme="sakura"] .tile-v64   { background: #e05080; color: #fff;    }
+html[data-theme="sakura"] .tile-v128  { background: #d83068; color: #fff;    }
+html[data-theme="sakura"] .tile-v256  { background: #c81850; color: #fff;    }
+html[data-theme="sakura"] .tile-v512  { background: #b80040; color: #fff;    }
+html[data-theme="sakura"] .tile-v1024 { background: #e8527a; color: #fff;    }
+html[data-theme="sakura"] .tile-v2048 { background: #f472b6; color: #fff;    }
+html[data-theme="sakura"] .tile-vmax  { background: #f472b6; color: #fff;    }
+
+html[data-theme="terminal"] .tile-v2    { background: #041408; color: #2a6b30; }
+html[data-theme="terminal"] .tile-v4    { background: #061c0a; color: #3a8b40; }
+html[data-theme="terminal"] .tile-v8    { background: #082810; color: #4aab50; }
+html[data-theme="terminal"] .tile-v16   { background: #0a3414; color: #5ac860; }
+html[data-theme="terminal"] .tile-v32   { background: #0d4018; color: #6adb70; }
+html[data-theme="terminal"] .tile-v64   { background: #104e1c; color: #85e89d; }
+html[data-theme="terminal"] .tile-v128  { background: #145e22; color: #a0f0a8; }
+html[data-theme="terminal"] .tile-v256  { background: #1a7028; color: #c8ffd0; }
+html[data-theme="terminal"] .tile-v512  { background: #208530; color: #fff;    }
+html[data-theme="terminal"] .tile-v1024 { background: #28a03a; color: #020804; }
+html[data-theme="terminal"] .tile-v2048 { background: #39d353; color: #020804; }
+html[data-theme="terminal"] .tile-vmax  { background: #39d353; color: #020804; }

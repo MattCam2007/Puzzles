@@ -312,3 +312,10 @@ body {
 @media (prefers-reduced-motion:reduce) { * { animation: none!important; transition: none!important; } }
 button:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
 .cell.white:focus-visible { outline: 2px solid var(--accent2); outline-offset: -2px; }
+
+html[data-theme="sakura"] {
+  --block:     #e8d0d8;
+  --clue:      #f0dce2;
+  --white:     #fff7f8;
+  --white-ink: #2d1820;
+}

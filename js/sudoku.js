@@ -441,6 +441,7 @@ function syncSettingsUI() {
 ═══════════════════════════════════════════ */
 function openSettings() {
   syncSettingsUI();
+  syncThemePicker();
   $('#settingsBackdrop').classList.add('show');
   $('#settingsPanel').classList.add('show');
 }

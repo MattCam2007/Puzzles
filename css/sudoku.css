@@ -236,3 +236,8 @@ body {
   font-size: 0.95rem; font-weight: 700; padding: 12px 28px;
   border-radius: var(--radius-sm); cursor: pointer; width: 100%;
 }
+
+html[data-theme="sakura"] {
+  --given:  #b06070;
+  --pencil: #e0527a;
+}

@@ -43,6 +43,51 @@
   --accent2-rgb: 192, 132, 252;
 }
 
+html[data-theme="midnight"] {
+  --bg:          #07090f;
+  --surface:     #0d1220;
+  --surface2:    #131a2e;
+  --surface3:    #1c2640;
+  --cell-empty:  #0f1828;
+  --accent:      #38bdf8;
+  --accent2:     #7dd3fc;
+  --accent-rgb:  56, 189, 248;
+  --accent2-rgb: 125, 211, 252;
+  --text:        #e2f0ff;
+  --text-muted:  #44607e;
+  --radius-sm:   6px;
+}
+
+html[data-theme="sakura"] {
+  --bg:          #fdf4f5;
+  --surface:     #fff7f8;
+  --surface2:    #fce8ec;
+  --surface3:    #f0cdd4;
+  --cell-empty:  #f8eaed;
+  --accent:      #e0527a;
+  --accent2:     #f472b6;
+  --accent-rgb:  224, 82, 122;
+  --accent2-rgb: 244, 114, 182;
+  --text:        #2d1820;
+  --text-muted:  #9a6070;
+  --radius-sm:   8px;
+}
+
+html[data-theme="terminal"] {
+  --bg:          #020804;
+  --surface:     #080f08;
+  --surface2:    #0d180d;
+  --surface3:    #162416;
+  --cell-empty:  #0a120a;
+  --accent:      #39d353;
+  --accent2:     #85e89d;
+  --accent-rgb:  57, 211, 83;
+  --accent2-rgb: 133, 232, 157;
+  --text:        #c8ffca;
+  --text-muted:  #3a6b3a;
+  --radius-sm:   999px;
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
