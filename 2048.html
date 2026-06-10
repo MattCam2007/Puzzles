@@ -14,6 +14,7 @@
   <div class="header-right">
     <div class="score-box"><div class="label">Score</div><div class="value" id="score">0</div></div>
     <div class="score-box"><div class="label">Best</div> <div class="value" id="best">0</div></div>
+    <button class="icon-btn" id="settingsBtn">⚙️</button>
   </div>
 </div>
 
@@ -32,20 +33,20 @@
   <canvas id="fx"></canvas>
 </div>
 
-<div class="options-bar">
-  <div class="anim-wrap">
-    <button class="btn-top anim-btn" id="animBtn" onclick="toggleAnimMenu()">
-      <span id="animLabel">✨ Clean</span>
-      <span class="chevron">▾</span>
-    </button>
-    <div class="anim-menu" id="animMenu"></div>
+<!-- SETTINGS PANEL -->
+<div class="settings-backdrop" id="settingsBackdrop"></div>
+<div class="settings-panel" id="settingsPanel">
+  <div class="settings-handle"></div>
+  <div class="settings-title">Settings</div>
+
+  <div class="settings-section">
+    <div class="settings-section-label">Animation Style</div>
+    <div id="animPicker"></div>
   </div>
-  <div class="anim-wrap">
-    <button class="btn-top anim-btn" id="tileBtn" onclick="toggleTileMenu()">
-      <span id="tileLabel">🔢 Numbers</span>
-      <span class="chevron">▾</span>
-    </button>
-    <div class="anim-menu" id="tileMenu"></div>
+
+  <div class="settings-section">
+    <div class="settings-section-label">Tile Style</div>
+    <div id="tilePicker"></div>
   </div>
 </div>
 

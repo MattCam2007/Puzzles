@@ -32,12 +32,6 @@ body {
 .board-top-left  { display: flex; align-items: center; gap: 8px; }
 .board-top-right { display: flex; gap: 8px; margin-left: auto; }
 
-.options-bar {
-  width: 100%; max-width: 420px;
-  display: flex; justify-content: flex-end; align-items: center; gap: 8px;
-  margin-top: 8px;
-}
-
 .btn {
   background: var(--surface); border: 1px solid var(--surface3);
   color: var(--text); font-family: 'Space Grotesk', sans-serif;
@@ -58,38 +52,20 @@ body {
 }
 .btn-top:active { background: var(--surface3); }
 
-/* animation selector — shared with tile selector */
-.anim-wrap { position: relative; display: inline-block; }
-.anim-btn {
-  display: flex; align-items: center; gap: 6px;
+/* pick-row — anim / tile pickers inside the settings panel */
+.pick-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 0; cursor: pointer;
+  border-bottom: 1px solid var(--surface2);
+  font-size: 0.88rem; font-weight: 600; color: var(--text-dim);
+  transition: color 0.1s;
 }
-.anim-btn .chevron { font-size: .65rem; transition: transform .15s; }
-.anim-btn.open .chevron { transform: rotate(180deg); }
-
-.anim-menu {
-  display: none;
-  position: absolute;
-  bottom: calc(100% + 6px);
-  right: 0;
-  background: var(--surface);
-  border: 1px solid var(--surface2);
-  border-radius: 10px;
-  overflow: hidden;
-  z-index: 200;
-  min-width: 180px;
-  box-shadow: 0 8px 32px rgba(0,0,0,.5);
-}
-.anim-menu.open { display: block; }
-.anim-menu-item {
-  padding: 9px 14px;
-  font-size: .82rem; font-weight: 600;
-  cursor: pointer;
-  display: flex; align-items: center; gap: 8px;
-  transition: background .1s;
-}
-.anim-menu-item:hover    { background: var(--surface2); }
-.anim-menu-item.selected { color: var(--accent2); }
-.anim-menu-item .anim-icon { font-size: 1rem; width: 1.2em; text-align: center; }
+.pick-row:last-child { border-bottom: none; }
+.pick-row:hover { color: var(--text); }
+.pick-icon { font-size: 1.1rem; width: 1.5em; text-align: center; }
+.pick-row.selected { color: var(--accent2); }
+.pick-check { margin-left: auto; color: var(--accent2); opacity: 0; font-size: 0.9rem; font-weight: 800; }
+.pick-row.selected .pick-check { opacity: 1; }
 
 /* tile mode overrides */
 .tile-mode-emoji { font-size: 1.6rem !important; line-height: 1; }
