@@ -222,3 +222,23 @@ body {
 .pick-row.selected { color: var(--accent2); }
 .pick-check { margin-left: auto; color: var(--accent2); opacity: 0; font-size: 0.9rem; font-weight: 800; }
 .pick-row.selected .pick-check { opacity: 1; }
+
+/* ── background image picker ── */
+.bg-url-row {
+  padding: 8px 0 10px;
+  border-bottom: 1px solid var(--surface2);
+}
+.settings-text-input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1.5px solid var(--surface3);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.82rem;
+  padding: 8px 10px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.settings-text-input:focus { border-color: var(--accent); }
+.settings-text-input::placeholder { color: var(--text-muted); }
