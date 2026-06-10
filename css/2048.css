@@ -27,10 +27,16 @@ body {
 .board-top-bar {
   width: 100%; max-width: 420px;
   display: flex; flex-wrap: wrap; align-items: center;
-  gap: 8px; margin-bottom: 12px;
+  gap: 8px; margin-bottom: 8px;
 }
 .board-top-left  { display: flex; align-items: center; gap: 8px; }
 .board-top-right { display: flex; gap: 8px; margin-left: auto; }
+
+.options-bar {
+  width: 100%; max-width: 420px;
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 12px;
+}
 
 .btn {
   background: var(--surface); border: 1px solid var(--surface3);
