@@ -257,298 +257,319 @@ const K = (function(){
 /* =========================================================
    Game controller / UI
    ========================================================= */
-const boardEl=$('#board'), padEl=$('#pad'), toastEl=$('#toast');
-const SAVE='kakuro_save_v1', BEST='kakuro_best_v1', SET='kakuro_settings_v1';
+const boardEl = $('#board'), numpadEl = $('#numpad'), toastEl = $('#toast');
+const SAVE = 'kakuro_save_v1', SET = 'kakuro_settings_v1';
 
-let G=null;            // {R,C,board,clues,solution,level,seed}
-let curLevel='easy', curSize=5;   // difficulty (density) and grid size (interior dim 5..12)
-let entries=[], notes=[]; // entries[r][c]=0..9 ; notes[r][c]=Set
-let sel=null;          // {r,c}
-let notesMode=false;
-let history=[];        // undo stack of {entries,notes}
-let timer=0, tick=null, paused=false, won=false;
-let errFlags=null;     // last computed error grid (for paint)
-let hintedCell=null;
+let G = null;
+let curLevel = 'easy', curSize = 5;
+let entries = [], notes = [];
+let sel = null;
+let notesMode = false;
+let history = [];
+let timer = 0, tick = null, won = false;
+let errFlags = null;
+let hintedCell = null;
+let pendingFlash = null;
 
-let settings = loadJSON(SET) || {autocheck:false, runs:true, dimpad:true, timer:true};
+let settings = loadJSON(SET) || { autocheck: false, runs: true, dimpad: true, timer: true };
 
 /* ---------- timer ---------- */
-function startTimer(){stopTimer(); if(!settings.timer)return; tick=setInterval(()=>{ if(!paused&&!won){timer++; $('#time').textContent=formatTime(timer);} },1000);}
-function stopTimer(){if(tick){clearInterval(tick);tick=null;}}
-
-/* ---------- best times (keyed by difficulty + size) ---------- */
-function getBest(){return loadJSON(BEST)||{};}
-function bestKey(){return curLevel+'-'+curSize;}
-function showBest(){const b=getBest()[bestKey()]; $('#best').textContent=b?formatTime(b):'—';}
+function startTimer() {
+  stopTimer();
+  if (!settings.timer) return;
+  tick = setInterval(() => { if (!won) { timer++; $('#timer').textContent = formatTime(timer); } }, 1000);
+}
+function stopTimer() { if (tick) { clearInterval(tick); tick = null; } }
 
 /* ---------- new game ---------- */
-function newGame(level, size){
-  if(level) curLevel=level;
-  if(size) curSize=size;
-  won=false; paused=false; hintedCell=null; errFlags=null; history=[];
-  boardEl.style.filter='none'; boardEl.style.pointerEvents='auto';
-  toast('Building a fresh grid…','cyan',700);
-  // generate (sync; fast). Defer a tick so the toast paints.
-  setTimeout(()=>{
-    const seed=(Date.now()^(Math.random()*1e9))>>>0;
-    G=K.generate(curLevel,curSize,seed);
-    entries=Array.from({length:G.R},()=>Array(G.C).fill(0));
-    notes=Array.from({length:G.R},()=>Array(G.C).fill(null).map(()=>new Set()));
-    sel=firstWhite();
-    timer=0; $('#time').textContent=settings.timer?'0:00':'—'; $('#status').textContent='Solving';
+function newGame(size) {
+  const level = $('#difficultySelect').value;
+  curLevel = level;
+  if (size !== undefined) curSize = size;
+  won = false; hintedCell = null; errFlags = null; history = [];
+  boardEl.style.filter = 'none'; boardEl.style.pointerEvents = 'auto';
+  toast('Building a fresh grid…', 'cyan', 700);
+  setTimeout(() => {
+    const seed = (Date.now() ^ (Math.random() * 1e9)) >>> 0;
+    G = K.generate(curLevel, curSize, seed);
+    entries = Array.from({ length: G.R }, () => Array(G.C).fill(0));
+    notes = Array.from({ length: G.R }, () => Array(G.C).fill(null).map(() => new Set()));
+    sel = firstWhite();
+    timer = 0;
+    $('#timer').textContent = settings.timer ? '0:00' : '—';
     syncControls();
-    sizeBoard(); render(); showBest(); startTimer(); persist();
-  },20);
+    sizeBoard(); render(); startTimer(); persist();
+  }, 20);
 }
-function syncControls(){
-  $('#dims').textContent=curSize+'×'+curSize+' · '+curLevel;
-  document.querySelectorAll('.levelpick button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.lvl===curLevel));
-  $('#sizeVal').textContent=curSize+'×'+curSize;
-  $('#sizeDown').disabled = curSize<=5;
-  $('#sizeUp').disabled = curSize>=12;
+
+function syncControls() {
+  $('#sizeVal').textContent = curSize + '×' + curSize;
+  $('#sizeDown').disabled = curSize <= 5;
+  $('#sizeUp').disabled = curSize >= 12;
 }
-function firstWhite(){for(let r=0;r<G.R;r++)for(let c=0;c<G.C;c++)if(G.board[r][c])return {r,c};return null;}
+
+function firstWhite() {
+  for (let r = 0; r < G.R; r++) for (let c = 0; c < G.C; c++) if (G.board[r][c]) return { r, c };
+  return null;
+}
 
 /* ---------- sizing ---------- */
-function sizeBoard(){
-  const wrap=document.querySelector('.wrap');
-  const avail=Math.min(wrap.clientWidth, 520) - 0;
-  const chrome=(G.C-1)*2 /*gaps*/ + 4 /*padding*/ + 4 /*border*/;
-  const cell=Math.floor((avail-chrome)/G.C);
-  const clamped=Math.max(30, Math.min(54, cell));
-  document.documentElement.style.setProperty('--cell', clamped+'px');
-  boardEl.style.gridTemplateColumns='repeat('+G.C+', var(--cell))';
+function sizeBoard() {
+  const wrap = document.querySelector('.board-wrap');
+  const avail = wrap.clientWidth;
+  const chrome = (G.C - 1) * 2 + 4 + 4;
+  const cell = Math.floor((avail - chrome) / G.C);
+  const clamped = Math.max(28, Math.min(70, cell));
+  document.documentElement.style.setProperty('--cell', clamped + 'px');
+  boardEl.style.gridTemplateColumns = 'repeat(' + G.C + ', 1fr)';
+  boardEl.style.gridTemplateRows = 'repeat(' + G.R + ', 1fr)';
 }
-window.addEventListener('resize', ()=>{ if(G){sizeBoard();} });
+window.addEventListener('resize', () => { if (G) sizeBoard(); });
 
 /* ---------- render ---------- */
-function render(){
-  boardEl.innerHTML='';
-  // figure out which cells share a run with sel
-  let runSet=new Set();
-  if(sel && settings.runs){
-    const {H,V}=K.segments(G.board,G.R,G.C);
-    for(const s of [...H,...V]){ if(s.some(([r,c])=>r===sel.r&&c===sel.c)){ for(const [r,c] of s) runSet.add(r+','+c); } }
-  }
-  for(let r=0;r<G.R;r++)for(let c=0;c<G.C;c++){
-    const d=document.createElement('div'); d.className='cell';
-    if(!G.board[r][c]){
-      const q=G.clues[r][c];
-      if(q&&(q.right||q.down)){ d.className='cell clue';
-        if(q.down){const e=document.createElement('span');e.className='down';e.textContent=q.down;d.appendChild(e);}
-        if(q.right){const e=document.createElement('span');e.className='right';e.textContent=q.right;d.appendChild(e);}
-        d.classList.add('tappable');
-        d.addEventListener('click',ev=>{
-          let dir;
-          if(q.right&&!q.down) dir='right';
-          else if(q.down&&!q.right) dir='down';
-          else { const rect=d.getBoundingClientRect(); const x=(ev.clientX-rect.left)/rect.width, y=(ev.clientY-rect.top)/rect.height; dir = (x>=y)?'right':'down'; } // \ diagonal: upper-right = across
-          showCombos(r,c,dir);
-        });
-      } else { d.className='cell block'; }
-    } else {
-      d.className='cell white'; d.tabIndex=0; d.dataset.r=r; d.dataset.c=c;
-      const v=entries[r][c];
-      if(v){ const b=document.createElement('span'); b.className='big'; b.textContent=v; d.appendChild(b); }
-      else if(notes[r][c]&&notes[r][c].size){ const n=document.createElement('div'); n.className='notes';
-        for(let k=1;k<=9;k++){const sp=document.createElement('span'); sp.textContent=notes[r][c].has(k)?k:''; n.appendChild(sp);} d.appendChild(n);
+function render() {
+  boardEl.innerHTML = '';
+  let runSet = new Set();
+  if (sel && settings.runs) {
+    const { H, V } = K.segments(G.board, G.R, G.C);
+    for (const s of [...H, ...V]) {
+      if (s.some(([r, c]) => r === sel.r && c === sel.c)) {
+        for (const [r, c] of s) runSet.add(r + ',' + c);
       }
-      if(runSet.has(r+','+c)) d.classList.add('run');
-      if(sel&&sel.r===r&&sel.c===c) d.classList.add('sel');
-      if(errFlags&&errFlags[r][c]) d.classList.add('err');
-      if(hintedCell&&hintedCell.r===r&&hintedCell.c===c) d.classList.add('hinted');
-      d.addEventListener('click',()=>{ sel={r,c}; hintedCell=null; render(); });
     }
-    boardEl.appendChild(d);
   }
-  renderPad();
+  for (let r = 0; r < G.R; r++) {
+    for (let c = 0; c < G.C; c++) {
+      const d = document.createElement('div');
+      d.className = 'cell';
+      if (!G.board[r][c]) {
+        const q = G.clues[r][c];
+        if (q && (q.right || q.down)) {
+          d.className = 'cell clue';
+          if (q.down) { const e = document.createElement('span'); e.className = 'down'; e.textContent = q.down; d.appendChild(e); }
+          if (q.right) { const e = document.createElement('span'); e.className = 'right'; e.textContent = q.right; d.appendChild(e); }
+          d.classList.add('tappable');
+          d.addEventListener('click', ev => {
+            let dir;
+            if (q.right && !q.down) dir = 'right';
+            else if (q.down && !q.right) dir = 'down';
+            else {
+              const rect = d.getBoundingClientRect();
+              const x = (ev.clientX - rect.left) / rect.width;
+              const y = (ev.clientY - rect.top) / rect.height;
+              dir = (x >= y) ? 'right' : 'down';
+            }
+            showCombos(r, c, dir);
+          });
+        } else {
+          d.className = 'cell block';
+        }
+      } else {
+        d.className = 'cell white'; d.tabIndex = 0; d.dataset.r = r; d.dataset.c = c;
+        const v = entries[r][c];
+        if (v) {
+          const b = document.createElement('span'); b.className = 'big'; b.textContent = v; d.appendChild(b);
+        } else if (notes[r][c] && notes[r][c].size) {
+          const n = document.createElement('div'); n.className = 'notes';
+          for (let k = 1; k <= 9; k++) {
+            const sp = document.createElement('span');
+            sp.textContent = notes[r][c].has(k) ? k : '';
+            n.appendChild(sp);
+          }
+          d.appendChild(n);
+        }
+        if (runSet.has(r + ',' + c)) d.classList.add('run');
+        if (sel && sel.r === r && sel.c === c) d.classList.add('sel');
+        if (errFlags && errFlags[r][c]) d.classList.add('err');
+        if (hintedCell && hintedCell.r === r && hintedCell.c === c) d.classList.add('hinted');
+        d.addEventListener('click', () => { sel = { r, c }; hintedCell = null; render(); });
+      }
+      boardEl.appendChild(d);
+    }
+  }
+  renderNumpad();
+  syncNotesBtn();
 }
 
 /* ---------- number pad ---------- */
-function renderPad(){
-  padEl.innerHTML='';
-  let cand=null;
-  if(sel && settings.dimpad && !entries[sel.r][sel.c]){
-    const cmap=K.candidates(G.board,G.clues,G.R,G.C,entries);
-    cand=cmap[sel.r+','+sel.c]||[];
+function renderNumpad() {
+  numpadEl.innerHTML = '';
+  let cand = null;
+  if (sel && settings.dimpad && !entries[sel.r][sel.c]) {
+    const cmap = K.candidates(G.board, G.clues, G.R, G.C, entries);
+    cand = cmap[sel.r + ',' + sel.c] || [];
   }
-  for(let n=1;n<=9;n++){
-    const b=document.createElement('button'); b.textContent=n;
-    if(cand && !cand.includes(n)) b.classList.add('dim');
-    b.addEventListener('click',()=>input(n));
-    padEl.appendChild(b);
+  for (let n = 1; n <= 9; n++) {
+    const b = document.createElement('div'); b.className = 'num-btn';
+    const label = document.createElement('span'); label.style.cssText = 'pointer-events:none'; label.textContent = n;
+    b.appendChild(label);
+    if (cand && !cand.includes(n)) b.classList.add('dim');
+    b.addEventListener('pointerdown', () => input(n));
+    numpadEl.appendChild(b);
   }
-  const er=document.createElement('button'); er.className='util'; er.textContent='Erase';
-  er.addEventListener('click',()=>input(0)); padEl.appendChild(er);
-  const nb=document.createElement('button'); nb.className='util notes-full'+(notesMode?' on':''); nb.textContent=notesMode?'Notes · on':'Notes';
-  nb.addEventListener('click',()=>{ notesMode=!notesMode; renderPad(); toast(notesMode?'Notes mode on — tap to pencil candidates':'Notes off','cyan',900); });
-  padEl.appendChild(nb);
+}
+
+function syncNotesBtn() {
+  const btn = $('#notesBtn');
+  if (!btn) return;
+  btn.textContent = notesMode ? '🔹 Notes' : '✏️ Normal';
+  btn.classList.toggle('active', notesMode);
 }
 
 /* ---------- input ---------- */
-function pushHistory(){ history.push({ e:entries.map(r=>r.slice()), n:notes.map(r=>r.map(s=>new Set(s))) }); if(history.length>120)history.shift(); }
-function input(n){
-  if(!sel||won) return;
-  const {r,c}=sel; if(!G.board[r][c]) return;
+function pushHistory() {
+  history.push({ e: entries.map(r => r.slice()), n: notes.map(r => r.map(s => new Set(s))) });
+  if (history.length > 120) history.shift();
+}
+
+function input(n) {
+  if (!sel || won) return;
+  const { r, c } = sel; if (!G.board[r][c]) return;
   pushHistory();
-  hintedCell=null;
-  if(notesMode && n!==0){
-    if(!entries[r][c]){ const set=notes[r][c]; if(set.has(n))set.delete(n); else set.add(n); }
+  hintedCell = null;
+  if (notesMode && n !== 0) {
+    if (!entries[r][c]) { const set = notes[r][c]; if (set.has(n)) set.delete(n); else set.add(n); }
   } else {
-    if(n===0){ entries[r][c]=0; }
-    else { entries[r][c]=n; notes[r][c].clear(); flashCell(r,c); }
+    if (n === 0) { entries[r][c] = 0; }
+    else { entries[r][c] = n; notes[r][c].clear(); pendingFlash = { r, c }; }
   }
   afterChange();
 }
-function flashCell(r,c){ // brief pop animation flag via re-render then class
-  pendingFlash={r,c};
-}
-let pendingFlash=null;
 
-function afterChange(){
-  if(settings.autocheck){ errFlags=K.evaluate(G.board,G.clues,G.R,G.C,entries).err; }
-  else { errFlags=null; }
+function afterChange() {
+  if (settings.autocheck) { errFlags = K.evaluate(G.board, G.clues, G.R, G.C, entries).err; }
+  else { errFlags = null; }
   render();
-  if(pendingFlash){ const sels=boardEl.querySelector('.cell.white.sel'); if(sels)sels.classList.add('flash'); pendingFlash=null; }
+  if (pendingFlash) {
+    const sels = boardEl.querySelector('.cell.white.sel');
+    if (sels) sels.classList.add('flash');
+    pendingFlash = null;
+  }
   persist();
   checkWin();
 }
 
-function checkWin(){
-  const ev=K.evaluate(G.board,G.clues,G.R,G.C,entries);
-  if(ev.complete){ doWin(); }
+function checkWin() {
+  const ev = K.evaluate(G.board, G.clues, G.R, G.C, entries);
+  if (ev.complete) doWin();
 }
-function doWin(){
-  won=true; stopTimer(); $('#status').textContent='Solved';
-  const best=getBest(); const key=bestKey(); const prev=best[key];
-  let isBest=false;
-  if(settings.timer){ if(prev===undefined||timer<prev){best[key]=timer;saveJSON(BEST,best);isBest=true;} }
-  $('#winTime').textContent=settings.timer?formatTime(timer):'✓';
-  $('#winBest').textContent=settings.timer ? (isBest?'New best time!':'Best: '+formatTime(best[key])) : '';
-  $('#winSub').textContent = ['Every run sums true.','Clean grid. No contradictions.','Cross-sums all balanced.'][Math.floor(Math.random()*3)];
-  $('#winOverlay').classList.add('show');
+
+function doWin() {
+  won = true; stopTimer();
+  const msgs = ['Every run sums true.', 'Clean grid. No contradictions.', 'Cross-sums all balanced.'];
+  $('#overlayTitle').textContent = 'Grid Solved!';
+  $('#overlayMsg').textContent = msgs[Math.floor(Math.random() * msgs.length)] + ' Finished in ' + formatTime(timer) + '.';
+  $('#overlay').classList.add('show');
   localStorage.removeItem(SAVE);
 }
 
 /* ---------- tools ---------- */
-function doHint(){
-  if(won) return;
-  const res=K.hint(G.board,G.clues,G.R,G.C,entries, sel&&entries[sel.r]&&!entries[sel.r][sel.c]?sel:null);
-  if(!res){ toast('Grid is already full.','cyan'); return; }
-  if(res.conflict){ toast('Current entries conflict — nothing fits from here. Try Check.','coral',2200); return; }
+function doHint() {
+  if (won) return;
+  const target = sel && !entries[sel.r][sel.c] ? sel : null;
+  const res = K.hint(G.board, G.clues, G.R, G.C, entries, target);
+  if (!res) { toast('Grid is already full.', 'cyan'); return; }
+  if (res.conflict) { toast('Current entries conflict — nothing fits from here. Try Check.', 'coral', 2200); return; }
   pushHistory();
-  entries[res.r][res.c]=res.val; notes[res.r][res.c].clear();
-  sel={r:res.r,c:res.c}; hintedCell={r:res.r,c:res.c};
-  pendingFlash={r:res.r,c:res.c};
+  entries[res.r][res.c] = res.val; notes[res.r][res.c].clear();
+  sel = { r: res.r, c: res.c }; hintedCell = { r: res.r, c: res.c };
+  pendingFlash = { r: res.r, c: res.c };
   afterChange();
-  toast('Placed '+res.val+' — one cell logic guarantees.','cyan',1400);
+  toast('Placed ' + res.val + ' — one cell logic guarantees.', 'cyan', 1400);
 }
-function doCheck(){
-  if(won) return;
-  const ev=K.evaluate(G.board,G.clues,G.R,G.C,entries);
-  errFlags=ev.err; render();
-  let count=0; for(let r=0;r<G.R;r++)for(let c=0;c<G.C;c++)if(ev.err[r][c])count++;
-  if(count===0 && ev.filled<ev.white) toast('No mistakes so far — '+(ev.white-ev.filled)+' cells to go.','cyan',1800);
-  else if(count===0) toast('Looking good!','cyan');
-  else toast(count+' cell'+(count>1?'s':'')+' in conflict (highlighted).','coral',2000);
+
+function doCheck() {
+  if (won) return;
+  const ev = K.evaluate(G.board, G.clues, G.R, G.C, entries);
+  errFlags = ev.err; render();
+  let count = 0;
+  for (let r = 0; r < G.R; r++) for (let c = 0; c < G.C; c++) if (ev.err[r][c]) count++;
+  if (count === 0 && ev.filled < ev.white) toast('No mistakes so far — ' + (ev.white - ev.filled) + ' cells to go.', 'cyan', 1800);
+  else if (count === 0) toast('Looking good!', 'cyan');
+  else toast(count + ' cell' + (count > 1 ? 's' : '') + ' in conflict (highlighted).', 'coral', 2000);
 }
-function doReveal(){
-  if(won||!sel) { toast('Select a cell to reveal.','cyan'); return; }
-  const {r,c}=sel; if(!G.board[r][c]) return;
-  // find a completion consistent with current OTHER entries
-  const tmp=entries.map(row=>row.slice()); tmp[r][c]=0;
-  const res=K.hint(G.board,G.clues,G.R,G.C,tmp,{r,c});
-  if(!res||res.conflict){
-    // fall back to the reference solution
-    pushHistory(); entries[r][c]=G.solution[r][c]; notes[r][c].clear(); hintedCell={r,c}; pendingFlash={r,c};
-    toast('Revealed (reset other conflicts may remain).','coral',1800); afterChange(); return;
-  }
-  pushHistory(); entries[r][c]=res.val; notes[r][c].clear(); hintedCell={r,c}; pendingFlash={r,c};
-  afterChange(); toast('Revealed '+res.val+'.','cyan',1200);
-}
-function doAutoNotes(){
-  if(won) return;
-  pushHistory();
-  const cmap=K.candidates(G.board,G.clues,G.R,G.C,entries);
-  for(let r=0;r<G.R;r++)for(let c=0;c<G.C;c++)if(G.board[r][c]&&!entries[r][c]){
-    notes[r][c]=new Set(cmap[r+','+c]||[]);
-  }
-  render(); persist(); toast('Pencilled every cell with its possible digits.','cyan',1600);
-}
-function doUndo(){
-  if(!history.length){ toast('Nothing to undo.','cyan'); return; }
-  const h=history.pop();
-  entries=h.e.map(r=>r.slice()); notes=h.n.map(r=>r.map(s=>new Set(s)));
-  hintedCell=null;
-  if(settings.autocheck) errFlags=K.evaluate(G.board,G.clues,G.R,G.C,entries).err; else errFlags=null;
+
+function doUndo() {
+  if (!history.length) { toast('Nothing to undo.', 'cyan'); return; }
+  const h = history.pop();
+  entries = h.e.map(r => r.slice()); notes = h.n.map(r => r.map(s => new Set(s)));
+  hintedCell = null;
+  if (settings.autocheck) errFlags = K.evaluate(G.board, G.clues, G.R, G.C, entries).err;
+  else errFlags = null;
   render(); persist();
 }
 
+function eraseCell() {
+  if (!sel || won) return;
+  const { r, c } = sel; if (!G.board[r][c]) return;
+  pushHistory();
+  entries[r][c] = 0; notes[r][c].clear(); hintedCell = null;
+  afterChange();
+}
+
 /* ---------- combinations modal ---------- */
-function runCells(r,c,dir){
-  const cells=[];
-  if(dir==='right'){ let cc=c+1; while(cc<G.C && G.board[r][cc]){ cells.push([r,cc]); cc++; } }
-  else { let rr=r+1; while(rr<G.R && G.board[rr][c]){ cells.push([rr,c]); rr++; } }
+function runCells(r, c, dir) {
+  const cells = [];
+  if (dir === 'right') { let cc = c + 1; while (cc < G.C && G.board[r][cc]) { cells.push([r, cc]); cc++; } }
+  else { let rr = r + 1; while (rr < G.R && G.board[rr][c]) { cells.push([rr, c]); rr++; } }
   return cells;
 }
-function showCombos(r,c,dir){
-  const q=G.clues[r][c]; if(!q) return;
-  const sum = dir==='right'? q.right : q.down;
-  if(!sum) return;
-  const cells=runCells(r,c,dir);
-  const len=cells.length;
-  const placed=[]; for(const [rr,cc] of cells) if(entries[rr][cc]) placed.push(entries[rr][cc]);
-  let placedMask=0; for(const d of placed) placedMask|=1<<d;
-  const dupPlaced = placed.length !== new Set(placed).size;
-  const masks=K.combos(len,sum);
-  // compatible = combo contains every placed digit (and placed has no dups)
-  const rows=masks.map(m=>{
-    const digits=[]; for(let d=1;d<=9;d++) if(m&(1<<d)) digits.push(d);
-    const compatible = !dupPlaced && ((m & placedMask)===placedMask);
-    return {digits,mask:m,compatible};
-  });
-  // forced digits = intersection across compatible combos
-  let forced=0b1111111110, anyCompat=false;
-  for(const row of rows) if(row.compatible){ forced&=row.mask; anyCompat=true; }
-  if(!anyCompat) forced=0;
-  const forcedDigits=[]; for(let d=1;d<=9;d++) if(forced&(1<<d)) forcedDigits.push(d);
 
-  $('#comboTitle').textContent = (dir==='right'?'Across':'Down')+' · sum '+sum;
-  const compatCount = rows.filter(x=>x.compatible).length;
-  const meta = masks.length===1
-    ? len+' cells · only one way'
-    : len+' cells · '+masks.length+' combinations'+(placed.length&&!dupPlaced&&compatCount<masks.length ? ' · '+compatCount+' still possible' : '');
+function showCombos(r, c, dir) {
+  const q = G.clues[r][c]; if (!q) return;
+  const sum = dir === 'right' ? q.right : q.down;
+  if (!sum) return;
+  const cells = runCells(r, c, dir);
+  const len = cells.length;
+  const placed = []; for (const [rr, cc] of cells) if (entries[rr][cc]) placed.push(entries[rr][cc]);
+  let placedMask = 0; for (const d of placed) placedMask |= 1 << d;
+  const dupPlaced = placed.length !== new Set(placed).size;
+  const masks = K.combos(len, sum);
+  const rows = masks.map(m => {
+    const digits = []; for (let d = 1; d <= 9; d++) if (m & (1 << d)) digits.push(d);
+    const compatible = !dupPlaced && ((m & placedMask) === placedMask);
+    return { digits, mask: m, compatible };
+  });
+  let forced = 0b1111111110, anyCompat = false;
+  for (const row of rows) if (row.compatible) { forced &= row.mask; anyCompat = true; }
+  if (!anyCompat) forced = 0;
+  const forcedDigits = []; for (let d = 1; d <= 9; d++) if (forced & (1 << d)) forcedDigits.push(d);
+
+  $('#comboTitle').textContent = (dir === 'right' ? 'Across' : 'Down') + ' · sum ' + sum;
+  const compatCount = rows.filter(x => x.compatible).length;
+  const meta = masks.length === 1
+    ? len + ' cells · only one way'
+    : len + ' cells · ' + masks.length + ' combinations' + (placed.length && !dupPlaced && compatCount < masks.length ? ' · ' + compatCount + ' still possible' : '');
   $('#comboMeta').textContent = meta;
 
-  const fc=$('#comboForced'); fc.innerHTML='';
-  const list=$('#comboList'); list.innerHTML='';
+  const fc = $('#comboForced'); fc.innerHTML = '';
+  const list = $('#comboList'); list.innerHTML = '';
 
-  if(masks.length===0){
-    const e=document.createElement('div'); e.className='combo-empty'; e.textContent='No combination of '+len+' distinct digits sums to '+sum+'.'; list.appendChild(e);
-  } else if(masks.length===1){
-    // Single combination — just show it clearly, no redundant "always includes"
-    const rd=document.createElement('div'); rd.className='combo-row';
-    for(const d of rows[0].digits){
-      const ch=document.createElement('span'); ch.className='chip';
-      if(placedMask&(1<<d)) ch.classList.add('placed');
-      else ch.classList.add('forced');
-      ch.textContent=d; rd.appendChild(ch);
+  if (masks.length === 0) {
+    const e = document.createElement('div'); e.className = 'combo-empty';
+    e.textContent = 'No combination of ' + len + ' distinct digits sums to ' + sum + '.';
+    list.appendChild(e);
+  } else if (masks.length === 1) {
+    const rd = document.createElement('div'); rd.className = 'combo-row';
+    for (const d of rows[0].digits) {
+      const ch = document.createElement('span'); ch.className = 'chip';
+      if (placedMask & (1 << d)) ch.classList.add('placed'); else ch.classList.add('forced');
+      ch.textContent = d; rd.appendChild(ch);
     }
     list.appendChild(rd);
   } else {
-    // Multiple combinations — show forced digits (small) then full list
-    if(forcedDigits.length){
-      const lab=document.createElement('span'); lab.className='lab'; lab.textContent='Always in'; fc.appendChild(lab);
-      for(const d of forcedDigits){ const ch=document.createElement('span'); ch.className='chip sm forced'; ch.textContent=d; fc.appendChild(ch); }
+    if (forcedDigits.length) {
+      const lab = document.createElement('span'); lab.className = 'lab'; lab.textContent = 'Always in'; fc.appendChild(lab);
+      for (const d of forcedDigits) { const ch = document.createElement('span'); ch.className = 'chip sm forced'; ch.textContent = d; fc.appendChild(ch); }
     }
-    rows.sort((a,b)=> (b.compatible-a.compatible) || a.digits[0]-b.digits[0]);
-    for(const row of rows){
-      const rd=document.createElement('div'); rd.className='combo-row'+(row.compatible?'':' dim');
-      for(const d of row.digits){
-        const ch=document.createElement('span'); ch.className='chip';
-        if(row.compatible && (placedMask&(1<<d))) ch.classList.add('placed');
-        else if(row.compatible && (forced&(1<<d))) ch.classList.add('forced');
-        ch.textContent=d; rd.appendChild(ch);
+    rows.sort((a, b) => (b.compatible - a.compatible) || a.digits[0] - b.digits[0]);
+    for (const row of rows) {
+      const rd = document.createElement('div'); rd.className = 'combo-row' + (row.compatible ? '' : ' dim');
+      for (const d of row.digits) {
+        const ch = document.createElement('span'); ch.className = 'chip';
+        if (row.compatible && (placedMask & (1 << d))) ch.classList.add('placed');
+        else if (row.compatible && (forced & (1 << d))) ch.classList.add('forced');
+        ch.textContent = d; rd.appendChild(ch);
       }
       list.appendChild(rd);
     }
@@ -556,101 +577,124 @@ function showCombos(r,c,dir){
   $('#comboSheet').classList.add('show');
 }
 
-/* ---------- pause ---------- */
-function togglePause(){
-  if(won)return;
-  paused=!paused;
-  $('#status').textContent=paused?'Paused':'Solving';
-  boardEl.style.filter=paused?'blur(7px)':'none';
-  boardEl.style.pointerEvents=paused?'none':'auto';
-}
-
 /* ---------- persistence ---------- */
-function persist(){
-  if(!G||won) return;
-  saveJSON(SAVE,{
-    G:{R:G.R,C:G.C,board:G.board,clues:G.clues,solution:G.solution,level:G.level,seed:G.seed},
-    entries, notes:notes.map(r=>r.map(s=>[...s])), timer, level:curLevel, size:curSize
+function persist() {
+  if (!G || won) return;
+  saveJSON(SAVE, {
+    G: { R: G.R, C: G.C, board: G.board, clues: G.clues, solution: G.solution, level: G.level, seed: G.seed },
+    entries, notes: notes.map(r => r.map(s => [...s])), timer, level: curLevel, size: curSize
   });
 }
-function restore(){
-  const s=loadJSON(SAVE);
-  if(!s||!s.G) return false;
-  G=s.G; entries=s.entries;
-  notes=s.notes.map(r=>r.map(a=>new Set(a)));
-  timer=s.timer||0;
-  curLevel=s.level||G.level||'easy';
-  curSize=s.size||(G.R-1);
-  sel=firstWhite(); won=false; paused=false; errFlags=null; history=[];
-  $('#time').textContent=settings.timer?formatTime(timer):'—';
+
+function restore() {
+  const s = loadJSON(SAVE);
+  if (!s || !s.G) return false;
+  G = s.G; entries = s.entries;
+  notes = s.notes.map(r => r.map(a => new Set(a)));
+  timer = s.timer || 0;
+  curLevel = s.level || G.level || 'easy';
+  curSize = s.size || (G.R - 1);
+  sel = firstWhite(); won = false; errFlags = null; history = [];
+  $('#timer').textContent = settings.timer ? formatTime(timer) : '—';
+  $('#difficultySelect').value = curLevel;
   syncControls();
-  sizeBoard(); render(); showBest(); startTimer();
+  sizeBoard(); render(); startTimer();
   return true;
 }
 
 /* ---------- toast ---------- */
-let toastT=null;
-function toast(msg,kind,ms){
-  toastEl.textContent=msg; toastEl.className='toast show'+(kind?' '+kind:'');
-  clearTimeout(toastT); toastT=setTimeout(()=>toastEl.classList.remove('show'), ms||1300);
+let toastT = null;
+function toast(msg, kind, ms) {
+  toastEl.textContent = msg; toastEl.className = 'toast show' + (kind ? ' ' + kind : '');
+  clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove('show'), ms || 1300);
 }
 
-/* ---------- settings sheet ---------- */
-function syncToggles(){
-  $('#t_autocheck').classList.toggle('on',settings.autocheck);
-  $('#t_runs').classList.toggle('on',settings.runs);
-  $('#t_dimpad').classList.toggle('on',settings.dimpad);
-  $('#t_timer').classList.toggle('on',settings.timer);
+/* ---------- settings ---------- */
+function syncSettingsUI() {
+  $('#togAutocheck').checked = settings.autocheck;
+  $('#togRuns').checked = settings.runs;
+  $('#togDimpad').checked = settings.dimpad;
+  $('#togTimer').checked = settings.timer;
 }
-function bindToggle(id,key,after){ $('#'+id).addEventListener('click',()=>{ settings[key]=!settings[key]; saveJSON(SET,settings); syncToggles(); if(after)after(); }); }
+
+function openSettings() {
+  syncSettingsUI();
+  $('#settingsBackdrop').classList.add('show');
+  $('#settingsPanel').classList.add('show');
+}
+function closeSettings() {
+  $('#settingsBackdrop').classList.remove('show');
+  $('#settingsPanel').classList.remove('show');
+}
+
+function onToggle(id, key, after) {
+  $('#' + id).addEventListener('change', e => {
+    settings[key] = e.target.checked;
+    saveJSON(SET, settings);
+    if (after) after();
+  });
+}
 
 /* ---------- keyboard ---------- */
-document.addEventListener('keydown',e=>{
-  if($('#winOverlay').classList.contains('show')){ if(e.key==='Enter'){ $('#winOverlay').classList.remove('show'); newGame(); } return; }
-  if($('#settingsSheet').classList.contains('show')) return;
-  if($('#comboSheet').classList.contains('show')){ if(e.key==='Escape') $('#comboSheet').classList.remove('show'); return; }
-  if(e.key>='1'&&e.key<='9'){ input(+e.key); e.preventDefault(); }
-  else if(e.key==='0'||e.key==='Backspace'||e.key==='Delete'){ input(0); e.preventDefault(); }
-  else if(e.key==='n'||e.key==='N'){ notesMode=!notesMode; renderPad(); }
-  else if(e.key.startsWith('Arrow')&&sel){ moveSel(e.key); e.preventDefault(); }
-  else if(e.key==='h'||e.key==='H'){ doHint(); }
-  else if(e.key==='u'||e.key==='U'){ doUndo(); }
+document.addEventListener('keydown', e => {
+  if ($('#overlay').classList.contains('show')) {
+    if (e.key === 'Enter') { $('#overlay').classList.remove('show'); newGame(); }
+    return;
+  }
+  if ($('#settingsPanel').classList.contains('show')) return;
+  if ($('#comboSheet').classList.contains('show')) { if (e.key === 'Escape') $('#comboSheet').classList.remove('show'); return; }
+  if (e.key >= '1' && e.key <= '9') { input(+e.key); e.preventDefault(); }
+  else if (e.key === '0' || e.key === 'Backspace' || e.key === 'Delete') { eraseCell(); e.preventDefault(); }
+  else if (e.key === 'n' || e.key === 'N') { notesMode = !notesMode; syncNotesBtn(); renderNumpad(); }
+  else if (e.key.startsWith('Arrow') && sel) { moveSel(e.key); e.preventDefault(); }
+  else if (e.key === 'h' || e.key === 'H') { doHint(); }
+  else if (e.key === 'u' || e.key === 'U') { doUndo(); }
 });
-function moveSel(dir){
-  let {r,c}=sel; const dr=dir==='ArrowUp'?-1:dir==='ArrowDown'?1:0; const dc=dir==='ArrowLeft'?-1:dir==='ArrowRight'?1:0;
-  for(let step=0;step<Math.max(G.R,G.C);step++){ r+=dr;c+=dc; if(r<0||c<0||r>=G.R||c>=G.C)return; if(G.board[r][c]){sel={r,c};hintedCell=null;render();return;} }
+
+function moveSel(dir) {
+  let { r, c } = sel;
+  const dr = dir === 'ArrowUp' ? -1 : dir === 'ArrowDown' ? 1 : 0;
+  const dc = dir === 'ArrowLeft' ? -1 : dir === 'ArrowRight' ? 1 : 0;
+  for (let step = 0; step < Math.max(G.R, G.C); step++) {
+    r += dr; c += dc;
+    if (r < 0 || c < 0 || r >= G.R || c >= G.C) return;
+    if (G.board[r][c]) { sel = { r, c }; hintedCell = null; render(); return; }
+  }
 }
 
 /* ---------- wire up ---------- */
-document.querySelectorAll('.levelpick button').forEach(b=>{
-  b.addEventListener('click',()=>newGame(b.dataset.lvl, curSize));
+$('#newGameBtn').addEventListener('click', () => newGame());
+$('#sizeDown').addEventListener('click', () => { if (curSize > 5) newGame(curSize - 1); });
+$('#sizeUp').addEventListener('click', () => { if (curSize < 12) newGame(curSize + 1); });
+$('#hintBtn').addEventListener('click', doHint);
+$('#checkBtn').addEventListener('click', doCheck);
+$('#undoBtn').addEventListener('click', doUndo);
+$('#eraseBtn').addEventListener('click', eraseCell);
+$('#notesBtn').addEventListener('click', () => { notesMode = !notesMode; syncNotesBtn(); renderNumpad(); });
+$('#settingsBtn').addEventListener('click', openSettings);
+$('#settingsBackdrop').addEventListener('click', closeSettings);
+$('#overlayBtn').addEventListener('click', () => { $('#overlay').classList.remove('show'); newGame(); });
+$('#overlay').addEventListener('click', e => { if (e.target === $('#overlay')) $('#overlay').classList.remove('show'); });
+$('#closeCombo').addEventListener('click', () => $('#comboSheet').classList.remove('show'));
+$('#comboSheet').addEventListener('click', e => { if (e.target === $('#comboSheet')) $('#comboSheet').classList.remove('show'); });
+
+onToggle('togAutocheck', 'autocheck', () => {
+  errFlags = settings.autocheck ? K.evaluate(G.board, G.clues, G.R, G.C, entries).err : null;
+  render();
 });
-$('#sizeDown').addEventListener('click',()=>{ if(curSize>5) newGame(curLevel, curSize-1); });
-$('#sizeUp').addEventListener('click',()=>{ if(curSize<12) newGame(curLevel, curSize+1); });
-$('#newBtn').addEventListener('click',()=>newGame());
-$('#hintBtn').addEventListener('click',doHint);
-$('#checkBtn').addEventListener('click',doCheck);
-$('#revealBtn').addEventListener('click',doReveal);
-$('#autonoteBtn').addEventListener('click',doAutoNotes);
-$('#undoBtn').addEventListener('click',doUndo);
-$('#pauseBtn').addEventListener('click',togglePause);
-$('#pauseBtn').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){togglePause();e.preventDefault();}});
-$('#settingsBtn').addEventListener('click',()=>{ syncToggles(); $('#settingsSheet').classList.add('show'); });
-$('#closeSettings').addEventListener('click',()=>$('#settingsSheet').classList.remove('show'));
-$('#settingsSheet').addEventListener('click',e=>{ if(e.target===$('#settingsSheet')) $('#settingsSheet').classList.remove('show'); });
-$('#closeCombo').addEventListener('click',()=>$('#comboSheet').classList.remove('show'));
-$('#comboSheet').addEventListener('click',e=>{ if(e.target===$('#comboSheet')) $('#comboSheet').classList.remove('show'); });
-$('#winAgain').addEventListener('click',()=>{ $('#winOverlay').classList.remove('show'); newGame(); });
-$('#winOverlay').addEventListener('click',e=>{ if(e.target===$('#winOverlay')) $('#winOverlay').classList.remove('show'); });
-bindToggle('t_autocheck','autocheck',()=>{ errFlags=settings.autocheck?K.evaluate(G.board,G.clues,G.R,G.C,entries).err:null; render(); });
-bindToggle('t_runs','runs',render);
-bindToggle('t_dimpad','dimpad',renderPad);
-bindToggle('t_timer','timer',()=>{ if(settings.timer){startTimer();} else {stopTimer(); $('#time').textContent='—';} });
+onToggle('togRuns', 'runs', render);
+onToggle('togDimpad', 'dimpad', renderNumpad);
+onToggle('togTimer', 'timer', () => {
+  if (settings.timer) { startTimer(); } else { stopTimer(); $('#timer').textContent = '—'; }
+});
 
 /* ---------- boot ---------- */
-syncToggles();
-if(!restore()){ newGame('easy', 5); }
-else if(!settings.timer){ $('#time').textContent='—'; }
-if(!localStorage.getItem('kakuro_tip_combos')){
-  setTimeout(()=>{ toast('Tip: tap any clue number to see its possible combinations.','cyan',3600); localStorage.setItem('kakuro_tip_combos','1'); }, 1400);
+syncSettingsUI();
+if (!restore()) { newGame(); }
+else if (!settings.timer) { $('#timer').textContent = '—'; }
+if (!localStorage.getItem('kakuro_tip_combos')) {
+  setTimeout(() => {
+    toast('Tip: tap any clue number to see its possible combinations.', 'cyan', 3600);
+    localStorage.setItem('kakuro_tip_combos', '1');
+  }, 1400);
 }
