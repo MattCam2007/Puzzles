@@ -82,6 +82,7 @@ body {
 
 .bg-grid {
   background: var(--surface);
+  background: color-mix(in srgb, var(--surface) var(--board-alpha), transparent);
   border-radius: var(--radius);
   padding: 11px;
   display: grid;
@@ -89,7 +90,11 @@ body {
   gap: 9px;
   width: 100%; aspect-ratio: 1;
 }
-.bg-cell { background: var(--cell-empty); border-radius: var(--radius); aspect-ratio: 1; }
+.bg-cell {
+  background: var(--cell-empty);
+  background: color-mix(in srgb, var(--cell-empty) var(--board-alpha), transparent);
+  border-radius: var(--radius); aspect-ratio: 1;
+}
 
 #tc {
   position: absolute; inset: 11px;

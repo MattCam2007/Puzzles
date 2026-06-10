@@ -5,7 +5,19 @@ const THEMES = [
   { id: 'terminal', icon: '💻', label: 'Terminal' },
 ];
 
-const BG_KEY = 'puzzle-bg-image';
+const BG_KEY    = 'puzzle-bg-image';
+const ALPHA_KEY = 'puzzle-board-alpha';
+
+function applyBoardAlpha(value) {  // 0–100
+  document.documentElement.style.setProperty('--board-alpha', `${value}%`);
+  localStorage.setItem(ALPHA_KEY, value);
+}
+
+function loadBoardAlpha() {
+  const saved = localStorage.getItem(ALPHA_KEY);
+  const value = saved !== null ? parseInt(saved) : 100;
+  document.documentElement.style.setProperty('--board-alpha', `${value}%`);
+}
 
 function applyTheme(id) {
   document.documentElement.setAttribute('data-theme', id);
@@ -112,7 +124,15 @@ function syncThemePicker() {
       syncThemePicker();
     };
   }
+
+  const slider = document.getElementById('boardAlphaSlider');
+  if (slider) {
+    const alphaSaved = localStorage.getItem(ALPHA_KEY);
+    slider.value = alphaSaved !== null ? alphaSaved : 100;
+    slider.oninput = () => applyBoardAlpha(parseInt(slider.value));
+  }
 }
 
 loadTheme();
 loadBgImage();
+loadBoardAlpha();

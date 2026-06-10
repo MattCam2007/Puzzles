@@ -41,6 +41,9 @@
   /* ── accent RGB triplets (for rgba() usage) ── */
   --accent-rgb:  124, 106, 247;
   --accent2-rgb: 192, 132, 252;
+
+  /* ── board transparency ── */
+  --board-alpha: 100%;
 }
 
 html[data-theme="midnight"] {
@@ -242,3 +245,31 @@ body {
 }
 .settings-text-input:focus { border-color: var(--accent); }
 .settings-text-input::placeholder { color: var(--text-muted); }
+
+/* ── opacity / range slider ── */
+.settings-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 110px; height: 4px;
+  border-radius: 2px;
+  background: var(--surface3);
+  outline: none;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.settings-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--accent2);
+  cursor: pointer;
+  box-shadow: 0 0 4px rgba(0,0,0,.4);
+}
+.settings-slider::-moz-range-thumb {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--accent2);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 4px rgba(0,0,0,.4);
+}
