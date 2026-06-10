@@ -52,20 +52,19 @@ body {
 }
 .btn-top:active { background: var(--surface3); }
 
-/* pick-row — anim / tile pickers inside the settings panel */
-.pick-row {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 0; cursor: pointer;
-  border-bottom: 1px solid var(--surface2);
-  font-size: 0.88rem; font-weight: 600; color: var(--text-dim);
-  transition: color 0.1s;
-}
-.pick-row:last-child { border-bottom: none; }
-.pick-row:hover { color: var(--text); }
-.pick-icon { font-size: 1.1rem; width: 1.5em; text-align: center; }
-.pick-row.selected { color: var(--accent2); }
-.pick-check { margin-left: auto; color: var(--accent2); opacity: 0; font-size: 0.9rem; font-weight: 800; }
-.pick-row.selected .pick-check { opacity: 1; }
+/* tile value colours — override these per theme */
+.tile-v2    { background: #3d3a52; color: #9b97b8; }
+.tile-v4    { background: #4a3d6e; color: #b89fe8; }
+.tile-v8    { background: #5c3a8a; color: #d4aaff; }
+.tile-v16   { background: #6b3fa0; color: #e8c0ff; }
+.tile-v32   { background: #7c44b8; color: #f0d4ff; }
+.tile-v64   { background: #8b2fc9; color: #fff; }
+.tile-v128  { background: #a020f0; color: #fff; }
+.tile-v256  { background: #b030e0; color: #fff; }
+.tile-v512  { background: #c040d0; color: #fff; }
+.tile-v1024 { background: #d050c0; color: #fff; }
+.tile-v2048 { background: #e060b0; color: #fff; }
+.tile-vmax  { background: #e060b0; color: #fff; }
 
 /* tile mode overrides */
 .tile-mode-emoji { font-size: 1.6rem !important; line-height: 1; }

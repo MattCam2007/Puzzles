@@ -570,7 +570,6 @@ function buildBg(){
 
 function makeTileEl(id,val,r,c){
   const sz=cellSize(), {x,y}=cellXY(r,c);
-  const [bg,fg]=TILE_COLORS[val]||TILE_COLORS[2048];
   const {text,cls,glow}=tileLabel(val);
 
   // Font size: depends on mode and text length
@@ -582,10 +581,11 @@ function makeTileEl(id,val,r,c){
     fs = len<=2?'2rem': len<=4?'1.6rem': len<=6?'1.1rem':'0.78rem';
   }
 
+  const vClass = TILE_COLORS[val] ? `tile-v${val}` : 'tile-vmax';
   const el=document.createElement('div');
-  el.className='tile' + (cls?' '+cls:'') + (glow?' tile-occult-glow':'');
+  el.className='tile ' + vClass + (cls?' '+cls:'') + (glow?' tile-occult-glow':'');
   el.dataset.tid=id; el.textContent=text;
-  el.style.cssText=`width:${sz}px;height:${sz}px;background:${bg};color:${fg};font-size:${fs};--tx:translate(${x}px,${y}px);transform:translate(${x}px,${y}px);`;
+  el.style.cssText=`width:${sz}px;height:${sz}px;font-size:${fs};--tx:translate(${x}px,${y}px);transform:translate(${x}px,${y}px);`;
   return el;
 }
 

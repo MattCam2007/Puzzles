@@ -34,6 +34,13 @@
   /* ── shape ── */
   --radius:    10px;
   --radius-sm: 6px;
+
+  /* ── background extension ── */
+  --bg-image: none;
+
+  /* ── accent RGB triplets (for rgba() usage) ── */
+  --accent-rgb:  124, 106, 247;
+  --accent2-rgb: 192, 132, 252;
 }
 
 *, *::before, *::after {
@@ -46,7 +53,10 @@
 html { overscroll-behavior: none; }
 
 body {
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image: var(--bg-image);
+  background-size: cover;
+  background-attachment: fixed;
   color: var(--text);
   font-family: 'Space Grotesk', system-ui, sans-serif;
   min-height: 100dvh;
@@ -152,3 +162,18 @@ body {
   cursor: pointer; transition: all 0.15s; border: 1.5px solid transparent;
 }
 .strike-opt.active { background: var(--accent-dim); color: var(--accent2); border-color: var(--accent); }
+
+/* ── pick-row — selectable list item used in settings pickers ── */
+.pick-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 0; cursor: pointer;
+  border-bottom: 1px solid var(--surface2);
+  font-size: 0.88rem; font-weight: 600; color: var(--text-dim);
+  transition: color 0.1s;
+}
+.pick-row:last-child { border-bottom: none; }
+.pick-row:hover { color: var(--text); }
+.pick-icon { font-size: 1.1rem; width: 1.5em; text-align: center; }
+.pick-row.selected { color: var(--accent2); }
+.pick-check { margin-left: auto; color: var(--accent2); opacity: 0; font-size: 0.9rem; font-weight: 800; }
+.pick-row.selected .pick-check { opacity: 1; }

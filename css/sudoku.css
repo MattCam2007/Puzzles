@@ -4,12 +4,12 @@
    ============================================================ */
 
 :root {
-  --given: #c8c4e8;
-  --pencil: #7c70b8;
-  --highlight-box: rgba(124,106,247,0.08);
-  --highlight-row: rgba(192,132,252,0.06);
-  --highlight-sel: rgba(124,106,247,0.28);
-  --numfirst-sel: rgba(192,132,252,0.32);
+  --given:          #c8c4e8;
+  --pencil:         #7c70b8;
+  --highlight-box:  rgba(var(--accent-rgb),  0.08);
+  --highlight-row:  rgba(var(--accent2-rgb), 0.06);
+  --highlight-sel:  rgba(var(--accent-rgb),  0.28);
+  --numfirst-sel:   rgba(var(--accent2-rgb), 0.32);
   --cell: 46px;
 }
 
