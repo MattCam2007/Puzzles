@@ -3,78 +3,118 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#0f0f13">
 <title>Kakuro</title>
 <link rel="stylesheet" href="css/theme.css">
 <link rel="stylesheet" href="css/kakuro.css">
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <div class="brand">
-      <h1 class="title">KAKURO</h1>
-      <span class="sub" id="dims">cross-sums</span>
-    </div>
-  </header>
 
-  <div class="controls">
-    <div class="ctl">
-      <span class="ctl-k">Difficulty</span>
-      <div class="levelpick" role="group" aria-label="Difficulty">
-        <button data-lvl="easy" aria-pressed="true">Easy</button>
-        <button data-lvl="medium" aria-pressed="false">Medium</button>
-        <button data-lvl="hard" aria-pressed="false">Hard</button>
-      </div>
+<div class="header">
+  <div class="title">Kakuro</div>
+  <div class="header-right">
+    <div class="score-box">
+      <div class="label">Time</div>
+      <div class="value" id="timer" style="font-variant-numeric:tabular-nums">0:00</div>
     </div>
-    <div class="ctl">
-      <span class="ctl-k">Size</span>
-      <div class="stepper">
+    <div class="size-box">
+      <div class="size-label">Size</div>
+      <div class="size-controls">
         <button id="sizeDown" aria-label="Smaller grid">−</button>
         <span id="sizeVal">5×5</span>
         <button id="sizeUp" aria-label="Larger grid">+</button>
       </div>
     </div>
-  </div>
-
-  <div class="stats">
-    <div class="stat"><div class="k">Time</div><div class="v" id="time">0:00</div></div>
-    <div class="stat" id="pauseBtn" role="button" tabindex="0" title="Pause / resume"><div class="k">Status</div><div class="v" id="status">Solving</div></div>
-    <div class="stat"><div class="k">Best</div><div class="v accent" id="best">—</div></div>
-  </div>
-
-  <div class="boardwrap">
-    <div class="board" id="board" aria-label="Kakuro grid"></div>
-  </div>
-
-  <div class="pad" id="pad"></div>
-
-  <div class="tools">
-    <button id="hintBtn"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10c.8.8 1 1.5 1 3h6c0-1.5.2-2.2 1-3a6 6 0 0 0-4-10z"/></svg>Hint</button>
-    <button id="checkBtn"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Check</button>
-    <button id="revealBtn" class="warn"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>Reveal</button>
-    <button id="autonoteBtn"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Auto-notes</button>
-  </div>
-
-  <div class="bottombar">
-    <button class="new" id="newBtn">New game</button>
-    <button class="iconbtn" id="undoBtn" title="Undo"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg></button>
-    <button class="iconbtn" id="settingsBtn" title="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-1.1-2.7H1a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 2.6 7a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H7a1.6 1.6 0 0 0 1-1.5V1a2 2 0 1 1 4 0v.1A1.6 1.6 0 0 0 17 2.6a1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V7a1.6 1.6 0 0 0 1.5 1H23a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg></button>
+    <div class="icon-btn" id="settingsBtn" title="Settings">⚙️</div>
   </div>
 </div>
 
-<!-- settings -->
-<div class="sheet-bg" id="settingsSheet">
-  <div class="sheet">
-    <h2>Settings</h2>
-    <div class="opt"><div><div class="lbl">Auto-check mistakes</div><div class="desc">Flag duplicate digits and broken sums as you type.</div></div><button class="toggle" id="t_autocheck"></button></div>
-    <div class="opt"><div><div class="lbl">Illuminate runs</div><div class="desc">Light up the across &amp; down runs of the selected cell.</div></div><button class="toggle on" id="t_runs"></button></div>
-    <div class="opt"><div><div class="lbl">Dim impossible digits</div><div class="desc">Fade pad digits that can't fit the selected cell.</div></div><button class="toggle on" id="t_dimpad"></button></div>
-    <div class="opt"><div><div class="lbl">Timer</div><div class="desc">Show and run the solve clock.</div></div><button class="toggle on" id="t_timer"></button></div>
-    <button class="close" id="closeSettings">Done</button>
+<div class="board-top-bar">
+  <div class="board-top-left">
+    <button class="btn accent" id="newGameBtn">New Game</button>
+    <select class="difficulty-select" id="difficultySelect">
+      <option value="easy">Easy</option>
+      <option value="medium" selected>Medium</option>
+      <option value="hard">Hard</option>
+    </select>
+  </div>
+  <div class="board-top-right">
+    <button class="btn-top" id="hintBtn">💡 Hint</button>
+    <button class="btn-top danger" id="clearBtn">🗑 Clear</button>
   </div>
 </div>
 
-<!-- combinations -->
+<div class="board-wrap">
+  <div class="board" id="board" aria-label="Kakuro grid"></div>
+</div>
+
+<div class="numpad" id="numpad"></div>
+
+<div class="action-row">
+  <button class="action-btn" id="notesBtn">✏️ Normal</button>
+  <button class="action-btn danger" id="eraseBtn">✕ Erase</button>
+</div>
+
+<!-- SETTINGS PANEL -->
+<div class="settings-backdrop" id="settingsBackdrop"></div>
+<div class="settings-panel" id="settingsPanel">
+  <div class="settings-handle"></div>
+  <div class="settings-title">Settings</div>
+
+  <div class="settings-section">
+    <div class="settings-section-label">Assistance</div>
+
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-name">Auto-check mistakes</div>
+        <div class="setting-desc">Flag duplicate digits and broken sums as you type.</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="togAutocheck">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-name">Illuminate runs</div>
+        <div class="setting-desc">Light up the across &amp; down runs of the selected cell.</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="togRuns" checked>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-name">Dim impossible digits</div>
+        <div class="setting-desc">Fade pad digits that can't fit the selected cell.</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="togDimpad" checked>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-label">Display</div>
+
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-name">Timer</div>
+        <div class="setting-desc">Show and run the solve clock.</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="togTimer" checked>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+  </div>
+
+</div>
+
+<!-- COMBINATIONS SHEET -->
 <div class="sheet-bg" id="comboSheet">
   <div class="sheet combo">
     <h2 id="comboTitle">Combinations</h2>
@@ -85,15 +125,12 @@
   </div>
 </div>
 
-<!-- win -->
-<div class="overlay" id="winOverlay">
-  <div class="card">
-    <div class="glyph">◆ ◇ ◆</div>
-    <h2>Grid solved</h2>
-    <p id="winSub">Every run sums true.</p>
-    <div class="bigtime" id="winTime">0:00</div>
-    <div class="best" id="winBest"></div>
-    <button class="again" id="winAgain">Play again</button>
+<!-- WIN/LOSE OVERLAY -->
+<div class="overlay" id="overlay">
+  <div class="overlay-card">
+    <h2 id="overlayTitle">Grid Solved!</h2>
+    <p id="overlayMsg"></p>
+    <button class="btn-primary" id="overlayBtn">Play Again</button>
   </div>
 </div>
 
