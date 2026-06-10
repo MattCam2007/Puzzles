@@ -16,6 +16,14 @@
       <div class="label">Time</div>
       <div class="value" id="timer" style="font-variant-numeric:tabular-nums">0:00</div>
     </div>
+    <div class="mistakes-wrap" id="mistakesWrap">
+      <div class="mistakes-label">Lives</div>
+      <div class="mistakes-indicator">
+        <div class="mistake-dot" id="m1"></div>
+        <div class="mistake-dot" id="m2"></div>
+        <div class="mistake-dot" id="m3"></div>
+      </div>
+    </div>
     <div class="icon-btn" id="settingsBtn" title="Settings">⚙️</div>
   </div>
 </div>
@@ -30,18 +38,9 @@
   <button class="btn accent" id="newGameBtn">New Game</button>
 </div>
 
-<div class="toolbar" id="toolbar">
-  <button class="tool-btn active" id="normalBtn">✏️ Normal</button>
-  <button class="tool-btn" id="pencilBtn">🔹 Pencil</button>
-  <div class="mode-badge" id="modeBadge">Cell First</div>
-  <div class="mistakes-wrap" id="mistakesWrap">
-    <div class="mistakes-label">Lives</div>
-    <div class="mistakes-indicator">
-      <div class="mistake-dot" id="m1"></div>
-      <div class="mistake-dot" id="m2"></div>
-      <div class="mistake-dot" id="m3"></div>
-    </div>
-  </div>
+<div class="board-top-bar">
+  <button class="btn-top" id="hintBtn">💡 Hint</button>
+  <button class="btn-top danger" id="clearBtn">🗑 Clear</button>
 </div>
 
 <div class="board-wrap">
@@ -51,9 +50,9 @@
 <div class="numpad" id="numpad"></div>
 
 <div class="action-row">
-  <button class="action-btn" id="hintBtn">💡 Hint</button>
+  <button class="action-btn" id="pencilToggleBtn">✏️ Normal</button>
+  <button class="action-btn" id="modeToggleBtn">Cell First</button>
   <button class="action-btn danger" id="eraseBtn">✕ Erase</button>
-  <button class="action-btn danger" id="clearBtn">🗑 Clear</button>
 </div>
 
 <!-- SETTINGS PANEL -->
@@ -104,7 +103,7 @@
     <div class="setting-row">
       <div class="setting-info">
         <div class="setting-name">Show hints button</div>
-        <div class="setting-desc">Reveal the Hint button below the board.</div>
+        <div class="setting-desc">Reveal the Hint button above the board.</div>
       </div>
       <label class="toggle">
         <input type="checkbox" id="togHints" checked>
@@ -152,7 +151,7 @@
     <div class="setting-row" id="mistakeDotsRow">
       <div class="setting-info">
         <div class="setting-name">Show mistake counter</div>
-        <div class="setting-desc">Display the lives dots in the toolbar.</div>
+        <div class="setting-desc">Display the lives dots in the header.</div>
       </div>
       <label class="toggle">
         <input type="checkbox" id="togMistakeDots" checked>

@@ -49,7 +49,7 @@ body {
   display: flex; gap: 8px; margin-bottom: 12px; align-items: center;
 }
 .difficulty-select {
-  flex: 1; background: var(--surface); border: 1px solid var(--surface3);
+  flex: none; background: var(--surface); border: 1px solid var(--surface3);
   color: var(--text); font-family: 'Space Grotesk', sans-serif;
   font-size: 0.85rem; font-weight: 600; padding: 8px 28px 8px 10px;
   border-radius: var(--radius-sm); outline: none; cursor: pointer;
@@ -68,36 +68,33 @@ body {
 .btn.accent { background: var(--accent-dim); border-color: var(--accent); color: var(--accent2); }
 .btn.accent:active { background: rgba(124,106,247,0.3); }
 
-/* ── TOOLBAR ── */
-.toolbar {
-  width: 100%; max-width: 420px;
-  display: flex; gap: 8px; margin-bottom: 10px; align-items: center;
+/* ── LIVES (in header) ── */
+.mistakes-wrap {
+  background: var(--surface); border-radius: var(--radius-sm);
+  padding: 5px 10px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
 }
-.tool-btn {
-  flex: 1; background: var(--surface); border: 1.5px solid var(--surface3);
-  color: var(--text-dim); font-family: 'Space Grotesk', sans-serif;
-  font-size: 0.78rem; font-weight: 600; padding: 9px 4px;
-  border-radius: var(--radius-sm); cursor: pointer;
-  transition: all 0.15s; text-align: center;
-}
-.tool-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent2); }
-.tool-btn:active { opacity: 0.7; }
-
-/* mistake dots */
-.mistakes-wrap { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 0 2px; }
 .mistakes-label { font-size: 0.55rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; }
 .mistakes-indicator { display: flex; gap: 4px; align-items: center; }
 .mistake-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--surface3); transition: background 0.2s; }
 .mistake-dot.used { background: var(--error); }
 
-/* input mode indicator */
-.mode-badge {
-  font-size: 0.62rem; font-weight: 700; color: var(--text-muted);
-  text-transform: uppercase; letter-spacing: 0.8px;
-  background: var(--surface); border: 1px solid var(--surface3);
-  padding: 4px 8px; border-radius: var(--radius-sm); white-space: nowrap;
+/* ── BOARD TOP BAR ── */
+.board-top-bar {
+  width: 100%; max-width: 420px;
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 6px;
 }
-.mode-badge.numfirst { color: var(--accent2); border-color: var(--accent); background: var(--accent-dim); }
+.btn-top {
+  background: var(--surface); border: 1px solid var(--surface3);
+  color: var(--text-dim); font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.78rem; font-weight: 600; padding: 7px 16px;
+  border-radius: var(--radius-sm); cursor: pointer;
+  transition: background 0.15s; white-space: nowrap;
+}
+.btn-top:active { background: var(--surface3); }
+.btn-top.danger { color: var(--error); }
+.btn-top.hidden { visibility: hidden; pointer-events: none; }
 
 /* ── BOARD ── */
 .board-wrap { width: 100%; max-width: 420px; aspect-ratio: 1; }
@@ -220,6 +217,8 @@ body {
 .action-btn:active { background: var(--surface3); }
 .action-btn.danger { color: var(--error); }
 .action-btn.hidden { visibility: hidden; pointer-events: none; }
+.action-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent2); }
+.action-btn.mode-numfirst { background: var(--accent-dim); border-color: var(--accent); color: var(--accent2); }
 
 /* ── SETTINGS PANEL ── */
 .settings-backdrop {
