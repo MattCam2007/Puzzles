@@ -70,25 +70,23 @@ body {
 .btn.accent { background: var(--accent-dim); border-color: var(--accent); color: var(--accent2); }
 .btn.accent:active { background: rgba(124,106,247,0.3); }
 
-/* ── SIZE STEPPER ── */
-.size-stepper {
-  display: flex; align-items: center;
-  background: var(--surface); border: 1px solid var(--surface3);
-  border-radius: var(--radius-sm); overflow: hidden; flex-shrink: 0;
+/* ── SIZE BOX (header, mirrors .mistakes-wrap in sudoku) ── */
+.size-box {
+  background: var(--surface); border-radius: var(--radius-sm);
+  padding: 5px 8px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
 }
-.size-stepper button {
-  background: transparent; border: none; border-radius: 0;
-  color: var(--accent2); font-size: 1rem; font-weight: 700;
-  padding: 7px 8px; cursor: pointer; line-height: 1;
-  font-family: 'Space Grotesk', sans-serif; transition: background 0.15s;
+.size-label { font-size: 0.55rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; }
+.size-controls { display: flex; align-items: center; gap: 1px; }
+.size-controls button {
+  background: transparent; border: none; color: var(--accent2);
+  font-size: 0.95rem; font-weight: 700; cursor: pointer; padding: 0 4px;
+  line-height: 1; font-family: 'Space Grotesk', sans-serif;
 }
-.size-stepper button:hover { background: var(--accent-dim); }
-.size-stepper button:disabled { color: var(--text-muted); cursor: not-allowed; }
-.size-stepper #sizeVal {
-  font-size: 0.78rem; font-weight: 600; color: var(--text);
-  padding: 0 4px; min-width: 34px; text-align: center;
-  font-variant-numeric: tabular-nums;
-  border-left: 1px solid var(--surface3); border-right: 1px solid var(--surface3);
+.size-controls button:disabled { color: var(--text-muted); cursor: not-allowed; }
+#sizeVal {
+  font-size: 0.82rem; font-weight: 700; color: var(--text);
+  min-width: 30px; text-align: center; font-variant-numeric: tabular-nums;
 }
 
 /* ── BOARD TOP BAR ── */
@@ -215,7 +213,7 @@ body {
 /* ── ACTION ROW ── */
 .action-row {
   width: 100%; max-width: 420px;
-  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  display: grid; grid-template-columns: 1fr 1fr;
   gap: 8px; margin-top: 8px;
 }
 .action-btn {

@@ -265,7 +265,6 @@ let curLevel = 'easy', curSize = 5;
 let entries = [], notes = [];
 let sel = null;
 let notesMode = false;
-let history = [];
 let timer = 0, tick = null, won = false;
 let errFlags = null;
 let hintedCell = null;
@@ -286,7 +285,7 @@ function newGame(size) {
   const level = $('#difficultySelect').value;
   curLevel = level;
   if (size !== undefined) curSize = size;
-  won = false; hintedCell = null; errFlags = null; history = [];
+  won = false; hintedCell = null; errFlags = null;
   boardEl.style.filter = 'none'; boardEl.style.pointerEvents = 'auto';
   toast('Building a fresh grid…', 'cyan', 700);
   setTimeout(() => {
@@ -417,15 +416,9 @@ function syncNotesBtn() {
 }
 
 /* ---------- input ---------- */
-function pushHistory() {
-  history.push({ e: entries.map(r => r.slice()), n: notes.map(r => r.map(s => new Set(s))) });
-  if (history.length > 120) history.shift();
-}
-
 function input(n) {
   if (!sel || won) return;
   const { r, c } = sel; if (!G.board[r][c]) return;
-  pushHistory();
   hintedCell = null;
   if (notesMode && n !== 0) {
     if (!entries[r][c]) { const set = notes[r][c]; if (set.has(n)) set.delete(n); else set.add(n); }
@@ -469,8 +462,7 @@ function doHint() {
   const target = sel && !entries[sel.r][sel.c] ? sel : null;
   const res = K.hint(G.board, G.clues, G.R, G.C, entries, target);
   if (!res) { toast('Grid is already full.', 'cyan'); return; }
-  if (res.conflict) { toast('Current entries conflict — nothing fits from here. Try Check.', 'coral', 2200); return; }
-  pushHistory();
+  if (res.conflict) { toast('Current entries conflict — nothing fits. Try clearing some cells.', 'coral', 2200); return; }
   entries[res.r][res.c] = res.val; notes[res.r][res.c].clear();
   sel = { r: res.r, c: res.c }; hintedCell = { r: res.r, c: res.c };
   pendingFlash = { r: res.r, c: res.c };
@@ -478,31 +470,17 @@ function doHint() {
   toast('Placed ' + res.val + ' — one cell logic guarantees.', 'cyan', 1400);
 }
 
-function doCheck() {
-  if (won) return;
-  const ev = K.evaluate(G.board, G.clues, G.R, G.C, entries);
-  errFlags = ev.err; render();
-  let count = 0;
-  for (let r = 0; r < G.R; r++) for (let c = 0; c < G.C; c++) if (ev.err[r][c]) count++;
-  if (count === 0 && ev.filled < ev.white) toast('No mistakes so far — ' + (ev.white - ev.filled) + ' cells to go.', 'cyan', 1800);
-  else if (count === 0) toast('Looking good!', 'cyan');
-  else toast(count + ' cell' + (count > 1 ? 's' : '') + ' in conflict (highlighted).', 'coral', 2000);
-}
-
-function doUndo() {
-  if (!history.length) { toast('Nothing to undo.', 'cyan'); return; }
-  const h = history.pop();
-  entries = h.e.map(r => r.slice()); notes = h.n.map(r => r.map(s => new Set(s)));
-  hintedCell = null;
-  if (settings.autocheck) errFlags = K.evaluate(G.board, G.clues, G.R, G.C, entries).err;
-  else errFlags = null;
+function clearEntries() {
+  if (!G || won) return;
+  entries = Array.from({ length: G.R }, () => Array(G.C).fill(0));
+  notes = Array.from({ length: G.R }, () => Array(G.C).fill(null).map(() => new Set()));
+  hintedCell = null; errFlags = null; sel = firstWhite();
   render(); persist();
 }
 
 function eraseCell() {
   if (!sel || won) return;
   const { r, c } = sel; if (!G.board[r][c]) return;
-  pushHistory();
   entries[r][c] = 0; notes[r][c].clear(); hintedCell = null;
   afterChange();
 }
@@ -594,7 +572,7 @@ function restore() {
   timer = s.timer || 0;
   curLevel = s.level || G.level || 'easy';
   curSize = s.size || (G.R - 1);
-  sel = firstWhite(); won = false; errFlags = null; history = [];
+  sel = firstWhite(); won = false; errFlags = null;
   $('#timer').textContent = settings.timer ? formatTime(timer) : '—';
   $('#difficultySelect').value = curLevel;
   syncControls();
@@ -648,7 +626,6 @@ document.addEventListener('keydown', e => {
   else if (e.key === 'n' || e.key === 'N') { notesMode = !notesMode; syncNotesBtn(); renderNumpad(); }
   else if (e.key.startsWith('Arrow') && sel) { moveSel(e.key); e.preventDefault(); }
   else if (e.key === 'h' || e.key === 'H') { doHint(); }
-  else if (e.key === 'u' || e.key === 'U') { doUndo(); }
 });
 
 function moveSel(dir) {
@@ -667,8 +644,7 @@ $('#newGameBtn').addEventListener('click', () => newGame());
 $('#sizeDown').addEventListener('click', () => { if (curSize > 5) newGame(curSize - 1); });
 $('#sizeUp').addEventListener('click', () => { if (curSize < 12) newGame(curSize + 1); });
 $('#hintBtn').addEventListener('click', doHint);
-$('#checkBtn').addEventListener('click', doCheck);
-$('#undoBtn').addEventListener('click', doUndo);
+$('#clearBtn').addEventListener('click', clearEntries);
 $('#eraseBtn').addEventListener('click', eraseCell);
 $('#notesBtn').addEventListener('click', () => { notesMode = !notesMode; syncNotesBtn(); renderNumpad(); });
 $('#settingsBtn').addEventListener('click', openSettings);

@@ -73,13 +73,21 @@ In the new layout "New game" moved to the board-top-bar, Undo moved to the actio
 
 ---
 
+## 8. Undo
+
+**What it did:** Maintained a stack of up to 120 snapshots of `entries` and `notes`. Tapping Undo popped the last snapshot and restored it, letting the player step back one move at a time.
+
+**Old HTML:** `<button class="iconbtn" id="undoBtn">…</button>` (in `.bottombar`)  
+**Old JS:** `history` array, `pushHistory()` called before every `input()` / hint / reveal / erase, `doUndo()` function.
+
+---
+
 ## Notes on What Was Kept
 
 The following kakuro-specific features were **retained** despite having no Sudoku equivalent:
 
-- **Combinations modal** — tap any clue cell to see all valid digit combinations for that run. Accessible via cell tap; no dedicated button required.
-- **Toast notifications** — brief bottom-centre messages for hints, check results, and tips.
+- **Combinations modal** — tap any clue cell to see all valid digit combinations for that run. Accessed by tapping clue cells; no dedicated button required.
+- **Toast notifications** — brief bottom-centre messages for hints and tips.
 - **Illuminate runs** setting — highlights the across/down run of the selected cell.
 - **Dim impossible digits** setting — fades numpad buttons that cannot legally fill the selected cell.
-- **Undo** — moved from the bottom bar icon button to the middle slot of the action row.
-- **Board size stepper** — moved from the controls section into the board-top-bar left side.
+- **Board size stepper** — placed in header-right, where Sudoku shows the lives dots.

@@ -16,6 +16,14 @@
       <div class="label">Time</div>
       <div class="value" id="timer" style="font-variant-numeric:tabular-nums">0:00</div>
     </div>
+    <div class="size-box">
+      <div class="size-label">Size</div>
+      <div class="size-controls">
+        <button id="sizeDown" aria-label="Smaller grid">−</button>
+        <span id="sizeVal">5×5</span>
+        <button id="sizeUp" aria-label="Larger grid">+</button>
+      </div>
+    </div>
     <div class="icon-btn" id="settingsBtn" title="Settings">⚙️</div>
   </div>
 </div>
@@ -28,15 +36,10 @@
       <option value="medium" selected>Medium</option>
       <option value="hard">Hard</option>
     </select>
-    <div class="size-stepper">
-      <button id="sizeDown" aria-label="Smaller grid">−</button>
-      <span id="sizeVal">5×5</span>
-      <button id="sizeUp" aria-label="Larger grid">+</button>
-    </div>
   </div>
   <div class="board-top-right">
     <button class="btn-top" id="hintBtn">💡 Hint</button>
-    <button class="btn-top" id="checkBtn">✓ Check</button>
+    <button class="btn-top danger" id="clearBtn">🗑 Clear</button>
   </div>
 </div>
 
@@ -48,7 +51,6 @@
 
 <div class="action-row">
   <button class="action-btn" id="notesBtn">✏️ Normal</button>
-  <button class="action-btn" id="undoBtn">↩ Undo</button>
   <button class="action-btn danger" id="eraseBtn">✕ Erase</button>
 </div>
 
