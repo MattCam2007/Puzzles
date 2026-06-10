@@ -387,13 +387,18 @@ function endGame(won) {
    SETTINGS → UI
 ═══════════════════════════════════════════ */
 function applySettingsToUI() {
-  // input mode badge
-  const badge = $('#modeBadge');
-  if (cfg.inputMode==='number') {
-    badge.textContent = 'Num First'; badge.classList.add('numfirst');
+  // mode toggle button
+  const modeBtn = $('#modeToggleBtn');
+  if (cfg.inputMode === 'number') {
+    modeBtn.textContent = 'Num First'; modeBtn.classList.add('mode-numfirst');
   } else {
-    badge.textContent = 'Cell First'; badge.classList.remove('numfirst');
+    modeBtn.textContent = 'Cell First'; modeBtn.classList.remove('mode-numfirst');
   }
+
+  // pencil toggle button
+  const pencilBtn = $('#pencilToggleBtn');
+  pencilBtn.textContent = pencilMode ? '🔹 Pencil' : '✏️ Normal';
+  pencilBtn.classList.toggle('active', pencilMode);
 
   // mistakes dots visibility
   const mwrap = $('#mistakesWrap');
@@ -487,6 +492,7 @@ $$('.strike-opt').forEach(opt => {
 /* ═══════════════════════════════════════════
    MAIN BUTTONS
 ═══════════════════════════════════════════ */
+$('#newGameBtn').addEventListener('click', startGame);
 $('#clearBtn').addEventListener('click', clearPuzzle);
 
 function clearPuzzle() {
@@ -506,15 +512,20 @@ $('#overlayBtn').addEventListener('click', startGame);
 $('#eraseBtn').addEventListener('click', eraseCell);
 $('#hintBtn').addEventListener('click', giveHint);
 
-$('#normalBtn').addEventListener('click', () => {
-  pencilMode=false;
-  $('#normalBtn').classList.add('active');
-  $('#pencilBtn').classList.remove('active');
-});
-$('#pencilBtn').addEventListener('click', () => {
-  pencilMode=true;
-  $('#pencilBtn').classList.add('active');
-  $('#normalBtn').classList.remove('active');
+function setPencilMode(on) {
+  pencilMode = on;
+  const btn = $('#pencilToggleBtn');
+  btn.textContent = on ? '🔹 Pencil' : '✏️ Normal';
+  btn.classList.toggle('active', on);
+}
+
+$('#pencilToggleBtn').addEventListener('click', () => setPencilMode(!pencilMode));
+
+$('#modeToggleBtn').addEventListener('click', () => {
+  cfg.inputMode = cfg.inputMode === 'cell' ? 'number' : 'cell';
+  if (cfg.inputMode === 'number') selected = null; else selectedNum = null;
+  saveCfg();
+  syncSettingsUI(); applySettingsToUI(); renderBoard(); renderNumpad();
 });
 
 /* ═══════════════════════════════════════════
@@ -525,9 +536,7 @@ document.addEventListener('keydown', e => {
   if (e.key>='1' && e.key<='9') { handleNumTap(+e.key); return; }
   if (e.key==='Backspace'||e.key==='Delete') { eraseCell(); return; }
   if (e.key==='p'||e.key==='P') {
-    pencilMode=!pencilMode;
-    $('#pencilBtn').classList.toggle('active', pencilMode);
-    $('#normalBtn').classList.toggle('active', !pencilMode);
+    setPencilMode(!pencilMode);
     return;
   }
   // arrow navigation (cell-first only)
