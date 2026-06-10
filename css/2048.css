@@ -26,12 +26,11 @@ body {
 
 .board-top-bar {
   width: 100%; max-width: 420px;
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 12px;
-  gap: 8px;
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: 8px; margin-bottom: 12px;
 }
 .board-top-left  { display: flex; align-items: center; gap: 8px; }
-.board-top-right { display: flex; gap: 8px; }
+.board-top-right { display: flex; gap: 8px; margin-left: auto; }
 
 .btn {
   background: var(--surface); border: 1px solid var(--surface3);
