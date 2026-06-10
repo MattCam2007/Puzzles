@@ -97,7 +97,9 @@ block in `css/2048.css` overriding all 12 of these classes.
 
 ## Architecture
 
-Themes are CSS attribute overrides scoped to `html[data-theme="X"]`:
+Themes are CSS attribute overrides scoped to `html[data-theme="X"]`.
+Galaxy is the default and lives in the bare `:root` block (already there —
+no override block needed for it). All other themes are additive overrides:
 
 ```css
 /* css/theme.css */
@@ -132,7 +134,7 @@ Create this file from scratch. It must:
 
 ```js
 const THEMES = [
-  { id: 'void',     icon: '🌑', label: 'Void'     },
+  { id: 'galaxy',   icon: '🌌', label: 'Galaxy'    },
   { id: 'midnight', icon: '🌊', label: 'Midnight'  },
   { id: 'sakura',   icon: '🌸', label: 'Sakura'    },
   { id: 'terminal', icon: '💻', label: 'Terminal'  },
@@ -145,12 +147,12 @@ function applyTheme(id) {
 }
 
 function loadTheme() {
-  const saved = localStorage.getItem('puzzle-theme') || 'void';
+  const saved = localStorage.getItem('puzzle-theme') || 'galaxy';
   document.documentElement.setAttribute('data-theme', saved);
 }
 
 function syncThemePicker() {
-  const current = document.documentElement.getAttribute('data-theme') || 'void';
+  const current = document.documentElement.getAttribute('data-theme') || 'galaxy';
   document.querySelectorAll('[data-theme-pick]').forEach(row => {
     const active = row.dataset.themePick === current;
     row.classList.toggle('selected', active);
@@ -174,8 +176,8 @@ settings sections.
 ```html
 <div class="settings-section">
   <div class="settings-section-label">Appearance</div>
-  <div class="pick-row" data-theme-pick="void">
-    <span class="pick-icon">🌑</span>Void<span class="pick-check">✓</span>
+  <div class="pick-row" data-theme-pick="galaxy">
+    <span class="pick-icon">🌌</span>Galaxy<span class="pick-check">✓</span>
   </div>
   <div class="pick-row" data-theme-pick="midnight">
     <span class="pick-icon">🌊</span>Midnight<span class="pick-check">✓</span>
@@ -205,7 +207,7 @@ syncThemePicker();
 
 ## The four themes — colour values
 
-### 1. Void (default — already in `:root`, no override block needed)
+### 1. Galaxy (default — already in `:root`, no override block needed)
 
 Dark purple/indigo. Current token values. No CSS change required.
 
