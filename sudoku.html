@@ -28,19 +28,20 @@
   </div>
 </div>
 
-<div class="controls-row">
-  <select class="difficulty-select" id="difficultySelect">
-    <option value="easy">Easy</option>
-    <option value="medium" selected>Medium</option>
-    <option value="hard">Hard</option>
-    <option value="expert">Expert</option>
-  </select>
-  <button class="btn accent" id="newGameBtn">New Game</button>
-</div>
-
 <div class="board-top-bar">
-  <button class="btn-top" id="hintBtn">💡 Hint</button>
-  <button class="btn-top danger" id="clearBtn">🗑 Clear</button>
+  <div class="board-top-left">
+    <select class="difficulty-select" id="difficultySelect">
+      <option value="easy">Easy</option>
+      <option value="medium" selected>Medium</option>
+      <option value="hard">Hard</option>
+      <option value="expert">Expert</option>
+    </select>
+    <button class="btn accent" id="newGameBtn">New Game</button>
+  </div>
+  <div class="board-top-right">
+    <button class="btn-top" id="hintBtn">💡 Hint</button>
+    <button class="btn-top danger" id="clearBtn">🗑 Clear</button>
+  </div>
 </div>
 
 <div class="board-wrap">
