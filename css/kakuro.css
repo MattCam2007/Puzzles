@@ -105,7 +105,9 @@ body {
   width: 100%; height: 100%;
   display: grid;
   /* grid-template-columns / rows set by JS */
-  gap: 2px; background: var(--surface3);
+  gap: 2px;
+  background: var(--surface3);
+  background: color-mix(in srgb, var(--surface3) var(--board-alpha), transparent);
   border: 2px solid var(--surface3);
   border-radius: var(--radius); overflow: hidden;
   box-shadow: 0 18px 50px -12px rgba(0,0,0,.7);
@@ -118,11 +120,15 @@ body {
 }
 
 /* ── BLOCK cells (dead / black) ── */
-.cell.block { background: var(--block); }
+.cell.block {
+  background: var(--block);
+  background: color-mix(in srgb, var(--block) var(--board-alpha), transparent);
+}
 
 /* ── CLUE cells ── */
 .cell.clue {
-  background: var(--clue);
+  background-color: var(--clue);
+  background-color: color-mix(in srgb, var(--clue) var(--board-alpha), transparent);
   background-image: linear-gradient(
     to top right,
     transparent calc(50% - .8px),
@@ -146,7 +152,9 @@ body {
 
 /* ── WHITE (fillable) cells ── */
 .cell.white {
-  background: var(--white); color: var(--white-ink); cursor: pointer;
+  background: var(--white);
+  background: color-mix(in srgb, var(--white) var(--board-alpha), transparent);
+  color: var(--white-ink); cursor: pointer;
 }
 .cell.white .big {
   font-size: calc(var(--cell) * .52); font-weight: 700; line-height: 1;
@@ -312,3 +320,10 @@ body {
 @media (prefers-reduced-motion:reduce) { * { animation: none!important; transition: none!important; } }
 button:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
 .cell.white:focus-visible { outline: 2px solid var(--accent2); outline-offset: -2px; }
+
+html[data-theme="sakura"] {
+  --block:     #e8d0d8;
+  --clue:      #f0dce2;
+  --white:     #fff7f8;
+  --white-ink: #2d1820;
+}

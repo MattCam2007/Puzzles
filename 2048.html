@@ -40,6 +40,42 @@
   <div class="settings-title">Settings</div>
 
   <div class="settings-section">
+    <div class="settings-section-label">Appearance</div>
+    <div class="pick-row" data-theme-pick="galaxy">
+      <span class="pick-icon">🌌</span>Galaxy<span class="pick-check">✓</span>
+    </div>
+    <div class="pick-row" data-theme-pick="midnight">
+      <span class="pick-icon">🌊</span>Midnight<span class="pick-check">✓</span>
+    </div>
+    <div class="pick-row" data-theme-pick="sakura">
+      <span class="pick-icon">🌸</span>Sakura<span class="pick-check">✓</span>
+    </div>
+    <div class="pick-row" data-theme-pick="terminal">
+      <span class="pick-icon">💻</span>Terminal<span class="pick-check">✓</span>
+    </div>
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-name">Board opacity</div>
+      </div>
+      <input type="range" id="boardAlphaSlider" min="0" max="100" value="100" class="settings-slider">
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-label">Background Image</div>
+    <div class="pick-row" id="bgUploadRow">
+      <span class="pick-icon">📁</span>Upload from device<span class="pick-check">✓</span>
+      <input type="file" accept="image/*" id="bgImageFile" style="display:none">
+    </div>
+    <div class="bg-url-row">
+      <input type="text" id="bgImageUrl" class="settings-text-input" placeholder="Paste image URL…">
+    </div>
+    <div class="pick-row" id="clearBgBtn">
+      <span class="pick-icon">✕</span>No background<span class="pick-check">✓</span>
+    </div>
+  </div>
+
+  <div class="settings-section">
     <div class="settings-section-label">Animation Style</div>
     <div id="animPicker"></div>
   </div>
@@ -66,6 +102,7 @@
 </div>
 
 <script src="js/common.js"></script>
+<script src="js/theme.js"></script>
 <script src="js/2048.js"></script>
 </body>
 </html>

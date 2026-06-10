@@ -122,6 +122,7 @@ function selectTileMode(id) {
 }
 
 function openSettings() {
+  syncThemePicker();
   $('#settingsBackdrop').classList.add('show');
   $('#settingsPanel').classList.add('show');
 }

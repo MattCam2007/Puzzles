@@ -91,11 +91,14 @@ body {
 .board {
   width: 100%; height: 100%;
   display: grid; grid-template-columns: repeat(9,1fr); grid-template-rows: repeat(9,1fr);
-  gap: 1px; background: var(--surface3);
+  gap: 1px;
+  background: var(--surface3);
+  background: color-mix(in srgb, var(--surface3) var(--board-alpha), transparent);
   border: 2px solid var(--surface3); border-radius: var(--radius); overflow: hidden;
 }
 .cell {
-  background: var(--bg); display: flex; align-items: center; justify-content: center;
+  background: var(--bg);
+  background: color-mix(in srgb, var(--bg) var(--board-alpha), transparent); display: flex; align-items: center; justify-content: center;
   cursor: pointer; position: relative;
   font-family: 'Space Grotesk', sans-serif;
   font-size: calc(var(--cell) * .52); font-weight: 700; color: var(--text);
@@ -235,4 +238,9 @@ body {
   border: none; color: white; font-family: 'Space Grotesk', sans-serif;
   font-size: 0.95rem; font-weight: 700; padding: 12px 28px;
   border-radius: var(--radius-sm); cursor: pointer; width: 100%;
+}
+
+html[data-theme="sakura"] {
+  --given:  #b06070;
+  --pencil: #e0527a;
 }
