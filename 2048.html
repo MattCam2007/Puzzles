@@ -9,41 +9,45 @@
 </head>
 <body>
 
-<div class="hdr">
-  <div class="title logo">2048</div>
-  <div class="scores">
-    <div class="sbox"><div class="sbox-label">Score</div><div class="sbox-val" id="score">0</div></div>
-    <div class="sbox"><div class="sbox-label">Best</div> <div class="sbox-val" id="best">0</div></div>
+<div class="header">
+  <div class="title">2048</div>
+  <div class="header-right">
+    <div class="score-box"><div class="label">Score</div><div class="value" id="score">0</div></div>
+    <div class="score-box"><div class="label">Best</div> <div class="value" id="best">0</div></div>
+    <button class="icon-btn" id="settingsBtn">⚙️</button>
   </div>
 </div>
 
-<div class="ctrl">
-  <div class="ctrl-left">
-    <div class="anim-wrap">
-      <button class="anim-btn" id="animBtn" onclick="toggleAnimMenu()">
-        <span id="animLabel">✨ Clean</span>
-        <span class="chevron">▾</span>
-      </button>
-      <div class="anim-menu" id="animMenu"></div>
-    </div>
-    <div class="anim-wrap">
-      <button class="anim-btn" id="tileBtn" onclick="toggleTileMenu()">
-        <span id="tileLabel">🔢 Numbers</span>
-        <span class="chevron">▾</span>
-      </button>
-      <div class="anim-menu" id="tileMenu"></div>
-    </div>
+<div class="board-top-bar">
+  <div class="board-top-left">
+    <button class="btn accent" id="newGameBtn" onclick="newGame()">New game</button>
   </div>
-  <div class="btns">
-    <button id="undoBtn" onclick="undo()">↩ Undo</button>
-    <button onclick="newGame()">New game</button>
+  <div class="board-top-right">
+    <button class="btn-top" id="undoBtn" onclick="undo()">↩ Undo</button>
   </div>
 </div>
 
-<div class="wrap">
+<div class="board-wrap">
   <div class="bg-grid" id="bgGrid"></div>
   <div id="tc"></div>
   <canvas id="fx"></canvas>
+</div>
+
+<!-- SETTINGS PANEL -->
+<div class="settings-backdrop" id="settingsBackdrop"></div>
+<div class="settings-panel" id="settingsPanel">
+  <div class="settings-handle"></div>
+  <div class="settings-title">Settings</div>
+
+  <div class="settings-section">
+    <div class="settings-section-label">Animation Style</div>
+    <div id="animPicker"></div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-label">Tile Style</div>
+    <div id="tilePicker"></div>
+  </div>
 </div>
 
 <div class="banner" id="banner">
@@ -52,8 +56,8 @@
     <div class="banner-sub"   id="bannerSub">No moves left</div>
   </div>
   <div class="banner-btns">
-    <button id="keepGoingBtn" onclick="keepGoing()" style="display:none">Keep going</button>
-    <button onclick="newGame()">New game</button>
+    <button class="btn-top" id="keepGoingBtn" onclick="keepGoing()" style="display:none">Keep going</button>
+    <button class="btn accent" onclick="newGame()">New game</button>
   </div>
 </div>
 

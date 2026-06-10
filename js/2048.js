@@ -86,77 +86,53 @@ function tileLabel(val) {
   return mode.render(val);
 }
 
-function buildTileMenu() {
-  const menu = $('#tileMenu');
-  menu.innerHTML = '';
-  for (const m of TILE_MODES) {
+function buildAnimPicker() {
+  const container = $('#animPicker');
+  container.innerHTML = '';
+  for (const a of ANIMS) {
     const d = document.createElement('div');
-    d.className = 'anim-menu-item' + (m.id===currentTileMode?' selected':'');
-    d.innerHTML = `<span class="anim-icon">${m.icon}</span>${m.label}`;
-    d.onclick = () => selectTileMode(m.id);
-    menu.appendChild(d);
+    d.className = 'pick-row' + (a.id === currentAnim ? ' selected' : '');
+    d.innerHTML = `<span class="pick-icon">${a.icon}</span>${a.label}<span class="pick-check">✓</span>`;
+    d.onclick = () => selectAnim(a.id);
+    container.appendChild(d);
   }
 }
 
-function selectTileMode(id) {
-  currentTileMode = id;
-  const m = TILE_MODES.find(x=>x.id===id);
-  $('#tileLabel').textContent = `${m.icon} ${m.label}`;
-  buildTileMenu();
-  closeTileMenu();
-  renderInstant(); // re-render board with new labels
-}
-
-function toggleTileMenu() {
-  const btn  = $('#tileBtn');
-  const menu = $('#tileMenu');
-  // close anim menu if open
-  $('#animBtn').classList.remove('open');
-  $('#animMenu').classList.remove('open');
-  const open = menu.classList.toggle('open');
-  btn.classList.toggle('open', open);
-}
-function closeTileMenu() {
-  $('#tileBtn').classList.remove('open');
-  $('#tileMenu').classList.remove('open');
-}
-
-function buildAnimMenu() {
-  const menu = $('#animMenu');
-  menu.innerHTML = '';
-  for (const a of ANIMS) {
+function buildTilePicker() {
+  const container = $('#tilePicker');
+  container.innerHTML = '';
+  for (const m of TILE_MODES) {
     const d = document.createElement('div');
-    d.className = 'anim-menu-item' + (a.id===currentAnim?' selected':'');
-    d.innerHTML = `<span class="anim-icon">${a.icon}</span>${a.label}`;
-    d.onclick = () => selectAnim(a.id);
-    menu.appendChild(d);
+    d.className = 'pick-row' + (m.id === currentTileMode ? ' selected' : '');
+    d.innerHTML = `<span class="pick-icon">${m.icon}</span>${m.label}<span class="pick-check">✓</span>`;
+    d.onclick = () => selectTileMode(m.id);
+    container.appendChild(d);
   }
 }
 
 function selectAnim(id) {
   currentAnim = id;
-  const a = ANIMS.find(x=>x.id===id);
-  $('#animLabel').textContent = `${a.icon} ${a.label}`;
-  buildAnimMenu();
-  closeAnimMenu();
+  buildAnimPicker();
 }
 
-function toggleAnimMenu() {
-  const btn  = $('#animBtn');
-  const menu = $('#animMenu');
-  // close tile menu if open
-  $('#tileBtn').classList.remove('open');
-  $('#tileMenu').classList.remove('open');
-  const open = menu.classList.toggle('open');
-  btn.classList.toggle('open', open);
+function selectTileMode(id) {
+  currentTileMode = id;
+  buildTilePicker();
+  renderInstant();
 }
-function closeAnimMenu() {
-  $('#animBtn').classList.remove('open');
-  $('#animMenu').classList.remove('open');
+
+function openSettings() {
+  $('#settingsBackdrop').classList.add('show');
+  $('#settingsPanel').classList.add('show');
 }
-document.addEventListener('click', e => {
-  if (!e.target.closest('.anim-wrap')) { closeAnimMenu(); closeTileMenu(); }
-});
+
+function closeSettings() {
+  $('#settingsBackdrop').classList.remove('show');
+  $('#settingsPanel').classList.remove('show');
+}
+
+$('#settingsBtn').addEventListener('click', openSettings);
+$('#settingsBackdrop').addEventListener('click', closeSettings);
 
 // ── Canvas FX layer ──────────────────────────────────────
 const fxCanvas = $('#fx');
@@ -165,7 +141,7 @@ let   fxParticles = [];
 let   fxRaf       = null;
 
 function resizeFxCanvas() {
-  const wrap = $('.wrap');
+  const wrap = $('.board-wrap');
   const r    = wrap.getBoundingClientRect();
   fxCanvas.width  = r.width;
   fxCanvas.height = r.height;
@@ -594,7 +570,6 @@ function buildBg(){
 
 function makeTileEl(id,val,r,c){
   const sz=cellSize(), {x,y}=cellXY(r,c);
-  const [bg,fg]=TILE_COLORS[val]||TILE_COLORS[2048];
   const {text,cls,glow}=tileLabel(val);
 
   // Font size: depends on mode and text length
@@ -606,10 +581,11 @@ function makeTileEl(id,val,r,c){
     fs = len<=2?'2rem': len<=4?'1.6rem': len<=6?'1.1rem':'0.78rem';
   }
 
+  const vClass = TILE_COLORS[val] ? `tile-v${val}` : 'tile-vmax';
   const el=document.createElement('div');
-  el.className='tile' + (cls?' '+cls:'') + (glow?' tile-occult-glow':'');
+  el.className='tile ' + vClass + (cls?' '+cls:'') + (glow?' tile-occult-glow':'');
   el.dataset.tid=id; el.textContent=text;
-  el.style.cssText=`width:${sz}px;height:${sz}px;background:${bg};color:${fg};font-size:${fs};--tx:translate(${x}px,${y}px);transform:translate(${x}px,${y}px);`;
+  el.style.cssText=`width:${sz}px;height:${sz}px;font-size:${fs};--tx:translate(${x}px,${y}px);transform:translate(${x}px,${y}px);`;
   return el;
 }
 
@@ -782,7 +758,7 @@ window.addEventListener('resize',()=>{resizeFxCanvas();renderInstant();});
 //  BOOT
 // ═══════════════════════════════════════════════════════════
 buildBg();
-buildAnimMenu();
-buildTileMenu();
+buildAnimPicker();
+buildTilePicker();
 resizeFxCanvas();
 newGame();
