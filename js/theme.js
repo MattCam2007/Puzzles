@@ -33,6 +33,32 @@ function loadBgImage() {
   if (saved) applyBgImage(saved);
 }
 
+function _readAndApply(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    applyBgImage(e.target.result);
+    const u = document.getElementById('bgImageUrl');
+    if (u) { u.value = ''; u.placeholder = 'Paste image URL…'; }
+    syncThemePicker();
+  };
+  reader.readAsDataURL(file);
+}
+
+async function _pickImageFile() {
+  if (window.showOpenFilePicker) {
+    try {
+      const [handle] = await window.showOpenFilePicker({
+        types: [{ description: 'Images', accept: { 'image/*': ['.jpg','.jpeg','.png','.gif','.webp','.bmp','.avif','.svg'] } }],
+        multiple: false,
+      });
+      _readAndApply(await handle.getFile());
+    } catch(e) { /* AbortError = user cancelled */ }
+  } else {
+    const f = document.getElementById('bgImageFile');
+    if (f) f.click();
+  }
+}
+
 function syncThemePicker() {
   const current = document.documentElement.getAttribute('data-theme') || 'galaxy';
   document.querySelectorAll('[data-theme-pick]').forEach(row => {
@@ -46,7 +72,10 @@ function syncThemePicker() {
   const isUpload = hasBg && saved.startsWith('data:');
 
   const uploadRow = document.getElementById('bgUploadRow');
-  if (uploadRow) uploadRow.classList.toggle('selected', isUpload);
+  if (uploadRow) {
+    uploadRow.classList.toggle('selected', isUpload);
+    uploadRow.onclick = () => _pickImageFile();
+  }
 
   const clearBtn = document.getElementById('clearBgBtn');
   if (clearBtn) {
@@ -66,14 +95,8 @@ function syncThemePicker() {
     fileInput.onchange = () => {
       const file = fileInput.files[0];
       if (!file) return;
-      const reader = new FileReader();
-      reader.onload = e => {
-        applyBgImage(e.target.result);
-        const u = document.getElementById('bgImageUrl');
-        if (u) { u.value = ''; u.placeholder = 'Paste image URL…'; }
-        syncThemePicker();
-      };
-      reader.readAsDataURL(file);
+      _readAndApply(file);
+      fileInput.value = '';
     };
   }
 
