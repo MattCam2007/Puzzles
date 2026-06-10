@@ -1,0 +1,68 @@
+/* ============================================================
+   Puzzle suite — shared theme
+   Design tokens, typography, reset and base layout.
+   Source of truth: the 2048 / Sudoku visual language.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&display=swap');
+
+:root {
+  /* ── surfaces ── */
+  --bg:         #0f0f13;
+  --surface:    #1a1a24;
+  --surface2:   #22222f;
+  --surface3:   #2a2a3a;
+  --cell-empty: #1e1e2a;
+
+  /* ── accents ── */
+  --accent:      #7c6af7;
+  --accent2:     #c084fc;
+  --accent-dim:  rgba(124,106,247,0.18);
+  --accent-dim2: rgba(192,132,252,0.12);
+  --cyan:        #56cfe1;  /* functional secondary (e.g. Kakuro "down" clues) */
+
+  /* ── text ── */
+  --text:       #e8e6f0;
+  --text-muted: #6b6880;
+  --text-dim:   #9b97b8;
+
+  /* ── status ── */
+  --error:   #f87171;
+  --success: #86efac;
+  --warn:    #fbbf24;
+
+  /* ── shape ── */
+  --radius:    10px;
+  --radius-sm: 6px;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html { overscroll-behavior: none; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  user-select: none;
+}
+
+/* Gradient wordmark used by every game header. Games set the size. */
+.title {
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}

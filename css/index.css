@@ -1,0 +1,36 @@
+/* ============================================================
+   Landing page — game picker
+   Built on the shared theme (theme.css).
+   ============================================================ */
+
+body {
+  justify-content: center;
+  padding: 24px 16px;
+  gap: 28px;
+}
+
+.home-head { text-align: center; }
+.home-head .title { font-size: 3rem; }
+.home-head .tagline {
+  margin-top: 6px; font-size: 0.85rem; color: var(--text-muted);
+  letter-spacing: 0.12em; text-transform: uppercase;
+}
+
+.game-list {
+  width: 100%; max-width: 440px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.game-card {
+  display: flex; align-items: center; gap: 16px;
+  background: var(--surface); border: 1px solid var(--surface3);
+  border-radius: var(--radius); padding: 18px 20px;
+  text-decoration: none; color: inherit;
+  transition: border-color 0.15s, transform 0.1s, background 0.15s;
+}
+.game-card:hover { border-color: var(--accent); background: var(--surface2); }
+.game-card:active { transform: scale(0.99); }
+.game-card .emoji { font-size: 2rem; line-height: 1; flex: none; }
+.game-card .meta { display: flex; flex-direction: column; gap: 2px; }
+.game-card .name { font-size: 1.15rem; font-weight: 700; }
+.game-card .desc { font-size: 0.78rem; color: var(--text-muted); }
+.game-card .chevron { margin-left: auto; color: var(--text-dim); font-size: 1.2rem; }
