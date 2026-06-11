@@ -6,6 +6,7 @@ const DEFAULTS = {
   highlight: true,
   sameNum: true,
   highlightPencil: true,
+  erasePencilMarks: true,
   showHints: true,
   showCandidates: true,
   showExcluded: false,
@@ -340,7 +341,7 @@ function placeNumber(r, c, n) {
   } else {
     playerBoard[r][c] = n;
     pencilMarks[r][c].clear();
-    clearAffectedPencilMarks(r, c, n);
+    if (cfg.erasePencilMarks) clearAffectedPencilMarks(r, c, n);
 
     if (cfg.checkMistakes && n !== solution[r][c]) {
       mistakes++;
@@ -443,6 +444,7 @@ function syncSettingsUI() {
   $('#togHighlight').checked = cfg.highlight;
   $('#togSameNum').checked = cfg.sameNum;
   $('#togHighlightPencil').checked = cfg.highlightPencil;
+  $('#togErasePencilMarks').checked = cfg.erasePencilMarks;
   $('#togHints').checked = cfg.showHints;
   $('#togCandidates').checked = cfg.showCandidates;
   $('#togExcluded').checked = cfg.showExcluded;
@@ -488,6 +490,7 @@ function onToggle(id, key, extra) {
 onToggle('togHighlight','highlight');
 onToggle('togSameNum','sameNum');
 onToggle('togHighlightPencil','highlightPencil');
+onToggle('togErasePencilMarks','erasePencilMarks');
 onToggle('togHints','showHints');
 onToggle('togCandidates','showCandidates');
 onToggle('togExcluded','showExcluded');
