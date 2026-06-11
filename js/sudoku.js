@@ -264,7 +264,7 @@ function renderNumpad() {
     btn.appendChild(label);
     const badge = document.createElement('span');
     badge.className = 'count-badge';
-    badge.textContent = remaining>0 ? remaining : '';
+    badge.textContent = counts[n] > 0 ? counts[n] : '';
     btn.appendChild(badge);
     if (counts[n]>=9) btn.classList.add('completed-num');
     btn.addEventListener('pointerdown', () => handleNumTap(n));
