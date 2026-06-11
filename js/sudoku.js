@@ -117,6 +117,21 @@ let seconds = 0;
 let gameOver = false;
 let hintsUsed = 0;
 
+function saveGameState() {
+  pushHistory('sudoku-history', {
+    ts: Date.now(),
+    difficulty: $('#difficultySelect').value,
+    puzzle: puzzle,
+    solution: solution,
+    playerBoard: playerBoard,
+    pencilMarks: pencilMarks.map(row => row.map(s => [...s])),
+    seconds: seconds,
+    mistakes: mistakes,
+    hintsUsed: hintsUsed,
+    gameOver: gameOver,
+  });
+}
+
 function startGame() {
   const diff = $('#difficultySelect').value;
   const data = makePuzzle(diff);
@@ -309,7 +324,7 @@ function placeNumber(r, c, n) {
     if (playerBoard[r][c] !== 0) return;
     const marks = pencilMarks[r][c];
     if (marks.has(n)) marks.delete(n); else marks.add(n);
-    renderBoard(); return;
+    renderBoard(); saveGameState(); return;
   }
 
   // toggle off if same
@@ -324,10 +339,10 @@ function placeNumber(r, c, n) {
       mistakes++;
       updateMistakeDots();
       const lim = cfg.strikeLimit;
-      if (lim > 0 && mistakes >= lim) { endGame(false); return; }
+      if (lim > 0 && mistakes >= lim) { endGame(false); saveGameState(); return; }
     }
   }
-  renderBoard(); renderNumpad(); checkWin();
+  renderBoard(); renderNumpad(); checkWin(); saveGameState();
 }
 
 function clearAffectedPencilMarks(row, col, num) {
@@ -344,7 +359,7 @@ function eraseCell() {
   if (puzzle[r][c] !== 0) return;
   if (pencilMode) pencilMarks[r][c].clear();
   else { playerBoard[r][c]=0; pencilMarks[r][c].clear(); }
-  renderBoard(); renderNumpad();
+  renderBoard(); renderNumpad(); saveGameState();
 }
 
 function giveHint() {
@@ -364,7 +379,7 @@ function giveHint() {
   pencilMarks[r][c].clear();
   clearAffectedPencilMarks(r,c,solution[r][c]);
   hintsUsed++; selected=[r,c];
-  renderBoard(); renderNumpad(); checkWin();
+  renderBoard(); renderNumpad(); checkWin(); saveGameState();
 }
 
 function checkWin() {
@@ -506,6 +521,7 @@ function clearPuzzle() {
   updateMistakeDots();
   renderBoard();
   renderNumpad();
+  saveGameState();
 }
 
 

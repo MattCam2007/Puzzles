@@ -28,6 +28,15 @@ function formatTime(seconds) {
   return m + ':' + String(s).padStart(2, '0');
 }
 
+/* ── history (circular buffer for undo / state replay) ── */
+function pushHistory(key, snapshot, limit) {
+  if (limit === undefined) limit = 20;
+  const history = loadJSON(key, []);
+  history.push(snapshot);
+  if (history.length > limit) history.splice(0, history.length - limit);
+  saveJSON(key, history);
+}
+
 /* ── arrays ── */
 function shuffle(arr) {
   const a = [...arr];

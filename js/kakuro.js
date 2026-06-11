@@ -558,10 +558,12 @@ function showCombos(r, c, dir) {
 /* ---------- persistence ---------- */
 function persist() {
   if (!G || won) return;
-  saveJSON(SAVE, {
+  const state = {
     G: { R: G.R, C: G.C, board: G.board, clues: G.clues, solution: G.solution, level: G.level, seed: G.seed },
-    entries, notes: notes.map(r => r.map(s => [...s])), timer, level: curLevel, size: curSize
-  });
+    entries, notes: notes.map(r => r.map(s => [...s])), timer, level: curLevel, size: curSize,
+  };
+  saveJSON(SAVE, state);
+  pushHistory('kakuro-history', { ts: Date.now(), ...state });
 }
 
 function restore() {

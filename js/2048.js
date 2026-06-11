@@ -655,6 +655,18 @@ function findCellEl(el){
 // ═══════════════════════════════════════════════════════════
 //  GAME LOGIC
 // ═══════════════════════════════════════════════════════════
+function saveHistory() {
+  pushHistory('2048-history', {
+    ts: Date.now(),
+    grid: grid,
+    score: score,
+    best: best,
+    gameWon: gameWon,
+    gameOver: gameOver,
+    wonAcked: [...wonAcked],
+  });
+}
+
 function newGame(){
   uid=0;elMap={};fxParticles=[];
   if(fxRaf){cancelAnimationFrame(fxRaf);fxRaf=null;}
@@ -682,6 +694,7 @@ function doMove(dir){
   animateMove(result.moves,nextGrid,sp,()=>{
     if(!gameWon) checkWin();
     if(!hasMoves()) showOverlay(false);
+    saveHistory();
   });
 }
 
