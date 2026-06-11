@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Theme Builder — Puzzles</title>
+<link rel="stylesheet" href="css/theme.css">
+<link rel="stylesheet" href="css/theme-builder.css">
+</head>
+<body>
+
+<!-- Sticky header -->
+<div class="tb-header">
+  <a href="index.html" class="tb-header-back" title="Back to games">←</a>
+  <div class="title">Theme Builder</div>
+  <button class="icon-btn" id="tbNewBtn" title="Start a new theme" style="flex-shrink:0">+</button>
+</div>
+
+<div class="tb-content">
+
+  <!-- Live preview — swipe / drag to switch games -->
+  <div class="tb-preview" id="tbPreview">
+    <div class="tp-slides" id="tpSlides">
+
+      <!-- Slide 0: 2048 -->
+      <div class="tp-slide tp-wrap">
+        <div class="tp-header">
+          <div class="tp-title">2048</div>
+          <div class="tp-scores">
+            <div class="tp-score">
+              <div class="tp-score-lbl">SCORE</div>
+              <div class="tp-score-val">1024</div>
+            </div>
+            <div class="tp-score">
+              <div class="tp-score-lbl">BEST</div>
+              <div class="tp-score-val">4096</div>
+            </div>
+          </div>
+        </div>
+        <div class="tp-grid">
+          <div class="tp-cell tp-empty"></div>
+          <div class="tp-cell tp-hi">128</div>
+          <div class="tp-cell tp-empty"></div>
+          <div class="tp-cell tp-mid">64</div>
+          <div class="tp-cell tp-lo">16</div>
+          <div class="tp-cell tp-empty"></div>
+          <div class="tp-cell tp-hi">512</div>
+          <div class="tp-cell tp-empty"></div>
+        </div>
+        <div class="tp-btns">
+          <button class="tp-btn-accent">New game</button>
+          <button class="tp-btn-ghost">↩ Undo</button>
+        </div>
+        <div class="tp-texts">
+          <span class="tp-text-primary">Primary</span>
+          <span class="tp-text-muted">Muted</span>
+          <span class="tp-text-dim">Dim text</span>
+        </div>
+      </div>
+
+      <!-- Slides 1 (Sudoku) and 2 (Kakuro) are injected by JS -->
+
+    </div>
+    <div class="tp-dots" id="tpDots">
+      <span class="tp-dot active"></span>
+      <span class="tp-dot"></span>
+      <span class="tp-dot"></span>
+    </div>
+  </div>
+
+  <!-- Theme name + icon -->
+  <div class="tb-name-row">
+    <button class="tb-icon-btn" id="tbIconBtn" type="button" title="Choose icon">🎨</button>
+    <div id="tbIconPopup" class="tb-icon-popup"></div>
+    <input type="text" id="tbThemeName" class="settings-text-input" placeholder="Theme name…" maxlength="32" autocomplete="off">
+    <span class="tb-editing-note" id="tbEditingBadge" style="display:none"></span>
+  </div>
+
+  <!-- Token editors — rendered by JS -->
+  <div id="tbEditors"></div>
+
+  <hr class="tb-divider">
+
+  <!-- Action buttons -->
+  <div class="tb-actions">
+    <button class="tb-btn tb-btn-primary" id="tbSaveBtn">Save Theme</button>
+    <button class="tb-btn" id="tbExportBtn">Export JSON</button>
+    <label class="tb-btn" style="cursor:pointer">
+      Import JSON
+      <input type="file" id="tbImportFile" accept=".json,application/json" style="display:none">
+    </label>
+  </div>
+
+  <hr class="tb-divider">
+
+  <!-- Saved custom themes -->
+  <div class="tb-saved">
+    <div class="tb-section-label">Saved Themes</div>
+    <div id="tbSavedList"></div>
+  </div>
+
+</div>
+
+<script src="js/common.js"></script>
+<script src="js/theme.js"></script>
+<script src="js/theme-builder.js"></script>
+</body>
+</html>
