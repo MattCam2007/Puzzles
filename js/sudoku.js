@@ -8,7 +8,7 @@ const DEFAULTS = {
   highlightPencil: true,
   erasePencilMarks: true,
   showHints: true,
-  showCandidates: true,
+  showCandidates: false,
   showExcluded: false,
   checkMistakes: true,
   showMistakeDots: true,
