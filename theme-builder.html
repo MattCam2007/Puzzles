@@ -18,44 +18,53 @@
 
 <div class="tb-content">
 
-  <!-- Live preview -->
+  <!-- Live preview — swipe / drag to switch games -->
   <div class="tb-preview" id="tbPreview">
-    <div class="tp-wrap">
-      <div class="tp-header">
-        <div class="tp-title">2048</div>
-        <div class="tp-scores">
-          <div class="tp-score">
-            <div class="tp-score-lbl">SCORE</div>
-            <div class="tp-score-val">1024</div>
+    <div class="tp-slides" id="tpSlides">
+
+      <!-- Slide 0: 2048 -->
+      <div class="tp-slide tp-wrap">
+        <div class="tp-header">
+          <div class="tp-title">2048</div>
+          <div class="tp-scores">
+            <div class="tp-score">
+              <div class="tp-score-lbl">SCORE</div>
+              <div class="tp-score-val">1024</div>
+            </div>
+            <div class="tp-score">
+              <div class="tp-score-lbl">BEST</div>
+              <div class="tp-score-val">4096</div>
+            </div>
           </div>
-          <div class="tp-score">
-            <div class="tp-score-lbl">BEST</div>
-            <div class="tp-score-val">4096</div>
-          </div>
+        </div>
+        <div class="tp-grid">
+          <div class="tp-cell tp-empty"></div>
+          <div class="tp-cell tp-hi">128</div>
+          <div class="tp-cell tp-empty"></div>
+          <div class="tp-cell tp-mid">64</div>
+          <div class="tp-cell tp-lo">16</div>
+          <div class="tp-cell tp-empty"></div>
+          <div class="tp-cell tp-hi">512</div>
+          <div class="tp-cell tp-empty"></div>
+        </div>
+        <div class="tp-btns">
+          <button class="tp-btn-accent">New game</button>
+          <button class="tp-btn-ghost">↩ Undo</button>
+        </div>
+        <div class="tp-texts">
+          <span class="tp-text-primary">Primary</span>
+          <span class="tp-text-muted">Muted</span>
+          <span class="tp-text-dim">Dim text</span>
         </div>
       </div>
 
-      <div class="tp-grid">
-        <div class="tp-cell tp-empty"></div>
-        <div class="tp-cell tp-hi">128</div>
-        <div class="tp-cell tp-empty"></div>
-        <div class="tp-cell tp-mid">64</div>
-        <div class="tp-cell tp-lo">16</div>
-        <div class="tp-cell tp-empty"></div>
-        <div class="tp-cell tp-hi">512</div>
-        <div class="tp-cell tp-empty"></div>
-      </div>
+      <!-- Slides 1 (Sudoku) and 2 (Kakuro) are injected by JS -->
 
-      <div class="tp-btns">
-        <button class="tp-btn-accent">New game</button>
-        <button class="tp-btn-ghost">↩ Undo</button>
-      </div>
-
-      <div class="tp-texts">
-        <span class="tp-text-primary">Primary</span>
-        <span class="tp-text-muted">Muted</span>
-        <span class="tp-text-dim">Dim text</span>
-      </div>
+    </div>
+    <div class="tp-dots" id="tpDots">
+      <span class="tp-dot active"></span>
+      <span class="tp-dot"></span>
+      <span class="tp-dot"></span>
     </div>
   </div>
 

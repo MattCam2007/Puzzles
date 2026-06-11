@@ -53,12 +53,49 @@
   padding: 20px 16px 40px;
 }
 
-/* ── live preview ── */
+/* ── live preview + carousel ── */
 .tb-preview {
   border-radius: var(--radius);
   overflow: hidden;
   border: 1.5px solid var(--surface3);
   margin-bottom: 20px;
+  cursor: grab;
+  user-select: none;
+}
+
+.tb-preview:active { cursor: grabbing; }
+
+/* Slide track — translate to switch games */
+.tp-slides {
+  display: flex;
+  will-change: transform;
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tp-slide { min-width: 100%; flex-shrink: 0; }
+
+/* Indicator dots */
+.tp-dots {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 0 5px;
+  background: var(--bg);
+  border-top: 1px solid var(--surface2);
+}
+
+.tp-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--surface3);
+  cursor: pointer;
+  transition: background 0.2s, transform 0.18s;
+}
+
+.tp-dot.active {
+  background: var(--accent2);
+  transform: scale(1.4);
 }
 
 .tp-wrap { background: var(--bg); padding: 12px; }
@@ -490,3 +527,114 @@
 .pick-row-link:last-child { border-bottom: none; }
 .pick-row-link .pick-icon { font-size: 1.1rem; width: 1.5em; text-align: center; }
 .pick-row-link .pick-arrow { margin-left: auto; font-size: 1rem; color: var(--text-muted); }
+
+/* ── Sudoku preview slide ── */
+.tp-sudoku-grid {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 1px;
+  background: var(--surface3);
+  border: 1.5px solid var(--surface3);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.tp-sudoku-cell {
+  background: var(--cell-empty);
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.45rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.tp-sudoku-cell.tp-given    { color: var(--text); font-weight: 800; }
+.tp-sudoku-cell.tp-selected { background: var(--accent-dim); color: var(--accent2); }
+
+/* thicker borders between 3×3 boxes */
+.tp-sudoku-cell.tp-box-left { border-left: 1.5px solid var(--surface3); }
+.tp-sudoku-cell.tp-box-top  { border-top:  1.5px solid var(--surface3); }
+
+.tp-numpad {
+  display: flex;
+  gap: 3px;
+  margin-bottom: 8px;
+}
+
+.tp-numpad-btn {
+  flex: 1;
+  aspect-ratio: 1;
+  background: var(--surface2);
+  border-radius: 3px;
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Kakuro preview slide ── */
+.tp-kakuro-grid {
+  display: grid;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.tp-kakuro-cell {
+  aspect-ratio: 1;
+  border-radius: 2px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tp-kakuro-black  { background: var(--bg); }
+
+.tp-kakuro-answer {
+  background: var(--cell-empty);
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.tp-kakuro-clue {
+  background: var(--surface2);
+  background-image: linear-gradient(
+    to bottom right,
+    transparent calc(50% - 0.6px),
+    var(--surface3) calc(50% - 0.6px),
+    var(--surface3) calc(50% + 0.6px),
+    transparent calc(50% + 0.6px)
+  );
+}
+
+.tp-kakuro-num-down {
+  position: absolute;
+  bottom: 1px;
+  left: 2px;
+  font-size: 0.38rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  line-height: 1;
+  z-index: 1;
+}
+
+.tp-kakuro-num-across {
+  position: absolute;
+  top: 1px;
+  right: 2px;
+  font-size: 0.38rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  line-height: 1;
+  z-index: 1;
+}
+
+/* Kakuro header shows completed cells count */
+.tp-kakuro-stat { font-size: 0.6rem; color: var(--text-muted); font-weight: 600; }
