@@ -5,8 +5,10 @@ const DEFAULTS = {
   inputMode: 'number',    // 'cell' | 'number'
   highlight: true,
   sameNum: true,
+  highlightPencil: true,
+  erasePencilMarks: true,
   showHints: true,
-  showCandidates: true,
+  showCandidates: false,
   showExcluded: false,
   checkMistakes: true,
   showMistakeDots: true,
@@ -197,7 +199,7 @@ function renderBoard() {
 function applyHighlights() {
   const cells = $$('.cell');
   cells.forEach(cell => {
-    cell.classList.remove('selected','numfirst-selected','box-hl','line-hl','same-number','candidate','excluded');
+    cell.classList.remove('selected','numfirst-selected','box-hl','line-hl','same-number','candidate','excluded','pencil-hl');
   });
 
   if (cfg.inputMode === 'cell' && selected) {
@@ -215,6 +217,9 @@ function applyHighlights() {
       if (cfg.sameNum && selVal) {
         const cv = playerBoard[r][c] || puzzle[r][c];
         if (cv===selVal) cell.classList.add('same-number');
+        else if (cfg.highlightPencil && puzzle[r][c]===0 && playerBoard[r][c]===0 && pencilMarks[r][c].has(selVal)) {
+          cell.classList.add('pencil-hl');
+        }
       }
     });
   }
@@ -225,6 +230,9 @@ function applyHighlights() {
       const cv = playerBoard[r][c] || puzzle[r][c];
       // highlight existing placements of this number
       if (cfg.sameNum && cv===selectedNum) cell.classList.add('numfirst-selected');
+      else if (cfg.highlightPencil && puzzle[r][c]===0 && playerBoard[r][c]===0 && pencilMarks[r][c].has(selectedNum)) {
+        cell.classList.add('pencil-hl');
+      }
       // candidate cells: empty, no conflict, not a given
       if (cfg.showCandidates && puzzle[r][c]===0 && playerBoard[r][c]===0 && isLegalPlacement(r, c, selectedNum)) {
         cell.classList.add('candidate');
@@ -256,7 +264,7 @@ function renderNumpad() {
     btn.appendChild(label);
     const badge = document.createElement('span');
     badge.className = 'count-badge';
-    badge.textContent = remaining>0 ? remaining : '';
+    badge.textContent = counts[n] > 0 ? counts[n] : '';
     btn.appendChild(badge);
     if (counts[n]>=9) btn.classList.add('completed-num');
     btn.addEventListener('pointerdown', () => handleNumTap(n));
@@ -333,7 +341,7 @@ function placeNumber(r, c, n) {
   } else {
     playerBoard[r][c] = n;
     pencilMarks[r][c].clear();
-    clearAffectedPencilMarks(r, c, n);
+    if (cfg.erasePencilMarks) clearAffectedPencilMarks(r, c, n);
 
     if (cfg.checkMistakes && n !== solution[r][c]) {
       mistakes++;
@@ -435,6 +443,8 @@ function applySettingsToUI() {
 function syncSettingsUI() {
   $('#togHighlight').checked = cfg.highlight;
   $('#togSameNum').checked = cfg.sameNum;
+  $('#togHighlightPencil').checked = cfg.highlightPencil;
+  $('#togErasePencilMarks').checked = cfg.erasePencilMarks;
   $('#togHints').checked = cfg.showHints;
   $('#togCandidates').checked = cfg.showCandidates;
   $('#togExcluded').checked = cfg.showExcluded;
@@ -479,6 +489,8 @@ function onToggle(id, key, extra) {
 }
 onToggle('togHighlight','highlight');
 onToggle('togSameNum','sameNum');
+onToggle('togHighlightPencil','highlightPencil');
+onToggle('togErasePencilMarks','erasePencilMarks');
 onToggle('togHints','showHints');
 onToggle('togCandidates','showCandidates');
 onToggle('togExcluded','showExcluded');

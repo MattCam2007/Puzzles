@@ -9,12 +9,13 @@
   --block:     #14141c;
   --clue:      #20202c;
   --clue-line: var(--surface3);
-  --white:     #e8e6f0;
-  --white-ink: #17171f;
+  --white:     var(--cell-empty);
+  --white-ink: var(--text);
   --across:    var(--accent2);
   --down:      var(--cyan);
   --coral:     var(--error);
-  --run-glow:  rgba(var(--accent-rgb), .16);
+  --run-glow:      rgba(var(--accent-rgb), .16);
+  --pencil-hl-glow: rgba(var(--accent-rgb), .26);
   --cell:      46px;   /* overridden by JS per grid size */
 }
 
@@ -165,6 +166,9 @@ body {
 .cell.white.run { background: #fff; }
 .cell.white.run::after {
   content: ""; position: absolute; inset: 0; background: var(--run-glow);
+}
+.cell.white.pencil-hl::after {
+  content: ""; position: absolute; inset: 0; background: var(--pencil-hl-glow);
 }
 .cell.white.sel { box-shadow: inset 0 0 0 3px var(--accent); z-index: 3; }
 .cell.white.sel::after {
@@ -322,8 +326,6 @@ button:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
 .cell.white:focus-visible { outline: 2px solid var(--accent2); outline-offset: -2px; }
 
 html[data-theme="sakura"] {
-  --block:     #e8d0d8;
-  --clue:      #f0dce2;
-  --white:     #fff7f8;
-  --white-ink: #2d1820;
+  --block: #e8d0d8;
+  --clue:  #f0dce2;
 }

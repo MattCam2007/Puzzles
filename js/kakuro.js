@@ -270,7 +270,9 @@ let errFlags = null;
 let hintedCell = null;
 let pendingFlash = null;
 
-let settings = loadJSON(SET) || { autocheck: false, runs: true, dimpad: true, timer: true };
+let settings = loadJSON(SET) || { autocheck: false, runs: true, dimpad: true, timer: true, highlightPencil: true, erasePencilMarks: true };
+settings.highlightPencil ??= true;
+settings.erasePencilMarks ??= true;
 
 /* ---------- timer ---------- */
 function startTimer() {
@@ -328,12 +330,18 @@ window.addEventListener('resize', () => { if (G) sizeBoard(); });
 /* ---------- render ---------- */
 function render() {
   boardEl.innerHTML = '';
-  let runSet = new Set();
-  if (sel && settings.runs) {
+  let runSet = new Set(), pencilHlSet = new Set();
+  if (sel && (settings.runs || settings.highlightPencil)) {
     const { H, V } = K.segments(G.board, G.R, G.C);
+    const selVal = entries[sel.r][sel.c];
     for (const s of [...H, ...V]) {
       if (s.some(([r, c]) => r === sel.r && c === sel.c)) {
-        for (const [r, c] of s) runSet.add(r + ',' + c);
+        for (const [r, c] of s) {
+          if (settings.runs) runSet.add(r + ',' + c);
+          if (settings.highlightPencil && selVal && !(r === sel.r && c === sel.c) && notes[r][c].has(selVal)) {
+            pencilHlSet.add(r + ',' + c);
+          }
+        }
       }
     }
   }
@@ -378,6 +386,7 @@ function render() {
           d.appendChild(n);
         }
         if (runSet.has(r + ',' + c)) d.classList.add('run');
+        if (pencilHlSet.has(r + ',' + c)) d.classList.add('pencil-hl');
         if (sel && sel.r === r && sel.c === c) d.classList.add('sel');
         if (errFlags && errFlags[r][c]) d.classList.add('err');
         if (hintedCell && hintedCell.r === r && hintedCell.c === c) d.classList.add('hinted');
@@ -424,7 +433,17 @@ function input(n) {
     if (!entries[r][c]) { const set = notes[r][c]; if (set.has(n)) set.delete(n); else set.add(n); }
   } else {
     if (n === 0) { entries[r][c] = 0; }
-    else { entries[r][c] = n; notes[r][c].clear(); pendingFlash = { r, c }; }
+    else {
+      entries[r][c] = n; notes[r][c].clear(); pendingFlash = { r, c };
+      if (settings.erasePencilMarks) {
+        const { H, V } = K.segments(G.board, G.R, G.C);
+        for (const s of [...H, ...V]) {
+          if (s.some(([sr, sc]) => sr === r && sc === c)) {
+            for (const [sr, sc] of s) { if (sr !== r || sc !== c) notes[sr][sc].delete(n); }
+          }
+        }
+      }
+    }
   }
   afterChange();
 }
@@ -595,6 +614,8 @@ function syncSettingsUI() {
   $('#togRuns').checked = settings.runs;
   $('#togDimpad').checked = settings.dimpad;
   $('#togTimer').checked = settings.timer;
+  $('#togHighlightPencil').checked = settings.highlightPencil;
+  $('#togErasePencilMarks').checked = settings.erasePencilMarks;
 }
 
 function openSettings() {
@@ -662,6 +683,8 @@ onToggle('togAutocheck', 'autocheck', () => {
   render();
 });
 onToggle('togRuns', 'runs', render);
+onToggle('togHighlightPencil', 'highlightPencil', render);
+onToggle('togErasePencilMarks', 'erasePencilMarks');
 onToggle('togDimpad', 'dimpad', renderNumpad);
 onToggle('togTimer', 'timer', () => {
   if (settings.timer) { startTimer(); } else { stopTimer(); $('#timer').textContent = '—'; }
