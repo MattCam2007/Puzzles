@@ -568,6 +568,31 @@ document.addEventListener('keydown', e => {
   }
 });
 
+function restoreSudoku() {
+  const history = loadJSON('sudoku-history', []);
+  if (!history.length) return false;
+  const s = history[history.length - 1];
+  if (!s || !s.puzzle) return false;
+  puzzle = s.puzzle;
+  solution = s.solution;
+  playerBoard = s.playerBoard;
+  pencilMarks = s.pencilMarks.map(row => row.map(a => new Set(a)));
+  seconds = s.seconds || 0;
+  mistakes = s.mistakes || 0;
+  hintsUsed = s.hintsUsed || 0;
+  gameOver = s.gameOver || false;
+  selected = null; selectedNum = null; pencilMode = false;
+  if (s.difficulty) $('#difficultySelect').value = s.difficulty;
+  clearInterval(timerInterval);
+  $('#timer').textContent = formatTime(seconds);
+  if (!gameOver) timerInterval = setInterval(tickTimer, 1000);
+  renderBoard(); renderNumpad();
+  updateMistakeDots();
+  applySettingsToUI();
+  $('#overlay').classList.remove('show');
+  return true;
+}
+
 /* kick off */
 function updateCellSize() {
   const wrap = document.querySelector('.board-wrap');
@@ -578,4 +603,4 @@ function updateCellSize() {
 }
 window.addEventListener('resize', updateCellSize);
 updateCellSize();
-startGame();
+if (!restoreSudoku()) startGame();

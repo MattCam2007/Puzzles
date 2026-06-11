@@ -680,6 +680,25 @@ function newGame(){
   $('#undoBtn').disabled=true;
 }
 
+function restore2048(){
+  const history=loadJSON('2048-history',[]);
+  if(!history.length) return false;
+  const s=history[history.length-1];
+  if(!s||!s.grid) return false;
+  elMap={};fxParticles=[];
+  if(fxRaf){cancelAnimationFrame(fxRaf);fxRaf=null;}
+  fxCtx.clearRect(0,0,fxCanvas.width,fxCanvas.height);
+  grid=s.grid; score=s.score; best=s.best;
+  gameWon=s.gameWon; gameOver=s.gameOver; busy=false;
+  wonAcked=new Set(s.wonAcked||[]);
+  prevGrid=null; prevScore=null;
+  uid=0;
+  for(let r=0;r<N;r++) for(let c=0;c<N;c++) if(grid[r][c]?.id>uid) uid=grid[r][c].id;
+  updateUI(); hideOverlay(); renderInstant();
+  $('#undoBtn').disabled=true;
+  return true;
+}
+
 function doMove(dir){
   if(busy||gameOver) return;
   const result=computeMove(dir); if(!result) return;
@@ -775,4 +794,4 @@ buildBg();
 buildAnimPicker();
 buildTilePicker();
 resizeFxCanvas();
-newGame();
+if(!restore2048()) newGame();
