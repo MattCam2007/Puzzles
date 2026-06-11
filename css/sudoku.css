@@ -98,8 +98,8 @@ body {
   border: 2px solid var(--surface3); border-radius: var(--radius); overflow: hidden;
 }
 .cell {
-  background: var(--bg);
-  background: color-mix(in srgb, var(--bg) var(--board-alpha), transparent); display: flex; align-items: center; justify-content: center;
+  background: var(--cell-empty);
+  background: color-mix(in srgb, var(--cell-empty) var(--board-alpha), transparent); display: flex; align-items: center; justify-content: center;
   cursor: pointer; position: relative;
   font-family: 'Space Grotesk', sans-serif;
   font-size: calc(var(--cell) * .52); font-weight: 700; color: var(--text);
