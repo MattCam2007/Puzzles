@@ -5,6 +5,8 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     environment: 'node',
+    // seeded puzzle generation is CPU-heavy under coverage instrumentation
+    testTimeout: 30000,
     coverage: {
       provider: 'v8',
       // Coverage is a floor for the pure layer, not a goal in itself.

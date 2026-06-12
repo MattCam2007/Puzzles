@@ -22,6 +22,8 @@ const browserGlobals = {
   DOMException: 'readonly',
   Worker: 'readonly',
   matchMedia: 'readonly',
+  File: 'readonly',
+  FileList: 'readonly',
   localStorage: 'readonly',
   location: 'readonly',
   navigator: 'readonly',

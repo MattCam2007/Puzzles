@@ -20,9 +20,7 @@ describe('B4 — restoring a finished game re-shows the overlay', () => {
           puzzle,
           solution: solved,
           playerBoard: puzzle,
-          pencilMarks: Array.from({ length: 9 }, () =>
-            Array.from({ length: 9 }, () => []),
-          ),
+          pencilMarks: Array.from({ length: 9 }, () => Array.from({ length: 9 }, () => [])),
           seconds: 30,
           mistakes: 3,
           hintsUsed: 0,
