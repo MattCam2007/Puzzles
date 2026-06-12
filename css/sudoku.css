@@ -156,21 +156,7 @@ body {
 }
 .pencil-mark.visible { opacity: 1; }
 
-/* ── NUMPAD ── */
-.numpad {
-  width: 100%; max-width: 420px;
-  display: grid; grid-template-columns: repeat(9,1fr);
-  gap: 5px; margin-top: 10px;
-}
-.num-btn {
-  background: var(--surface); border: 1.5px solid var(--surface3);
-  color: var(--text); font-family: 'Space Grotesk', sans-serif;
-  font-size: clamp(0.95rem, 3.8vw, 1.3rem); font-weight: 700;
-  aspect-ratio: 1; border-radius: var(--radius-sm); cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: all 0.12s; position: relative;
-}
-.num-btn:active { transform: scale(0.88); background: var(--surface3); }
+/* ── NUMPAD ── (.numpad/.num-btn base rules live in theme.css) */
 .num-btn.num-selected { background: var(--accent-dim); border-color: var(--accent); color: var(--accent2); }
 .num-btn.completed-num {
   pointer-events: none;
