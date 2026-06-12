@@ -1,0 +1,9 @@
+# Prettier covers the new module/test layer; legacy HTML/CSS keep their
+# hand-tuned formatting (pixel-identical output is the refactor contract).
+*.html
+css/
+node_modules/
+coverage/
+plans/
+*.md
+tests/golden/
