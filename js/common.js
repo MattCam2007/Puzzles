@@ -46,3 +46,21 @@ function shuffle(arr) {
   }
   return a;
 }
+
+/* ── puzzle switcher ── */
+(function() {
+  const btn  = document.getElementById('puzzleSwitcherBtn');
+  const drop = document.getElementById('puzzleDropdown');
+  if (!btn || !drop) return;
+  const page = location.pathname.split('/').pop() || 'index.html';
+  drop.querySelectorAll('.puzzle-option').forEach(function(a) {
+    if (a.getAttribute('href') === page) a.classList.add('current');
+  });
+  btn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    drop.classList.toggle('show');
+  });
+  document.addEventListener('click', function() {
+    drop.classList.remove('show');
+  });
+})();
