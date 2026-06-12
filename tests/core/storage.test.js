@@ -1,12 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import {
-  loadJSON,
-  saveJSON,
-  removeKey,
-  pushHistory,
-  STORAGE_KEYS,
-} from '../../js/core/storage.js';
+import { loadJSON, saveJSON, removeKey, pushHistory, STORAGE_KEYS } from '../../js/core/storage.js';
 
 beforeEach(() => localStorage.clear());
 

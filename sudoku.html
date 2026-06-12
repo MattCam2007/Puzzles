@@ -18,11 +18,7 @@
     </div>
     <div class="mistakes-wrap" id="mistakesWrap">
       <div class="mistakes-label">Lives</div>
-      <div class="mistakes-indicator">
-        <div class="mistake-dot" id="m1"></div>
-        <div class="mistake-dot" id="m2"></div>
-        <div class="mistake-dot" id="m3"></div>
-      </div>
+      <div class="mistakes-indicator" id="mistakesDots"></div>
     </div>
     <div class="puzzle-switcher-wrap">
       <button class="icon-btn puzzle-switcher-btn" id="puzzleSwitcherBtn" title="Switch puzzle">☰</button>
@@ -70,45 +66,8 @@
   <div class="settings-handle"></div>
   <div class="settings-title">Settings</div>
 
-  <div class="settings-section">
-    <div class="settings-section-label">Appearance</div>
-    <div class="pick-row" data-theme-pick="galaxy">
-      <span class="pick-icon">🌌</span>Galaxy<span class="pick-check">✓</span>
-    </div>
-    <div class="pick-row" data-theme-pick="midnight">
-      <span class="pick-icon">🌊</span>Midnight<span class="pick-check">✓</span>
-    </div>
-    <div class="pick-row" data-theme-pick="sakura">
-      <span class="pick-icon">🌸</span>Sakura<span class="pick-check">✓</span>
-    </div>
-    <div class="pick-row" data-theme-pick="terminal">
-      <span class="pick-icon">💻</span>Terminal<span class="pick-check">✓</span>
-    </div>
-    <div id="customThemesList"></div>
-    <a href="theme-builder.html" class="pick-row-link">
-      <span class="pick-icon">🎨</span>Build a theme<span class="pick-arrow">›</span>
-    </a>
-    <div class="setting-row">
-      <div class="setting-info">
-        <div class="setting-name">Board opacity</div>
-      </div>
-      <input type="range" id="boardAlphaSlider" min="0" max="100" value="100" class="settings-slider">
-    </div>
-  </div>
-
-  <div class="settings-section">
-    <div class="settings-section-label">Background Image</div>
-    <div class="pick-row" id="bgUploadRow">
-      <span class="pick-icon">📁</span>Upload from device<span class="pick-check">✓</span>
-      <input type="file" accept="image/*" id="bgImageFile" style="display:none">
-    </div>
-    <div class="bg-url-row">
-      <input type="text" id="bgImageUrl" class="settings-text-input" placeholder="Paste image URL…">
-    </div>
-    <div class="pick-row" id="clearBgBtn">
-      <span class="pick-icon">✕</span>No background<span class="pick-check">✓</span>
-    </div>
-  </div>
+  <!-- Appearance + Background sections injected by ui/shared-sections.js -->
+  <div data-shared-settings></div>
 
   <div class="settings-section">
     <div class="settings-section-label">Input Style</div>
@@ -280,8 +239,6 @@
   </div>
 </div>
 
-<script src="js/common.js"></script>
-<script src="js/theme.js"></script>
-<script src="js/sudoku.js"></script>
+<script type="module" src="js/pages/sudoku.js"></script>
 </body>
 </html>

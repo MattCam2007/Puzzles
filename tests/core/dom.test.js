@@ -25,7 +25,12 @@ describe('$ / $$', () => {
 
 describe('el', () => {
   it('builds an element with props and children', () => {
-    const node = el('div', { className: 'num-btn', dataset: { row: 1 } }, el('span', {}, '5'), 'txt');
+    const node = el(
+      'div',
+      { className: 'num-btn', dataset: { row: 1 } },
+      el('span', {}, '5'),
+      'txt',
+    );
     expect(node.className).toBe('num-btn');
     expect(node.dataset.row).toBe('1');
     expect(node.children[0].tagName).toBe('SPAN');

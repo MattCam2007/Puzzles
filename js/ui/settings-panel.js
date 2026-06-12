@@ -33,7 +33,5 @@ export function bindToggle(id, get, set, after) {
 
 /** True when the event target is a place users type — keyboard handlers must not steal it. */
 export function isTypingTarget(target) {
-  return (
-    target instanceof Element && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)
-  );
+  return target instanceof Element && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
 }

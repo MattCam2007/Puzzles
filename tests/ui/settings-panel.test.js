@@ -45,7 +45,12 @@ describe('bindToggle', () => {
     document.body.innerHTML = '<input type="checkbox" id="tog">';
     const cfg = { flag: true };
     const after = vi.fn();
-    bindToggle('tog', () => cfg.flag, (v) => (cfg.flag = v), after);
+    bindToggle(
+      'tog',
+      () => cfg.flag,
+      (v) => (cfg.flag = v),
+      after,
+    );
     const input = document.getElementById('tog');
     expect(input.checked).toBe(true);
     input.checked = false;

@@ -4,7 +4,12 @@
 
 import { applyTheme } from './theme.js';
 import { loadCustomThemes, escapeHtml } from './custom-themes.js';
-import { applyBgImage, applyBoardAlpha, getSavedBgImage, getSavedBoardAlpha } from './background.js';
+import {
+  applyBgImage,
+  applyBoardAlpha,
+  getSavedBgImage,
+  getSavedBoardAlpha,
+} from './background.js';
 
 function syncBuiltinRows(current) {
   document.querySelectorAll('[data-theme-pick]').forEach((row) => {
@@ -54,7 +59,9 @@ async function pickImageFile() {
         types: [
           {
             description: 'Images',
-            accept: { 'image/*': ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.avif', '.svg'] },
+            accept: {
+              'image/*': ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.avif', '.svg'],
+            },
           },
         ],
         multiple: false,

@@ -41,18 +41,6 @@ const browserGlobals = {
 };
 
 export default [
-  {
-    // Legacy pre-refactor monoliths: deleted when the module switchover lands
-    // (plans/refactor-and-testing.md, Phase 4).
-    ignores: [
-      'js/common.js',
-      'js/theme.js',
-      'js/2048.js',
-      'js/sudoku.js',
-      'js/kakuro.js',
-      'js/theme-builder.js',
-    ],
-  },
   js.configs.recommended,
   {
     files: ['js/**/*.js', 'tests/**/*.js', 'scripts/**/*.mjs'],

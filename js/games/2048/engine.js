@@ -78,7 +78,12 @@ export function computeMove(grid, dir) {
           absorbed: true,
           mergedVal: nv,
         });
-        if (tiles[ti].r !== wr || tiles[ti].c !== wc || tiles[ti + 1].r !== wr || tiles[ti + 1].c !== wc)
+        if (
+          tiles[ti].r !== wr ||
+          tiles[ti].c !== wc ||
+          tiles[ti + 1].r !== wr ||
+          tiles[ti + 1].c !== wc
+        )
           anyMoved = true;
         wi++;
         ti += 2;

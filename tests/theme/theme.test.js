@@ -48,8 +48,12 @@ describe('applyTheme', () => {
       <div class="pick-row" data-theme-pick="galaxy"></div>
       <div class="pick-row" data-theme-pick="terminal"></div>`;
     applyTheme('terminal');
-    expect(document.querySelector('[data-theme-pick="terminal"]').classList.contains('selected')).toBe(true);
-    expect(document.querySelector('[data-theme-pick="galaxy"]').classList.contains('selected')).toBe(false);
+    expect(
+      document.querySelector('[data-theme-pick="terminal"]').classList.contains('selected'),
+    ).toBe(true);
+    expect(
+      document.querySelector('[data-theme-pick="galaxy"]').classList.contains('selected'),
+    ).toBe(false);
   });
 });
 
@@ -66,9 +70,7 @@ describe('loadTheme', () => {
   });
 
   it('re-injects a saved custom theme CSS', () => {
-    saveCustomThemesToStorage([
-      { id: 'custom-7', label: 'C', tokens: { '--bg': '#101010' } },
-    ]);
+    saveCustomThemesToStorage([{ id: 'custom-7', label: 'C', tokens: { '--bg': '#101010' } }]);
     localStorage.setItem('puzzle-theme', 'custom-7');
     loadTheme();
     expect(document.documentElement.getAttribute('data-theme')).toBe('custom-7');

@@ -61,10 +61,19 @@ describe('injectSharedSections', () => {
     const rows = document.querySelectorAll('[data-theme-pick]');
     expect(rows).toHaveLength(THEMES.length);
     expect([...rows].map((r) => r.dataset.themePick)).toEqual(THEMES.map((t) => t.id));
-    for (const id of ['customThemesList', 'boardAlphaSlider', 'bgUploadRow', 'bgImageUrl', 'bgImageFile', 'clearBgBtn']) {
+    for (const id of [
+      'customThemesList',
+      'boardAlphaSlider',
+      'bgUploadRow',
+      'bgImageUrl',
+      'bgImageFile',
+      'clearBgBtn',
+    ]) {
       expect(document.getElementById(id)).not.toBe(null);
     }
-    expect(document.querySelector('.pick-row-link').getAttribute('href')).toBe('theme-builder.html');
+    expect(document.querySelector('.pick-row-link').getAttribute('href')).toBe(
+      'theme-builder.html',
+    );
   });
 
   it('no-ops on pages without the placeholder', () => {

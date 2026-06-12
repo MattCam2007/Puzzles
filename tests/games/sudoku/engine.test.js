@@ -51,9 +51,7 @@ describe('makePuzzle', () => {
 
   it('harder difficulties remove more clues (golden fixtures)', () => {
     const count = (f) => readFixture(f).puzzle.flat().filter(Boolean).length;
-    expect(count('sudoku-easy-seed11.json')).toBeGreaterThan(
-      count('sudoku-expert-seed3.json'),
-    );
+    expect(count('sudoku-easy-seed11.json')).toBeGreaterThan(count('sudoku-expert-seed3.json'));
   });
 
   it('unknown difficulty falls back to the medium clue target', () => {

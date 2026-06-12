@@ -28,9 +28,7 @@ describe('hexToRgb', () => {
 
 describe('escapeHtml', () => {
   it('escapes &, < and >', () => {
-    expect(escapeHtml('<img src=x onerror=alert(1)>')).toBe(
-      '&lt;img src=x onerror=alert(1)&gt;',
-    );
+    expect(escapeHtml('<img src=x onerror=alert(1)>')).toBe('&lt;img src=x onerror=alert(1)&gt;');
     expect(escapeHtml('a & b')).toBe('a &amp; b');
   });
   it('stringifies non-strings', () => {
