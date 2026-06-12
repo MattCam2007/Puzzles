@@ -1,0 +1,292 @@
+{
+ "R": 8,
+ "C": 8,
+ "board": [
+  [
+   false,
+   false,
+   false,
+   false,
+   false,
+   false,
+   false,
+   false
+  ],
+  [
+   false,
+   true,
+   true,
+   false,
+   false,
+   true,
+   true,
+   false
+  ],
+  [
+   false,
+   true,
+   true,
+   true,
+   true,
+   true,
+   true,
+   false
+  ],
+  [
+   false,
+   true,
+   true,
+   true,
+   true,
+   true,
+   true,
+   false
+  ],
+  [
+   false,
+   false,
+   true,
+   true,
+   false,
+   true,
+   true,
+   true
+  ],
+  [
+   false,
+   false,
+   false,
+   true,
+   true,
+   false,
+   true,
+   true
+  ],
+  [
+   false,
+   true,
+   true,
+   true,
+   true,
+   true,
+   true,
+   true
+  ],
+  [
+   false,
+   true,
+   true,
+   false,
+   false,
+   true,
+   true,
+   false
+  ]
+ ],
+ "clues": [
+  [
+   null,
+   {
+    "down": 6
+   },
+   {
+    "down": 11
+   },
+   null,
+   null,
+   {
+    "down": 29
+   },
+   {
+    "down": 42
+   },
+   null
+  ],
+  [
+   {
+    "right": 3
+   },
+   null,
+   null,
+   {
+    "down": 16
+   },
+   {
+    "right": 12,
+    "down": 11
+   },
+   null,
+   null,
+   null
+  ],
+  [
+   {
+    "right": 38
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null
+  ],
+  [
+   {
+    "right": 22
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "down": 24
+   }
+  ],
+  [
+   null,
+   {
+    "right": 7
+   },
+   null,
+   null,
+   {
+    "right": 24,
+    "down": 8
+   },
+   null,
+   null,
+   null
+  ],
+  [
+   null,
+   {
+    "down": 4
+   },
+   {
+    "right": 3,
+    "down": 4
+   },
+   null,
+   null,
+   {
+    "right": 15,
+    "down": 6
+   },
+   null,
+   null
+  ],
+  [
+   {
+    "right": 29
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null
+  ],
+  [
+   {
+    "right": 4
+   },
+   null,
+   null,
+   null,
+   {
+    "right": 4
+   },
+   null,
+   null,
+   null
+  ]
+ ],
+ "solution": [
+  [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  [
+   0,
+   2,
+   1,
+   0,
+   0,
+   7,
+   5,
+   0
+  ],
+  [
+   0,
+   3,
+   5,
+   6,
+   7,
+   9,
+   8,
+   0
+  ],
+  [
+   0,
+   1,
+   2,
+   3,
+   4,
+   5,
+   7,
+   0
+  ],
+  [
+   0,
+   0,
+   3,
+   4,
+   0,
+   8,
+   9,
+   7
+  ],
+  [
+   0,
+   0,
+   0,
+   1,
+   2,
+   0,
+   6,
+   9
+  ],
+  [
+   0,
+   3,
+   1,
+   2,
+   6,
+   5,
+   4,
+   8
+  ],
+  [
+   0,
+   1,
+   3,
+   0,
+   0,
+   1,
+   3,
+   0
+  ]
+ ],
+ "level": "medium",
+ "seed": 1234
+}

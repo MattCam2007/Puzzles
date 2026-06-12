@@ -1,0 +1,182 @@
+{
+ "R": 6,
+ "C": 6,
+ "board": [
+  [
+   false,
+   false,
+   false,
+   false,
+   false,
+   false
+  ],
+  [
+   false,
+   true,
+   true,
+   false,
+   true,
+   true
+  ],
+  [
+   false,
+   true,
+   true,
+   false,
+   true,
+   true
+  ],
+  [
+   false,
+   false,
+   false,
+   true,
+   true,
+   false
+  ],
+  [
+   false,
+   true,
+   true,
+   true,
+   false,
+   false
+  ],
+  [
+   false,
+   true,
+   true,
+   true,
+   false,
+   false
+  ]
+ ],
+ "clues": [
+  [
+   null,
+   {
+    "down": 17
+   },
+   {
+    "down": 16
+   },
+   null,
+   {
+    "down": 24
+   },
+   {
+    "down": 17
+   }
+  ],
+  [
+   {
+    "right": 16
+   },
+   null,
+   null,
+   {
+    "right": 17
+   },
+   null,
+   null
+  ],
+  [
+   {
+    "right": 17
+   },
+   null,
+   null,
+   {
+    "right": 17,
+    "down": 23
+   },
+   null,
+   null
+  ],
+  [
+   null,
+   {
+    "down": 17
+   },
+   {
+    "right": 16,
+    "down": 16
+   },
+   null,
+   null,
+   null
+  ],
+  [
+   {
+    "right": 23
+   },
+   null,
+   null,
+   null,
+   null,
+   null
+  ],
+  [
+   {
+    "right": 24
+   },
+   null,
+   null,
+   null,
+   null,
+   null
+  ]
+ ],
+ "solution": [
+  [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  [
+   0,
+   9,
+   7,
+   0,
+   8,
+   9
+  ],
+  [
+   0,
+   8,
+   9,
+   0,
+   9,
+   8
+  ],
+  [
+   0,
+   0,
+   0,
+   9,
+   7,
+   0
+  ],
+  [
+   0,
+   8,
+   9,
+   6,
+   0,
+   0
+  ],
+  [
+   0,
+   9,
+   7,
+   8,
+   0,
+   0
+  ]
+ ],
+ "level": "easy",
+ "seed": 1234
+}
