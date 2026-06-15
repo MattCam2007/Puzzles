@@ -61,9 +61,12 @@ Minesweeper will mirror **all** of the above 1:1.
 - **Chording**: clicking an already-revealed number whose adjacent flag count
   equals the number reveals all its other neighbours (classic middle-click /
   both-button behaviour). Exposed on touch by tapping a satisfied number.
-- **First-click safety**: classic Windows guarantees the **first revealed cell
-  is never a mine** — mines are placed *after* the first click (relocate the
-  mine if it landed there). Implemented by deferring mine layout to first reveal.
+- **First-click safety**: classic Windows (3.1–Me) guarantees only the **single
+  first-clicked cell** is never a mine — if a mine was placed there it is
+  relocated to the first free cell scanning from the top-left. (WinXP+ widened
+  this to the 3×3 region; we deliberately match the **single-cell** classic
+  behaviour, *not* the neighbour-safe variant, to be "exactly classic.")
+  Implemented by deferring mine layout until the first reveal.
 - **Mine counter**: mines minus flags placed (can go negative, like classic).
 - **Timer**: starts on first reveal, stops on win/lose; classic caps display but
   we'll just use the shared `formatTime`.
@@ -107,10 +110,20 @@ Clone the structure of `sudoku.html` / `kakuro.html`:
 - Scripts: `common.js` → `theme.js` → `minesweeper.js`.
 
 ### 3.2 `css/minesweeper.css`
-Same header used by `theme.css`. Reuse `.header`, `.score-box`,
-`.board-top-bar`, `.btn`, `.btn-top`, `.difficulty-select`, `.overlay*` exactly
-as the other games (these live in `theme.css` + per-game css; Minesweeper's css
-will define the game-specific board/cell classes only). New rules:
+
+> **Correction (verified against the code):** `theme.css` does **not** define
+> `.header`, `.score-box`, `.board-top-bar`, `.btn`, `.btn-top`,
+> `.difficulty-select`, `.board-wrap`, or `.overlay`/`.overlay-card`/`.btn-primary`.
+> Those classes are **duplicated in every game's own CSS** (`sudoku.css`,
+> `2048.css`, `kakuro.css`). Only tokens + the settings-sheet/switcher/pick-row/
+> slider chrome live in `theme.css`. Therefore `minesweeper.css` **must itself
+> include** the full header/stat-box/top-bar/button/select/overlay block —
+> copied from `sudoku.css` (the closest analog, and the only file besides
+> `kakuro.css` that defines `.overlay`; `2048.css` uses `.banner` instead). If
+> this is skipped the page renders unstyled. The "game-specific" rules below are
+> *in addition* to that copied shared block.
+
+Game-specific rules:
 
 - `.board` as a CSS grid driven by `--cols` / `--rows` custom properties set in
   JS; cells fixed by `--cell` size. Because Intermediate/Expert are larger and
@@ -154,9 +167,18 @@ Mirror `sudoku.js` structure and idioms:
    set `--cols`/`--rows`/`--cell`; update cell classes/text on each action
    (re-render touched cells, not the whole board, for Expert perf).
 5. **Interaction**:
-   - `pointerdown`/`click` reveal; `contextmenu` → flag (preventDefault);
-     long-press (timer on `pointerdown`, ~450ms) → flag on touch;
-     `#flagModeBtn` toggles tap-to-flag for touch users.
+   - `pointerdown`/`click` reveal; `contextmenu` → flag — **`preventDefault`
+     scoped to the board element only**, not the document, so the rest of the
+     page keeps its native menu.
+   - Long-press (timer on `pointerdown`, ~450ms) → flag on touch. **The
+     long-press timer must be cancelled on `pointermove` past a small threshold
+     (and on `pointercancel`)** — otherwise dragging to pan the Expert board
+     (which scrolls horizontally) would plant flags. `#flagModeBtn` toggles
+     tap-to-flag for touch users.
+   - **Difficulty `<select>` change → immediately `startGame()`**: unlike the
+     other games (where changing difficulty only takes effect on the next New
+     Game), Minesweeper's board *dimensions* change with level, so the select
+     must rebuild the board at once to stay in sync with what's shown.
    - Tap on a revealed number → `chord` when `cfg.chording`.
    - Keyboard (when `cfg.useKeyboard`): arrows to move a cursor, Space/Enter to
      reveal, `F` to flag — same opt-in pattern as Sudoku.
@@ -174,6 +196,10 @@ Mirror `sudoku.js` structure and idioms:
 11. **Persistence/restore**: `saveGameState()` via
     `pushHistory('minesweeper-history', snapshot)` (store mineSet/flags/revealed
     as arrays); `restoreMinesweeper()` rehydrates Sets; `if (!restoreMinesweeper()) startGame();`.
+    Note: `pushHistory` keeps the last 20 snapshots but restore only ever reads
+    the latest — for Expert (480 cells) that's 20× redundant board copies. Match
+    the existing pattern, but pass an explicit small `limit` (e.g. 2) to
+    `pushHistory` to keep localStorage light.
 12. **Responsive sizing**: `updateCellSize()` on resize (like Sudoku) computing
     `--cell` from `.board-wrap` width ÷ cols with a min, enabling Expert scroll.
 
@@ -217,6 +243,16 @@ flag-mode button.
   face, mine/flag glyphs (💣/🚩/❓), end-game mine reveal + wrong-flag ✗.
 - Mobile-first: long-press + flag-mode toggle for flagging; Expert board pans
   horizontally inside `.board-wrap` rather than shrinking cells to unreadable.
+
+### Intentional deviations from pixel-exact classic (so they read as choices, not bugs)
+
+- **Timer / mine counter** use the app's `.score-box` + `formatTime` (`m:ss`),
+  not the 3-digit LED. The counter still goes negative when over-flagged
+  (e.g. shown as `-1`); the timer is not hard-capped at 999.
+- Reset **face** is an app-styled `.icon-btn`, shown alongside (not instead of)
+  the standard `New Game` button.
+- Mine/flag/question render as 💣 / 🚩 / ❓ glyphs themed via tokens rather than
+  the classic bitmap sprites.
 
 ---
 
