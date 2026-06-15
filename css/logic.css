@@ -129,17 +129,18 @@ body {
 }
 
 /* ── LOGIC GRID (shared cell chrome) ── */
+/* --cell is set on :root by JS (updateCellSize); this is the pre-JS fallback. */
+:root { --cell: 30px; }
 table.logic-grid {
   border-collapse: collapse;
   background: color-mix(in srgb, var(--surface) var(--board-alpha), transparent);
-  --cell: 34px;
 }
 .logic-grid th, .logic-grid td { border: 1px solid var(--surface3); }
 .logic-grid td.cell {
   width: var(--cell); height: var(--cell);
-  min-width: var(--cell);
+  min-width: var(--cell); max-width: var(--cell);
   text-align: center; vertical-align: middle;
-  cursor: pointer; font-size: calc(var(--cell) * 0.46); font-weight: 700;
+  cursor: pointer; font-size: calc(var(--cell) * 0.56); font-weight: 700;
   line-height: 1;
   background: color-mix(in srgb, var(--cell-empty) var(--board-alpha), transparent);
   transition: background 0.08s;
@@ -147,8 +148,8 @@ table.logic-grid {
 }
 .logic-grid td.cell:active { background: color-mix(in srgb, var(--surface3) var(--board-alpha), transparent); }
 .logic-grid td.cell.cell-yes  { color: var(--success); }
-.logic-grid td.cell.cell-no   { color: var(--error); font-size: calc(var(--cell) * 0.4); }
-.logic-grid td.cell.cell-auto { color: var(--text-muted); font-size: calc(var(--cell) * 0.4); }
+.logic-grid td.cell.cell-no   { color: var(--error); font-size: calc(var(--cell) * 0.5); }
+.logic-grid td.cell.cell-auto { color: var(--text-muted); font-size: calc(var(--cell) * 0.5); }
 .logic-grid td.cell.bad { background: color-mix(in srgb, var(--error) 28%, transparent) !important; }
 
 /* category band headers */
@@ -158,22 +159,28 @@ table.logic-grid {
   background: color-mix(in srgb, var(--surface2) var(--board-alpha), transparent);
   text-transform: uppercase;
 }
-/* value column headers — narrow, rotated when tight */
+/* value column headers — narrow, rotated vertical to stay column-width */
 .logic-grid th.val-header {
-  font-size: 0.6rem; font-weight: 600; color: var(--text-dim);
-  padding: 4px 2px; max-width: var(--cell);
+  font-size: 0.58rem; font-weight: 600; color: var(--text-dim);
+  padding: 4px 0; width: var(--cell); max-width: var(--cell);
   background: color-mix(in srgb, var(--surface) var(--board-alpha), transparent);
-  white-space: nowrap; height: 78px; vertical-align: bottom;
+  white-space: nowrap; height: 72px; vertical-align: bottom; overflow: hidden;
 }
 .logic-grid th.val-header span {
   display: inline-block; writing-mode: vertical-rl; transform: rotate(180deg);
-  white-space: nowrap; max-height: 70px; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; max-height: 64px; overflow: hidden; text-overflow: ellipsis;
 }
-/* entity / left row headers */
+/* entity / left row headers — compact so the grid fits narrow screens */
 .logic-grid th.row-header {
-  font-size: 0.7rem; font-weight: 600; color: var(--text);
-  padding: 3px 8px 3px 4px; text-align: right; white-space: nowrap;
+  font-size: 0.64rem; font-weight: 600; color: var(--text);
+  padding: 3px 6px 3px 4px; text-align: right;
+  white-space: nowrap; max-width: 78px; overflow: hidden; text-overflow: ellipsis;
   background: color-mix(in srgb, var(--surface) var(--board-alpha), transparent);
+}
+/* triangular row-category label — vertical to save horizontal space */
+.logic-grid th.rowcat-label {
+  writing-mode: vertical-rl; transform: rotate(180deg);
+  width: 20px; padding: 2px 0; font-size: 0.52rem; letter-spacing: 0.04em;
 }
 .logic-grid th.corner { background: transparent; border: none; }
 /* spacer cells used to build the triangular stair */
@@ -208,4 +215,15 @@ html[data-theme="sakura"] .logic-grid td.cell.cell-no  { color: #c0392b; }
   border: none; color: white; font-family: 'Space Grotesk', sans-serif;
   font-size: 0.95rem; font-weight: 700; padding: 12px 28px;
   border-radius: var(--radius-sm); cursor: pointer; width: 100%;
+}
+
+/* ── MOBILE ── keep clues compact so the board is reachable, and let the
+   board pan horizontally for wide tiers without shrinking cells to mush. */
+@media (max-width: 560px) {
+  body { padding: 12px 8px 24px; }
+  .clues-panel { padding: 8px 10px; }
+  .clue-item { font-size: 0.78rem; padding: 6px 9px; line-height: 1.35; }
+  .clues-list { gap: 4px; max-height: 38vh; overflow-y: auto; }
+  /* scroll hint: a soft fade at the right edge of a pannable board */
+  .board-wrap { position: relative; }
 }
