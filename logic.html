@@ -3,27 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Kakuro</title>
+<title>Logic Grid</title>
 <link rel="stylesheet" href="css/theme.css">
-<link rel="stylesheet" href="css/kakuro.css">
+<link rel="stylesheet" href="css/logic.css">
 <link rel="stylesheet" href="css/theme-builder.css">
 </head>
 <body>
 
 <div class="header">
-  <div class="title">Kakuro</div>
+  <div class="title">Logic Grid</div>
   <div class="header-right">
     <div class="score-box">
       <div class="label">Time</div>
       <div class="value" id="timer" style="font-variant-numeric:tabular-nums">0:00</div>
     </div>
-    <div class="size-box">
-      <div class="size-label">Size</div>
-      <div class="size-controls">
-        <button id="sizeDown" aria-label="Smaller grid">−</button>
-        <span id="sizeVal">5×5</span>
-        <button id="sizeUp" aria-label="Larger grid">+</button>
-      </div>
+    <div class="score-box">
+      <div class="label">Hints</div>
+      <div class="value" id="hintCount" style="font-variant-numeric:tabular-nums">0</div>
+    </div>
+    <div class="score-box">
+      <div class="label">Best</div>
+      <div class="value" id="bestTime" style="font-variant-numeric:tabular-nums">—</div>
     </div>
     <div class="puzzle-switcher-wrap">
       <button class="icon-btn puzzle-switcher-btn" id="puzzleSwitcherBtn" title="Switch puzzle">☰</button>
@@ -46,24 +46,34 @@
       <option value="easy">Easy</option>
       <option value="medium" selected>Medium</option>
       <option value="hard">Hard</option>
+      <option value="expert">Expert</option>
     </select>
   </div>
   <div class="board-top-right">
+    <button class="btn-top" id="checkBtn">👁 Check</button>
+    <button class="btn-top" id="contraBtn">⚠️ Scan</button>
     <button class="btn-top" id="hintBtn">💡 Hint</button>
-    <button class="btn-top danger" id="clearBtn">🗑 Clear</button>
+    <button class="btn-top" id="resetBtn">↺ Reset</button>
   </div>
 </div>
 
-<div class="board-wrap">
-  <div class="board" id="board" aria-label="Kakuro grid"></div>
+<!-- CLUES -->
+<div class="clues-panel" id="cluesPanel">
+  <div class="clues-head">
+    <span class="clues-label">Clues</span>
+    <button class="btn-top" id="filterBtn">Filter</button>
+  </div>
+  <div class="clue-filter" id="clueFilter" style="display:none"></div>
+  <div class="clues-list" id="cluesList"></div>
 </div>
 
-<div class="numpad" id="numpad"></div>
-
-<div class="action-row">
-  <button class="action-btn" id="notesBtn">✏️ Normal</button>
-  <button class="action-btn danger" id="eraseBtn">✕ Erase</button>
+<!-- BOARD -->
+<div class="board-wrap" id="boardWrap">
+  <div id="board" aria-label="Logic grid"></div>
 </div>
+
+<!-- STATUS LINE -->
+<div class="status-line" id="statusLine"></div>
 
 <!-- SETTINGS PANEL -->
 <div class="settings-backdrop" id="settingsBackdrop"></div>
@@ -112,74 +122,65 @@
   </div>
 
   <div class="settings-section">
-    <div class="settings-section-label">Assistance</div>
+    <div class="settings-section-label">Board layout</div>
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-name">Grid style</div>
+        <div class="setting-desc">Entity rows is compact and mobile-friendly. Classic grid is the traditional logic-puzzle matrix — wider, best on a big screen.</div>
+      </div>
+    </div>
+    <div class="seg-control" id="layoutSeg">
+      <button class="seg-btn" data-layout="entity">Entity rows</button>
+      <button class="seg-btn" data-layout="triangular">Classic grid</button>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-label">Assists</div>
 
     <div class="setting-row">
       <div class="setting-info">
-        <div class="setting-name">Auto-check mistakes</div>
-        <div class="setting-desc">Flag duplicate digits and broken sums as you type.</div>
+        <div class="setting-name">Auto-eliminate</div>
+        <div class="setting-desc">When you mark ✓, automatically cross out the cells it rules out.</div>
       </div>
       <label class="toggle">
-        <input type="checkbox" id="togAutocheck">
+        <input type="checkbox" id="togAutoElim" checked>
         <span class="toggle-slider"></span>
       </label>
     </div>
 
     <div class="setting-row">
       <div class="setting-info">
-        <div class="setting-name">Illuminate runs</div>
-        <div class="setting-desc">Light up the across &amp; down runs of the selected cell.</div>
+        <div class="setting-name">Highlight contradictions</div>
+        <div class="setting-desc">Flag squares that conflict with your other marks as you play.</div>
       </div>
       <label class="toggle">
-        <input type="checkbox" id="togRuns" checked>
+        <input type="checkbox" id="togContra" checked>
         <span class="toggle-slider"></span>
       </label>
     </div>
 
     <div class="setting-row">
       <div class="setting-info">
-        <div class="setting-name">Dim impossible digits</div>
-        <div class="setting-desc">Fade pad digits that can't fit the selected cell.</div>
+        <div class="setting-name">Show clue filter</div>
+        <div class="setting-desc">Show pills to filter clues by a single entity.</div>
       </div>
       <label class="toggle">
-        <input type="checkbox" id="togDimpad" checked>
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
-
-    <div class="setting-row">
-      <div class="setting-info">
-        <div class="setting-name">Highlight penciled-in numbers</div>
-        <div class="setting-desc">Tint run cells where the selected cell's number appears as a pencil mark.</div>
-      </div>
-      <label class="toggle">
-        <input type="checkbox" id="togHighlightPencil" checked>
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
-
-    <div class="setting-row">
-      <div class="setting-info">
-        <div class="setting-name">Auto-erase pencil marks</div>
-        <div class="setting-desc">Remove a number's pencil marks from the same run when you place it.</div>
-      </div>
-      <label class="toggle">
-        <input type="checkbox" id="togErasePencilMarks" checked>
+        <input type="checkbox" id="togClueFilter" checked>
         <span class="toggle-slider"></span>
       </label>
     </div>
   </div>
 
   <div class="settings-section">
-    <div class="settings-section-label">Display</div>
-
+    <div class="settings-section-label">Rules</div>
     <div class="setting-row">
       <div class="setting-info">
-        <div class="setting-name">Timer</div>
-        <div class="setting-desc">Show and run the solve clock.</div>
+        <div class="setting-name">Require no wrong marks to win</div>
+        <div class="setting-desc">A stray ✗ is fine, but a wrong ✓ will block the win until you fix it.</div>
       </div>
       <label class="toggle">
-        <input type="checkbox" id="togTimer" checked>
+        <input type="checkbox" id="togNoWrong">
         <span class="toggle-slider"></span>
       </label>
     </div>
@@ -187,30 +188,17 @@
 
 </div>
 
-<!-- COMBINATIONS SHEET -->
-<div class="sheet-bg" id="comboSheet">
-  <div class="sheet combo">
-    <h2 id="comboTitle">Combinations</h2>
-    <div id="comboMeta" class="combo-meta"></div>
-    <div id="comboForced" class="combo-forced"></div>
-    <div id="comboList" class="combo-list"></div>
-    <button class="close" id="closeCombo">Done</button>
-  </div>
-</div>
-
-<!-- WIN/LOSE OVERLAY -->
+<!-- WIN OVERLAY -->
 <div class="overlay" id="overlay">
   <div class="overlay-card">
-    <h2 id="overlayTitle">Grid Solved!</h2>
+    <h2 id="overlayTitle">🎉 Solved!</h2>
     <p id="overlayMsg"></p>
     <button class="btn-primary" id="overlayBtn">Play Again</button>
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
-
 <script src="js/common.js"></script>
 <script src="js/theme.js"></script>
-<script src="js/kakuro.js"></script>
+<script src="js/logic.js"></script>
 </body>
 </html>
