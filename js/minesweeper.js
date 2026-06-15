@@ -7,6 +7,7 @@ const DEFAULTS = {
   safeFirst:     true,
   chording:      true,
   longPressFlag: true,
+  longPressMs:   450,
   useKeyboard:   true,
 };
 
@@ -372,7 +373,6 @@ let longPressTimer = null;
 let longPressFired = false;
 let lastPointerType = 'mouse';
 let pointerStartX = 0, pointerStartY = 0;
-const LONG_PRESS_MS = 450;
 const DRAG_THRESHOLD = 6; // px
 
 function cellIdxFromEvent(e) {
@@ -399,7 +399,7 @@ $('#board').addEventListener('pointerdown', e => {
     longPressTimer = setTimeout(() => {
       longPressFired = true;
       toggleFlag(i);
-    }, LONG_PRESS_MS);
+    }, cfg.longPressMs);
   }
 
   if (e.button === 0 && !gameOver) {
@@ -528,11 +528,25 @@ function onToggle(id, key, extra) {
 onToggle('togQuestion',   'questionMarks');
 onToggle('togSafeFirst',  'safeFirst');
 onToggle('togChord',      'chording');
-onToggle('togLongPress',  'longPressFlag');
+onToggle('togLongPress',  'longPressFlag', applySettingsToUI);
 onToggle('togKeyboard',   'useKeyboard', applySettingsToUI);
+
+/* hold-time-to-flag picker */
+$$('#flagDelayPicker .strike-opt').forEach(opt => {
+  opt.addEventListener('click', () => {
+    cfg.longPressMs = +opt.dataset.val;
+    saveCfg();
+    syncSettingsUI();
+  });
+});
 
 function applySettingsToUI() {
   $('#difficultySelect').value = cfg.difficulty;
+  // hold-time picker is only relevant when long-press flagging is on
+  const dim = cfg.longPressFlag ? '1' : '0.4';
+  $('#flagDelayRow').style.opacity = dim;
+  $('#flagDelayPicker').style.opacity = dim;
+  $('#flagDelayPicker').style.pointerEvents = cfg.longPressFlag ? 'auto' : 'none';
 }
 
 function syncSettingsUI() {
@@ -541,6 +555,9 @@ function syncSettingsUI() {
   $('#togChord').checked     = cfg.chording;
   $('#togLongPress').checked = cfg.longPressFlag;
   $('#togKeyboard').checked  = cfg.useKeyboard;
+  $$('#flagDelayPicker .strike-opt').forEach(opt => {
+    opt.classList.toggle('active', +opt.dataset.val === cfg.longPressMs);
+  });
 }
 
 /* ═══════════════════════════════════════════
