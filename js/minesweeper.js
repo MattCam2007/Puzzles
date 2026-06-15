@@ -363,6 +363,7 @@ function startGame() {
 ═══════════════════════════════════════════ */
 let longPressTimer = null;
 let longPressFired = false;
+let lastPointerType = 'mouse';
 let pointerStartX = 0, pointerStartY = 0;
 const LONG_PRESS_MS = 450;
 const DRAG_THRESHOLD = 6; // px
@@ -378,6 +379,11 @@ $('#board').addEventListener('pointerdown', e => {
   const i = cellIdxFromEvent(e);
   if (i < 0) return;
 
+  // defensively clear any stale timer so one hold can't start two
+  clearTimeout(longPressTimer);
+  longPressTimer = null;
+
+  lastPointerType = e.pointerType;
   pointerStartX = e.clientX;
   pointerStartY = e.clientY;
   longPressFired = false;
@@ -424,10 +430,14 @@ $('#board').addEventListener('click', e => {
   revealCell(i);
 });
 
-// right-click = flag, scoped to board only
+// right-click = flag, scoped to board only.
+// On touch/pen a long press also emits a native contextmenu event; that case is
+// already handled by the long-press timer, so only act on it for the mouse —
+// otherwise one hold would toggle twice and skip a state.
 $('#board').addEventListener('contextmenu', e => {
   e.preventDefault();
   if (gameOver) return;
+  if (lastPointerType !== 'mouse') return; // touch/pen handled by long-press timer
   const i = cellIdxFromEvent(e);
   if (i < 0) return;
   toggleFlag(i);
