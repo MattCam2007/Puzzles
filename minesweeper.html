@@ -3,28 +3,29 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Kakuro</title>
+<title>Minesweeper</title>
 <link rel="stylesheet" href="css/theme.css">
-<link rel="stylesheet" href="css/kakuro.css">
+<link rel="stylesheet" href="css/minesweeper.css">
 <link rel="stylesheet" href="css/theme-builder.css">
 </head>
 <body>
 
 <div class="header">
-  <div class="title">Kakuro</div>
+  <div class="title">Minesweeper</div>
   <div class="header-right">
+    <div class="score-box">
+      <div class="label">Mines</div>
+      <div class="value" id="mineCount" style="font-variant-numeric:tabular-nums">10</div>
+    </div>
     <div class="score-box">
       <div class="label">Time</div>
       <div class="value" id="timer" style="font-variant-numeric:tabular-nums">0:00</div>
     </div>
-    <div class="size-box">
-      <div class="size-label">Size</div>
-      <div class="size-controls">
-        <button id="sizeDown" aria-label="Smaller grid">−</button>
-        <span id="sizeVal">5×5</span>
-        <button id="sizeUp" aria-label="Larger grid">+</button>
-      </div>
+    <div class="score-box">
+      <div class="label">Best</div>
+      <div class="value" id="bestTime" style="font-variant-numeric:tabular-nums">—</div>
     </div>
+    <button class="icon-btn face-btn" id="faceBtn" title="New game">🙂</button>
     <div class="puzzle-switcher-wrap">
       <button class="icon-btn puzzle-switcher-btn" id="puzzleSwitcherBtn" title="Switch puzzle">☰</button>
       <div class="puzzle-dropdown" id="puzzleDropdown">
@@ -42,26 +43,18 @@
   <div class="board-top-left">
     <button class="btn accent" id="newGameBtn">New Game</button>
     <select class="difficulty-select" id="difficultySelect">
-      <option value="easy">Easy</option>
-      <option value="medium" selected>Medium</option>
-      <option value="hard">Hard</option>
+      <option value="beginner">Beginner</option>
+      <option value="intermediate" selected>Intermediate</option>
+      <option value="expert">Expert</option>
     </select>
   </div>
   <div class="board-top-right">
-    <button class="btn-top" id="hintBtn">💡 Hint</button>
-    <button class="btn-top danger" id="clearBtn">🗑 Clear</button>
+    <button class="btn-top" id="flagModeBtn">🚩 Flag</button>
   </div>
 </div>
 
-<div class="board-wrap">
-  <div class="board" id="board" aria-label="Kakuro grid"></div>
-</div>
-
-<div class="numpad" id="numpad"></div>
-
-<div class="action-row">
-  <button class="action-btn" id="notesBtn">✏️ Normal</button>
-  <button class="action-btn danger" id="eraseBtn">✕ Erase</button>
+<div class="board-wrap" id="boardWrap">
+  <div class="board" id="board" aria-label="Minesweeper grid"></div>
 </div>
 
 <!-- SETTINGS PANEL -->
@@ -111,74 +104,62 @@
   </div>
 
   <div class="settings-section">
-    <div class="settings-section-label">Assistance</div>
+    <div class="settings-section-label">Gameplay</div>
 
     <div class="setting-row">
       <div class="setting-info">
-        <div class="setting-name">Auto-check mistakes</div>
-        <div class="setting-desc">Flag duplicate digits and broken sums as you type.</div>
+        <div class="setting-name">Question marks</div>
+        <div class="setting-desc">Cycle covered → 🚩 flag → ❓ question → covered when flagging.</div>
       </div>
       <label class="toggle">
-        <input type="checkbox" id="togAutocheck">
+        <input type="checkbox" id="togQuestion" checked>
         <span class="toggle-slider"></span>
       </label>
     </div>
 
     <div class="setting-row">
       <div class="setting-info">
-        <div class="setting-name">Illuminate runs</div>
-        <div class="setting-desc">Light up the across &amp; down runs of the selected cell.</div>
+        <div class="setting-name">First-click safety</div>
+        <div class="setting-desc">The first cell you reveal is never a mine.</div>
       </div>
       <label class="toggle">
-        <input type="checkbox" id="togRuns" checked>
+        <input type="checkbox" id="togSafeFirst" checked>
         <span class="toggle-slider"></span>
       </label>
     </div>
 
     <div class="setting-row">
       <div class="setting-info">
-        <div class="setting-name">Dim impossible digits</div>
-        <div class="setting-desc">Fade pad digits that can't fit the selected cell.</div>
+        <div class="setting-name">Chording</div>
+        <div class="setting-desc">Tap a revealed number whose adjacent flag count matches it to reveal remaining neighbours.</div>
       </div>
       <label class="toggle">
-        <input type="checkbox" id="togDimpad" checked>
+        <input type="checkbox" id="togChord" checked>
         <span class="toggle-slider"></span>
       </label>
     </div>
 
     <div class="setting-row">
       <div class="setting-info">
-        <div class="setting-name">Highlight penciled-in numbers</div>
-        <div class="setting-desc">Tint run cells where the selected cell's number appears as a pencil mark.</div>
+        <div class="setting-name">Long-press to flag</div>
+        <div class="setting-desc">Hold a covered cell to plant a flag instead of revealing it.</div>
       </div>
       <label class="toggle">
-        <input type="checkbox" id="togHighlightPencil" checked>
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
-
-    <div class="setting-row">
-      <div class="setting-info">
-        <div class="setting-name">Auto-erase pencil marks</div>
-        <div class="setting-desc">Remove a number's pencil marks from the same run when you place it.</div>
-      </div>
-      <label class="toggle">
-        <input type="checkbox" id="togErasePencilMarks" checked>
+        <input type="checkbox" id="togLongPress" checked>
         <span class="toggle-slider"></span>
       </label>
     </div>
   </div>
 
   <div class="settings-section">
-    <div class="settings-section-label">Display</div>
-
+    <div class="settings-section-label">Input</div>
     <div class="setting-row">
       <div class="setting-info">
-        <div class="setting-name">Timer</div>
-        <div class="setting-desc">Show and run the solve clock.</div>
+        <div class="setting-name">Use physical keyboard</div>
+        <div class="setting-desc">Arrow keys to move cursor, Space/Enter to reveal, F to flag.</div>
       </div>
       <label class="toggle">
-        <input type="checkbox" id="togTimer" checked>
+        <input type="checkbox" id="togKeyboard" checked>
         <span class="toggle-slider"></span>
       </label>
     </div>
@@ -186,30 +167,17 @@
 
 </div>
 
-<!-- COMBINATIONS SHEET -->
-<div class="sheet-bg" id="comboSheet">
-  <div class="sheet combo">
-    <h2 id="comboTitle">Combinations</h2>
-    <div id="comboMeta" class="combo-meta"></div>
-    <div id="comboForced" class="combo-forced"></div>
-    <div id="comboList" class="combo-list"></div>
-    <button class="close" id="closeCombo">Done</button>
-  </div>
-</div>
-
 <!-- WIN/LOSE OVERLAY -->
 <div class="overlay" id="overlay">
   <div class="overlay-card">
-    <h2 id="overlayTitle">Grid Solved!</h2>
+    <h2 id="overlayTitle">🎉 Cleared!</h2>
     <p id="overlayMsg"></p>
     <button class="btn-primary" id="overlayBtn">Play Again</button>
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
-
 <script src="js/common.js"></script>
 <script src="js/theme.js"></script>
-<script src="js/kakuro.js"></script>
+<script src="js/minesweeper.js"></script>
 </body>
 </html>
