@@ -1,0 +1,9 @@
+# GitHub Pages (Jekyll) configuration.
+#
+# This repo is a static HTML/CSS/JS app; Jekyll just needs to copy it through.
+# The files under plans/ are internal planning documents (not site pages) and
+# contain code snippets with `{{ ... }}` and TypeScript-style braces that
+# Jekyll's Liquid parser would try to evaluate and error on. Keep them out of
+# the built site.
+exclude:
+  - plans

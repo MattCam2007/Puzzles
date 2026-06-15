@@ -1,0 +1,211 @@
+/* ============================================================
+   Minesweeper — game-specific styles
+   Shared tokens, reset, body base and .title live in theme.css.
+   NOTE: .header, .score-box, .board-top-bar, .btn, .btn-top,
+   .difficulty-select, .board-wrap, .overlay are NOT in theme.css —
+   each game owns its own copy. This file is the Minesweeper copy.
+   ============================================================ */
+
+body {
+  padding: 14px 12px 24px;
+  overflow-x: hidden;
+}
+
+/* ── HEADER ── */
+.header {
+  width: 100%; max-width: 600px;
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.title { font-size: 1.8rem; }
+.header-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.score-box {
+  background: var(--surface); border-radius: var(--radius-sm);
+  padding: 5px 11px; text-align: center; min-width: 48px;
+}
+.score-box .label {
+  font-size: 0.58rem; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 1px;
+}
+.score-box .value { font-size: 0.95rem; font-weight: 700; }
+
+/* ── FACE BUTTON ── */
+.face-btn {
+  font-size: 1.2rem;
+  width: 38px; height: 38px;
+  transition: transform 0.1s;
+}
+.face-btn:active { transform: scale(0.88); }
+
+/* ── DIFFICULTY SELECT ── */
+.difficulty-select {
+  flex: none; background: var(--surface); border: 1px solid var(--surface3);
+  color: var(--text); font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.85rem; font-weight: 600; padding: 8px 28px 8px 10px;
+  border-radius: var(--radius-sm); outline: none; cursor: pointer;
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b6880' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+}
+
+/* ── BUTTONS ── */
+.btn {
+  background: var(--surface); border: 1px solid var(--surface3);
+  color: var(--text); font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.8rem; font-weight: 600; padding: 8px 14px;
+  border-radius: var(--radius-sm); cursor: pointer;
+  transition: background 0.15s; white-space: nowrap;
+}
+.btn:active { background: var(--surface3); }
+.btn.accent { background: var(--accent-dim); border-color: var(--accent); color: var(--accent2); }
+.btn.accent:active { background: rgba(var(--accent-rgb), 0.3); }
+
+/* ── BOARD TOP BAR ── */
+.board-top-bar {
+  width: 100%; max-width: 600px;
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: 8px; margin-bottom: 8px;
+}
+.board-top-left { display: flex; gap: 8px; align-items: center; }
+.board-top-right { display: flex; gap: 6px; align-items: center; margin-left: auto; }
+.btn-top {
+  background: var(--surface); border: 1px solid var(--surface3);
+  color: var(--text-dim); font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.78rem; font-weight: 600; padding: 7px 12px;
+  border-radius: var(--radius-sm); cursor: pointer;
+  transition: background 0.15s; white-space: nowrap;
+}
+.btn-top:active { background: var(--surface3); }
+.btn-top.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent2); }
+
+/* ── BOARD WRAP ── */
+.board-wrap {
+  width: 100%; max-width: 600px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── BOARD GRID ── */
+.board {
+  display: inline-grid;
+  grid-template-columns: repeat(var(--cols, 9), var(--cell, 32px));
+  grid-template-rows:    repeat(var(--rows, 9), var(--cell, 32px));
+  gap: 2px;
+  background: color-mix(in srgb, var(--surface3) var(--board-alpha), transparent);
+  border: 2px solid var(--surface3); border-radius: var(--radius); overflow: hidden;
+  touch-action: pan-x pan-y;
+}
+
+/* ── CELLS ── */
+.cell {
+  width: var(--cell, 32px); height: var(--cell, 32px);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; position: relative; overflow: hidden;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: calc(var(--cell, 32px) * 0.5); font-weight: 800;
+  line-height: 1; transition: background 0.08s;
+  -webkit-user-select: none; user-select: none;
+}
+
+/* covered: raised look */
+.cell.covered {
+  background: color-mix(in srgb, var(--surface2) var(--board-alpha), transparent);
+  border-right:  2px solid color-mix(in srgb, var(--surface3) var(--board-alpha), transparent);
+  border-bottom: 2px solid color-mix(in srgb, var(--surface3) var(--board-alpha), transparent);
+  border-left:   2px solid color-mix(in srgb, var(--surface) var(--board-alpha), transparent);
+  border-top:    2px solid color-mix(in srgb, var(--surface) var(--board-alpha), transparent);
+}
+.cell.covered:active {
+  border-color: color-mix(in srgb, var(--surface3) var(--board-alpha), transparent);
+}
+
+/* keyboard cursor */
+.cell.cursor {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  z-index: 1;
+}
+
+/* revealed: flat */
+.cell.revealed {
+  background: color-mix(in srgb, var(--cell-empty) var(--board-alpha), transparent);
+  border: none;
+  cursor: default;
+}
+
+/* flag / question */
+.cell.flag   { font-size: calc(var(--cell, 32px) * 0.52); }
+.cell.question { font-size: calc(var(--cell, 32px) * 0.52); color: var(--warn); }
+
+/* mine on loss */
+.cell.mine { background: color-mix(in srgb, var(--surface3) var(--board-alpha), transparent); }
+.cell.exploded { background: color-mix(in srgb, var(--error) var(--board-alpha), transparent) !important; }
+.cell.wrong-flag { color: var(--error); }
+
+/* number colours — classic palette adapted for all themes */
+.cell.n1 { color: #4d9ef7; }   /* blue */
+.cell.n2 { color: #4dbb75; }   /* green */
+.cell.n3 { color: #f87171; }   /* red */
+.cell.n4 { color: #9b7cf8; }   /* navy → purple in dark themes */
+.cell.n5 { color: #fb923c; }   /* maroon → orange */
+.cell.n6 { color: #22d3ee; }   /* teal → cyan */
+.cell.n7 { color: var(--text); } /* black/white → readable text */
+.cell.n8 { color: var(--text-muted); } /* grey */
+
+/* sakura theme: lighter numbers for legibility on the light bg */
+html[data-theme="sakura"] .cell.n1 { color: #1d6fd8; }
+html[data-theme="sakura"] .cell.n2 { color: #1a7a48; }
+html[data-theme="sakura"] .cell.n3 { color: #c0392b; }
+html[data-theme="sakura"] .cell.n4 { color: #6d28d9; }
+html[data-theme="sakura"] .cell.n5 { color: #c2410c; }
+html[data-theme="sakura"] .cell.n6 { color: #0e7490; }
+html[data-theme="sakura"] .cell.n7 { color: #1e1e1e; }
+html[data-theme="sakura"] .cell.n8 { color: #6b7280; }
+
+/* ── LOSS BANNER (non-covering) ── */
+.banner {
+  width: 100%; max-width: 600px;
+  margin-top: 12px; background: var(--surface);
+  border: 1px solid var(--surface3);
+  border-radius: var(--radius); padding: 14px 18px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  opacity: 0; pointer-events: none;
+  transform: translateY(6px);
+  transition: opacity .25s, transform .25s;
+}
+.banner.show { opacity: 1; pointer-events: all; transform: translateY(0); }
+.banner-left  { display: flex; flex-direction: column; gap: 2px; }
+.banner-title {
+  font-size: 1.2rem; font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.banner-sub  { font-size: .8rem; color: var(--text-muted); }
+.banner-btns { display: flex; gap: 8px; flex-shrink: 0; }
+
+/* ── OVERLAY ── */
+.overlay {
+  position: fixed; inset: 0; background: rgba(15,15,19,0.9);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100; backdrop-filter: blur(4px);
+  opacity: 0; pointer-events: none; transition: opacity 0.3s;
+}
+.overlay.show { opacity: 1; pointer-events: all; }
+.overlay-card {
+  background: var(--surface); border: 1px solid #3d3a5a;
+  border-radius: 16px; padding: 32px 28px; text-align: center;
+  max-width: 300px; width: 90%;
+}
+.overlay-card h2 {
+  font-size: 1.8rem; font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text; margin-bottom: 8px;
+}
+.overlay-card p { color: var(--text-dim); font-size: 0.88rem; margin-bottom: 24px; line-height: 1.55; }
+.overlay-card .btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border: none; color: white; font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.95rem; font-weight: 700; padding: 12px 28px;
+  border-radius: var(--radius-sm); cursor: pointer; width: 100%;
+}
