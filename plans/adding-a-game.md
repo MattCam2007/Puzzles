@@ -16,7 +16,7 @@ Puzzles/
 ├── <game>.html             ← your new game
 ├── css/
 │   ├── theme.css           ← shared design tokens + settings chrome
-│   ├── theme-builder.css   ← shared pick-row-link, pick-arrow, toast styles
+│   ├── theme-builder.css   ← shared pick-row-link, pick-arrow styles
 │   ├── index.css           ← home page styles only
 │   └── <game>.css          ← your new game (owns layout classes too — see §3)
 └── js/
@@ -54,7 +54,10 @@ What `theme.css` *does* provide:
 
 What `theme-builder.css` provides (must be the third `<link>` in `<head>`):
 - `.pick-row-link`, `.pick-arrow` — the "Build a theme ›" link row in settings
-- `.toast` — if you ever need toast notifications
+
+Toast notifications are **not** a shared style — only `kakuro.css` defines
+`.toast` (lines 309–321). Copy it from there into your game's CSS if you
+need it.
 
 ---
 
@@ -243,8 +246,14 @@ as named or the shared JS will silently no-op:
 
 ## 4. `css/<game>.css` — the shared layout block
 
-**Copy this block verbatim** from `sudoku.css` or `kakuro.css` into your
-game's CSS first. These classes are NOT in `theme.css`.
+**Copy this block** into your game's CSS first (it's adapted from `sudoku.css`
+/ `kakuro.css`), then add your game-specific rules below. These classes are
+NOT in `theme.css`. One intentional change from the existing files: the
+`.btn.accent:active` rule below uses the theme token
+`rgba(var(--accent-rgb), 0.3)` so it recolors per theme — `sudoku.css`,
+`kakuro.css` and `2048.css` hardcode `rgba(124,106,247,0.3)` there, which only
+looks right on the default Galaxy theme. Either works; the token form is
+preferred for new games (`minesweeper.css` already uses it).
 
 ```css
 /* ── HEADER ── */
@@ -635,9 +644,11 @@ Add a `.game-card` entry inside `<nav class="game-list">`:
 
 ## 9. Wire into every existing game page
 
-Add one line to the `#puzzleDropdown` in **every** game page, including your
-own. Current pages to update: `index.html` (home card), `2048.html`,
-`sudoku.html`, `kakuro.html`, `minesweeper.html`, and your new page.
+Add one line to the `#puzzleDropdown` in **every** game page that has one,
+including your own. `index.html` does **not** have a dropdown — it uses game
+cards instead (covered in §8), so don't look for one there. Pages with a
+`#puzzleDropdown` to update: `2048.html`, `sudoku.html`, `kakuro.html`,
+`minesweeper.html`, and your new page.
 
 ```html
 <a href="mygame.html" class="puzzle-option">🎯 My Game</a>
@@ -829,11 +840,17 @@ Apply the same fix to every cell/surface colour inside the board.
 Same issue as above — use `color-mix` with `--board-alpha` on board surfaces
 so they become transparent when the slider is turned down.
 
-**Q: Restore on page reload doesn't work.**
-`restoreMyGame()` must return `false` (not `undefined`) when there's nothing
-to restore. Check that your sanity check on the loaded snapshot explicitly
-`return false`. Also confirm `saveGameState()` is called after every state
-change (after each move, flag, timer tick where you want to capture).
+**Q: Restore on page reload doesn't work (the game always starts fresh).**
+The kick-off line is `if (!restoreMyGame()) startGame();`, so `restoreMyGame()`
+needs to return a truthy value when it successfully restores and a falsy value
+(`false` or `undefined` both work) when it bails. Usual causes:
+- `saveGameState()` is never called after moves, so there's no snapshot to
+  load. Call it after every state change you want to be resumable.
+- Your sanity check rejects valid snapshots — the fields you test
+  (`if (!s || !s.<field>) return false;`) must actually be present in what
+  `saveGameState()` wrote.
+- A bail path accidentally returns a truthy value, so a fresh page is treated
+  as a successful restore and you see a blank/half-built board.
 
 **Q: Settings changes don't persist after reload.**
 You forgot `saveCfg()` inside a toggle handler, or you mutated `cfg` directly
@@ -865,6 +882,6 @@ In `theme-builder.css` — the third `<link>` tag in `<head>`. If the "Build a
 theme ›" row is unstyled, check that `theme-builder.css` is linked.
 
 **Q: Where does `.toast` live?**
-Also `theme-builder.css`. The `kakuro.css` has its own toast implementation
-in addition; if you need toast-style notifications, copy the CSS from
-`kakuro.css` lines 309–321.
+Only in `kakuro.css` (lines 309–321). It is **not** a shared style — it's not
+in `theme.css` or `theme-builder.css`. If you need toast-style notifications,
+copy that CSS into your game's CSS.
