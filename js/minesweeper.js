@@ -34,6 +34,7 @@ let flagCount, revealedCount;
 let seconds, timerInterval;
 let cursor = null;    // [r,c] keyboard cursor
 let flagMode = false; // tap-to-flag toggle
+let explodedIdx = -1; // index of the mine that was struck (for red highlight)
 
 /* ═══════════════════════════════════════════
    ENGINE
@@ -202,6 +203,7 @@ function checkWin() {
 function endGame(won, explodeIdx) {
   gameOver = true;
   win = won;
+  explodedIdx = explodeIdx;
   clearInterval(timerInterval);
 
   if (!won) {
@@ -212,7 +214,7 @@ function endGame(won, explodeIdx) {
     }
   }
 
-  renderBoard();
+  renderBoard(explodeIdx);
   updateHUD();
 
   const face = $('#faceBtn');
@@ -230,12 +232,15 @@ function endGame(won, explodeIdx) {
     const improved = !prev || seconds <= prev;
     $('#overlayTitle').textContent = '🎉 Cleared!';
     $('#overlayMsg').textContent = `Solved in ${ts}${improved && prev ? ' — new best!' : '. Best: ' + formatTime(newBest)}`;
+    // win: celebratory full overlay is fine
+    setTimeout(() => $('#overlay').classList.add('show'), 400);
   } else {
-    $('#overlayTitle').textContent = '💥 Boom!';
-    $('#overlayMsg').textContent = `You hit a mine after ${ts}. Try again!`;
+    // loss: show a non-covering banner so the board stays visible to study.
+    // The board is already deactivated (gameOver guards all input).
+    $('#bannerSub').textContent = `You hit a mine after ${ts}. The mine you struck is in red — study the board, then start again.`;
+    $('#banner').classList.add('show');
   }
 
-  setTimeout(() => $('#overlay').classList.add('show'), 400);
   saveGameState();
 }
 
@@ -338,6 +343,7 @@ function startGame() {
   flagCount = 0; revealedCount = 0;
   firstClickDone = false;
   gameOver = false; win = false;
+  explodedIdx = -1;
   seconds = 0;
   cursor = null;
   clearInterval(timerInterval);
@@ -355,6 +361,7 @@ function startGame() {
   $('#timer').textContent = '0:00';
   $('#faceBtn').textContent = '🙂';
   $('#overlay').classList.remove('show');
+  $('#banner').classList.remove('show');
   applySettingsToUI();
 }
 
@@ -486,6 +493,7 @@ $('#flagModeBtn').addEventListener('click', () => {
 $('#newGameBtn').addEventListener('click', startGame);
 $('#faceBtn').addEventListener('click', startGame);
 $('#overlayBtn').addEventListener('click', startGame);
+$('#bannerBtn').addEventListener('click', startGame);
 
 $('#difficultySelect').addEventListener('change', () => {
   cfg.difficulty = $('#difficultySelect').value;
@@ -547,7 +555,7 @@ function saveGameState() {
     cellState:      [...cellState],
     flagCount, revealedCount,
     firstClickDone,
-    gameOver, win,
+    gameOver, win, explodedIdx,
     seconds,
   }, 2);
 }
@@ -568,16 +576,22 @@ function restoreMinesweeper() {
   firstClickDone = s.firstClickDone;
   gameOver  = s.gameOver;
   win       = s.win;
+  explodedIdx = s.explodedIdx ?? -1;
   seconds   = s.seconds || 0;
   cursor    = null;
 
   $('#difficultySelect').value = cfg.difficulty;
   updateCellSize();
-  renderBoard();
+  renderBoard(explodedIdx);
   updateHUD();
   $('#faceBtn').textContent = win ? '😎' : gameOver ? '😵' : '🙂';
   if (!gameOver && firstClickDone) startTimer();
-  if (gameOver) setTimeout(() => $('#overlay').classList.add('show'), 100);
+  if (gameOver && win) {
+    setTimeout(() => $('#overlay').classList.add('show'), 100);
+  } else if (gameOver && !win) {
+    $('#bannerSub').textContent = `You hit a mine after ${formatTime(seconds)}. The mine you struck is in red — study the board, then start again.`;
+    $('#banner').classList.add('show');
+  }
   applySettingsToUI();
   return true;
 }

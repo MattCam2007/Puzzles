@@ -162,6 +162,27 @@ html[data-theme="sakura"] .cell.n6 { color: #0e7490; }
 html[data-theme="sakura"] .cell.n7 { color: #1e1e1e; }
 html[data-theme="sakura"] .cell.n8 { color: #6b7280; }
 
+/* ── LOSS BANNER (non-covering) ── */
+.banner {
+  width: 100%; max-width: 600px;
+  margin-top: 12px; background: var(--surface);
+  border: 1px solid var(--surface3);
+  border-radius: var(--radius); padding: 14px 18px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  opacity: 0; pointer-events: none;
+  transform: translateY(6px);
+  transition: opacity .25s, transform .25s;
+}
+.banner.show { opacity: 1; pointer-events: all; transform: translateY(0); }
+.banner-left  { display: flex; flex-direction: column; gap: 2px; }
+.banner-title {
+  font-size: 1.2rem; font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.banner-sub  { font-size: .8rem; color: var(--text-muted); }
+.banner-btns { display: flex; gap: 8px; flex-shrink: 0; }
+
 /* ── OVERLAY ── */
 .overlay {
   position: fixed; inset: 0; background: rgba(15,15,19,0.9);
