@@ -78,10 +78,16 @@ is owned by exactly one entity (a perfect matching per category). The player is
 given a set of **clues** and must deduce the full assignment with **no
 guessing** — the clue set is generated to force a single solution.
 
-- **Solving surface**: an elimination grid. Rows = the N entities. Columns =
-  every `(category, value)` pair, grouped under a category header (the POC's
-  layout — entity-row grid, *not* the classic NxN triangular grid, because it
-  is far more mobile-friendly inside the 420px column).
+- **Solving surface**: an elimination grid, in one of **two user-selectable
+  layouts** (a Settings option — see §3.5 and §6.2):
+  - **Entity-row grid** (default, mobile-first): rows = the N entities; columns
+    = every `(category, value)` pair grouped under a category header (the POC's
+    layout). Compact inside the 420px column.
+  - **Classic triangular grid** (desktop-friendly): the traditional logic-grid
+    matrix that pairs **every** category against every other in a stepped
+    half-matrix. More cells, wider, but the canonical experience.
+  Both are backed by the **same engine and the same cell model** — only
+  rendering and hit-testing differ. The setting is persisted in `cfg`.
 - **Cell cycling**: tap a cell to cycle **blank → ✓ → ✗ → blank** (POC states
   `0/1/2`). A fourth state, **auto-eliminated** `·` (POC state `3`), is written
   by the assist logic, not by the user, and is skipped by the manual cycle.
@@ -160,6 +166,14 @@ the pool, e.g. `{name:'Decade', ordinal:true, values:[...]}` (Decade, Season,
 and any added Age/Floor/Rank category). Hard/Expert generation **guarantees at
 least one ordinal category is picked** so a comparative clue is always possible.
 
+### 3.5 Board layout is orthogonal to difficulty
+The **board layout** (entity-row vs. classic triangular, §2/§6.2) is a *separate
+user preference*, not a difficulty lever — any tier is playable in either
+layout. It changes presentation only; the engine, clues, solver and win check
+are identical. Defaulting to entity-row keeps the first run mobile-friendly;
+players who prefer the canonical matrix (e.g. on PC) flip it in Settings and the
+choice persists in `cfg.boardLayout`.
+
 ---
 
 ## 4. Files to create
@@ -201,9 +215,16 @@ Clone the structure of `sudoku.html`:
    overlay-card/btn-primary). Without it the page is unstyled (see
    `adding-a-game.md` §4 / FAQ).
 2. Game-specific rules:
-   - `.logic-grid` table: `border-collapse`, category header bands
-     (`.cat-header`), value column headers (rotated/clamped text for width),
-     entity row headers (`.row-header`).
+   - `.logic-grid` table (**entity-row layout**): `border-collapse`, category
+     header bands (`.cat-header`), value column headers (rotated/clamped text for
+     width), entity row headers (`.row-header`).
+   - `.logic-grid.triangular` (**classic layout**): the stepped half-matrix —
+     left/top category+value headers, a staircase of category blocks where each
+     block omits the cells above the diagonal. Implement the stair via per-block
+     `colspan` on the header row plus empty spacer cells, with rotated value
+     labels along the top (a `writing-mode: vertical-rl` / `rotate` rule). It
+     reuses the same `.cell-yes/.cell-no/.cell-auto` cell classes; only the table
+     scaffold differs. This is the widest view → always `overflow:auto` + pan.
    - Cell states reskinned to tokens (POC used hardcoded greens/reds):
      - `.cell-yes` → `var(--success)` ✓, bold
      - `.cell-no`  → `var(--error)` ✗
@@ -226,9 +247,10 @@ Clone the structure of `sudoku.html`:
 Mirror `sudoku.js` / `minesweeper.js` structure and idioms. Port the POC's pure
 functions, rename for clarity, and wrap them in the shared lifecycle.
 
-1. **`DEFAULTS` + `cfg`**: `difficulty:'easy'`, `autoElim:true`,
-   `showClueFilter:true`, `highlightContradictions:true`,
-   `requireNoWrong:false`. `loadJSON('logic-cfg', {})` + `saveCfg()`.
+1. **`DEFAULTS` + `cfg`**: `difficulty:'easy'`, `boardLayout:'entity'`
+   (`'entity'` | `'triangular'`), `autoElim:true`, `showClueFilter:true`,
+   `highlightContradictions:true`, `requireNoWrong:false`.
+   `loadJSON('logic-cfg', {})` + `saveCfg()`.
 2. **Presets**: `const LEVELS = { easy:{items:4,cats:3,palette:'easy'},
    medium:{items:4,cats:4,palette:'balanced'}, hard:{items:5,cats:4,palette:'hard'},
    expert:{items:5,cats:5,palette:'expert'} }` where `palette` drives clue mix.
@@ -258,8 +280,15 @@ functions, rename for clarity, and wrap them in the shared lifecycle.
      ordinal category for hard/expert), build, **retry with a bounded attempt
      count** (POC recurses unbounded — add a cap, e.g. 40 attempts, then relax
      the palette as a fallback so generation always terminates).
-5. **Rendering**: `renderClues()` (filter pills + list, POC), `renderGrid()`
-   (entity-row table, POC), `renderAll()`. Set `--cell`/`--cols` before render.
+5. **Rendering**: `renderClues()` (filter pills + list, POC) and a
+   **layout-dispatched** grid renderer — `renderGrid()` calls
+   `renderEntityGrid()` (POC entity-row table) or `renderTriangularGrid()`
+   based on `cfg.boardLayout`. Both write into `#board`, set `--cols`/`--cell`,
+   and emit cells that share the **same `(entity?,catA,valA[,catB,valB])`
+   addressing** so the cell-cycle/auto-elim handlers are layout-agnostic
+   (see §5.5). `renderAll()` ties clues + grid together. Changing the layout
+   setting re-renders in place **without** regenerating the puzzle or resetting
+   marks (the cell model is shared).
 6. **Interaction**:
    - Tap cell → `cycleCell` (POC) honoring `cfg.autoElim`; re-render the touched
      cells (not the whole grid) for the 25-column Expert board.
@@ -278,15 +307,19 @@ functions, rename for clarity, and wrap them in the shared lifecycle.
    (title "🎉 Solved!", msg with time, best, and hints used), `show` overlay.
    `#overlayBtn` → `startGame()`.
 9. **Settings → UI**: `openSettings()` calls `syncThemePicker()`;
-   `syncSettingsUI()` + `onToggle(...)` per toggle; `applySettingsToUI()` toggles
-   the clue-filter row visibility and re-applies auto-elim.
+   `syncSettingsUI()` + `onToggle(...)` per toggle; the **board-layout segmented
+   control** sets `cfg.boardLayout`, `saveCfg()`, then `renderGrid()` (no
+   regeneration); `applySettingsToUI()` toggles clue-filter row visibility and
+   re-applies auto-elim.
 10. **Persist/restore**: `saveGameState()` via `pushHistory('logic-history',
     snapshot, 2)` — the snapshot **must include the whole generated puzzle**
     (entities, categories, solution, clues) plus the current grid marks, hint
     count and elapsed seconds, because puzzles are procedural and cannot be
     regenerated from a seed (unless seeded RNG is added — out of scope, noted in
-    §8). `restoreLogic()` rehydrates and re-renders; `if (!restoreLogic())
-    startGame();` at the bottom.
+    §8). The `marks` store (§5.5) is serialized as the grid state. The **layout
+    is NOT in the snapshot** — it lives in `cfg.boardLayout`, so a resumed game
+    renders in whatever layout the player currently prefers. `restoreLogic()`
+    rehydrates and re-renders; `if (!restoreLogic()) startGame();` at the bottom.
 
 ---
 
@@ -323,6 +356,31 @@ step (e.g. allow one positive clue on Expert) rather than recursing forever.
 Log nothing to the user — it just yields a slightly easier board in the rare
 worst case.
 
+### 5.5 One cell model, two layouts (enables the layout toggle)
+To let the layout setting flip freely without losing marks, the user's grid
+state lives in a **single layout-independent store of pairwise marks**, not the
+POC's `grid[entity][category][value]`.
+
+- **Canonical store**: `marks` keyed by an unordered pair of `(category,value)`
+  cells → one of `blank | yes | no | auto`, symmetric (`A↔B` is one entry; store
+  with a canonical key order). "yes" means *the same entity owns both values*.
+- **Entity-row layout** renders only the pairs where one side is the **anchor
+  (name) category** — i.e. entity × attribute. This is exactly the POC's
+  surface, so the POC's `grid[entity][cat][val]` is just the projection
+  `marks[(Name,entity)][(cat,val)]`.
+- **Triangular layout** renders the pairs for **every** category combination,
+  including attribute × attribute — the extra cells the entity-row view hides.
+- **Auto-elim, contradiction-finding, Check and win** all operate on the
+  canonical `marks` (and on the solution), so they are written **once** and work
+  in both layouts. Auto-elim's transitivity (if `A=B` yes and `B=C` yes then
+  `A=C` yes; if `A=B` yes then `A=X` no for siblings X) is naturally expressed
+  on the pairwise store and shows up correctly in whichever layout is visible.
+- **Win check** stays "every entity has its correct value" — read off the
+  anchor-vs-attribute projection regardless of layout.
+
+This refactor of the POC's data shape is the main engine change the layout
+toggle requires; it is otherwise a pure win (auto-elim becomes more capable).
+
 ---
 
 ## 6. Styling / UX / layout decisions to match the app
@@ -335,32 +393,48 @@ worst case.
   so they recolor under all four built-in themes **and** custom themes, and
   respect board opacity + background image via `color-mix`.
 
-### 6.1 Wide-board handling (20 / 25 columns)
+### 6.1 Wide-board handling + the two layouts
 - `.header` and `.board-top-bar` keep `max-width:420px`.
 - `.board-wrap` gets `overflow-x:auto`; the grid renders at its natural width.
 - JS `updateCellSize()` computes `--cell` from `min(availWidth/cols, 34px)`
   clamped to a **min ~26px** so headers stay legible; below that the board pans
-  horizontally (Expert), centered on desktop — same approach as Expert
-  Minesweeper (`adding-a-game.md` §4 "Adjusting max-width").
-- Value column headers use small, clamped, optionally rotated text to keep
-  columns narrow.
+  horizontally, centered on desktop — same approach as Expert Minesweeper
+  (`adding-a-game.md` §4 "Adjusting max-width").
+- **Entity-row** layout: cols = `C × N` (12 → 25 across the tiers); fits at Easy/
+  Medium, pans at Hard/Expert.
+- **Triangular** layout: always wider (every category pair) → expects to pan even
+  on Medium; this is why it's offered as a *choice* and defaults off on mobile.
+  On PC the extra width is comfortable and the matrix is the canonical view.
+- Value headers use small, clamped, rotated text to keep columns narrow.
 
-### 6.2 Clues panel
+### 6.2 Board-layout toggle (the new setting)
+- A *Layout* control in Settings switches `cfg.boardLayout` between
+  **Entity rows** and **Classic grid**. Best as a **segmented control**
+  (`.seg-control` / `.seg-btn`, already in `theme.css`) — two clear options.
+- Flipping it calls `renderGrid()` only — **no regeneration, no lost marks**
+  (shared cell model, §5.5). Default `'entity'` (mobile-first); the user's pick
+  persists across games and reloads via `cfg`.
+- Optional nicety: also expose it as a tiny top-bar toggle button for quick
+  flips on PC; not required for v1.
+
+### 6.3 Clues panel
 - Sits above the board (clues are the puzzle; the grid is scratch space).
 - Filter-by-entity pills shown only when `cfg.showClueFilter` and N ≥ 4.
 - Highlighting a clue tints it; "used" strike-through is a player aid only (no
   effect on logic).
 
-### 6.3 Game-specific settings sections
+### 6.4 Game-specific settings sections
+- *Layout*: **Board layout** segmented control (Entity rows / Classic grid) →
+  `cfg.boardLayout` (§6.2).
 - *Assists*: **Auto-eliminate** (`#togAutoElim`), **Highlight contradictions
   live** (`#togContra`), **Show clue filter** (`#togClueFilter`).
 - *Rules*: **Require no wrong marks to win** (`#togNoWrong`) — when on, stray ✗
   are fine but a wrong ✓ blocks the win (stricter solve).
 - Difficulty lives in the top-bar select (not settings), matching Minesweeper.
 
-### 6.4 Intentional deviations (so they read as choices, not bugs)
-- Entity-row grid instead of the classic triangular NxN logic grid — chosen for
-  mobile width; the deduction content is identical.
+### 6.5 Intentional deviations (so they read as choices, not bugs)
+- Two board layouts offered, defaulting to the mobile-friendly entity-row grid;
+  both are logically identical, so the choice is pure presentation.
 - No lose state / no strikes — logic puzzles are not lost, only assisted.
 - Timer/Best use the app's `.score-box` + `formatTime` (`m:ss`).
 
@@ -395,7 +469,9 @@ worst case.
   instead of the whole puzzle, and enable "daily" puzzles. Noted, not built.
 - **Either/or and conditional clue types** — a natural Expert+ extension once
   comparative clues land.
-- **Classic triangular grid view** as an optional layout for tablets/desktop.
+
+(The classic triangular grid is **in scope** as a selectable layout — §3.5,
+§6.2 — not deferred.)
 
 ---
 
@@ -410,8 +486,12 @@ No build system (static HTML/JS/CSS opened directly). Verify by:
   pills, Check / Contradictions / Hint, hint counter, reset, win overlay, best-
   time persistence, and **restore after reload** (whole puzzle + marks resume).
 - Difficulty select rebuilds the board immediately.
-- Easy/Medium fit the 420px width; Hard/Expert pan horizontally; layout holds on
-  a narrow mobile viewport.
+- **Board-layout toggle**: switch Entity rows ↔ Classic grid mid-game — marks,
+  clues, hints and timer all survive (no regeneration); both layouts agree on
+  ✓/✗ for the same logical state; the choice persists across reload and games.
+- Entity-row: Easy/Medium fit the 420px width, Hard/Expert pan horizontally.
+  Classic grid pans as needed and is comfortable on PC; layout holds on a narrow
+  mobile viewport.
 - Cycle all four themes + a custom theme + background image + opacity slider on
   the grid and clue list; confirm ✓/✗ stay legible on **sakura** (light).
 - Switch among all five games via dropdown and home grid; current-page
