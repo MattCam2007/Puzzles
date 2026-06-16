@@ -50,7 +50,7 @@ const LOGIC_PACKS = {
     premise:
       "The Grand Tournament of Thornmere draws champions from across the Five Kingdoms every decade. This year's field is thin on legends and heavy on personality: Aldric, whose tournament record is legend (according to Aldric); Seraphine, who has been here three days and already knows more about this tournament than the organizers; Bramble, who definitely has a good reason for being here; Vex, who is not responsible for the stable fire (probably); and Lyria, who has already written the victory song. Five competitors. Five kingdoms. One trophy — and the small matter of who burned down the stables.",
 
-    question: 'Who is sponsored by the Thieves?',
+    question: 'The stable fire was no accident. Someone here answers to the Thieves — and knowing who they sponsor will tell you who set it. Can you figure out who came from where, what they fight with, and who is really pulling their strings?',
   },
 
   /* ── HIGH FANTASY: THE FALLEN GUILD ── */
@@ -87,7 +87,7 @@ const LOGIC_PACKS = {
     premise:
       "The Adventurers' Guild of Ironhaven has a problem: the Vault of Relics was full on Tuesday and empty Monday morning. The Guildmaster has locked down the tower — nobody leaves until the missing relics are found. Five members were in the building that night: Orin, Thessaly, Greymantle, Cinder, and Wren. Each one has a perfectly reasonable explanation for why it wasn't them. Figure out who lives where, what role they hold in the guild, and which relic they were last seen near.",
 
-    question: 'Who was the last one near the vault?',
+    question: "The vault had no forced entry. Whoever took the relics knew the lock — and knew which floor to avoid. Match everyone to their role, their familiar, and what they were last seen carrying. The answer is already in the grid.",
   },
 
 };

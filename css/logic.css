@@ -87,6 +87,12 @@ body {
 }
 .story-premise {
   font-size: 0.82rem; line-height: 1.52; color: var(--text-dim);
+  margin-bottom: 8px;
+}
+.story-question {
+  font-size: 0.83rem; font-weight: 700; color: var(--accent2);
+  padding: 7px 10px; border-radius: var(--radius-sm);
+  background: var(--accent-dim); border: 1px solid var(--accent);
 }
 .cast-list { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; }
 .cast-item {
