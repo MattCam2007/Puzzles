@@ -85,7 +85,7 @@ const LOGIC_PACKS = {
     ],
 
     premise:
-      "The Adventurers' Guild of Ironhaven has a problem: the Vault of Relics was full on Tuesday and empty Monday morning. The Guildmaster has locked down the tower — nobody leaves until the missing relics are found. Five members were in the building that night: Orin, Thessaly, Greymantle, Cinder, and Wren. Each one has a perfectly reasonable explanation for why it wasn't them. Figure out who lives where, what role they hold in the guild, and which relic they were last seen near.",
+      "The Adventurers' Guild of Ironhaven has a problem: the Vault of Relics was full on Monday night and stood empty by Tuesday morning. The Guildmaster has locked down the tower — nobody leaves until the missing relics are found. Five members were in the building that night: Orin, Thessaly, Greymantle, Cinder, and Wren. Each one has a perfectly reasonable explanation for why it wasn't them. Figure out who lives where, what role they hold in the guild, and which relic they were last seen near.",
 
     question: "The vault had no forced entry. Whoever took the relics knew the lock — and knew which floor to avoid. Match everyone to their role, their familiar, and what they were last seen carrying. The answer is already in the grid.",
   },
