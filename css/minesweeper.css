@@ -140,7 +140,23 @@ body {
 /* mine on loss */
 .cell.mine { background: color-mix(in srgb, var(--surface3) var(--board-alpha), transparent); }
 .cell.exploded { background: color-mix(in srgb, var(--error) var(--board-alpha), transparent) !important; }
-.cell.wrong-flag { color: var(--error); }
+/* wrong flag on loss — a flag placed where there was no mine.
+   `color` alone can't recolour the 🚩 emoji glyph (notably on Android),
+   so mark it unmistakably with a red tint + an ✗ struck over the flag. */
+.cell.wrong-flag {
+  color: var(--error);
+  background: color-mix(in srgb, var(--error) calc(var(--board-alpha) * 0.45), transparent);
+}
+.cell.wrong-flag::after {
+  content: '✕';
+  position: absolute;
+  inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--error);
+  font-size: calc(var(--cell, 32px) * 0.8);
+  font-weight: 900;
+  pointer-events: none;
+}
 
 /* number colours — classic palette adapted for all themes */
 .cell.n1 { color: #4d9ef7; }   /* blue */
