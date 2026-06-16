@@ -70,6 +70,33 @@ body {
 .btn-top:active { background: var(--surface3); }
 .btn-top.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent2); }
 
+/* ── STORY PANEL ── */
+.story-panel {
+  width: 100%; max-width: 640px;
+  background: color-mix(in srgb, var(--surface) var(--board-alpha), transparent);
+  border: 1px solid var(--surface3); border-radius: var(--radius);
+  padding: 10px 12px; margin-bottom: 12px;
+}
+.story-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 6px;
+}
+.story-label {
+  font-size: 0.65rem; font-weight: 700; color: var(--accent2);
+  text-transform: uppercase; letter-spacing: 1px;
+}
+.story-premise {
+  font-size: 0.82rem; line-height: 1.52; color: var(--text-dim);
+}
+.cast-list { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; }
+.cast-item {
+  font-size: 0.8rem; line-height: 1.4;
+  padding: 7px 10px; border-radius: var(--radius-sm);
+  border: 1px solid var(--surface3); background: var(--surface2);
+  color: var(--text-dim);
+}
+.cast-name { font-weight: 700; color: var(--text); }
+
 /* ── CLUES PANEL ── */
 .clues-panel {
   width: 100%; max-width: 640px;
@@ -221,6 +248,9 @@ html[data-theme="sakura"] .logic-grid td.cell.cell-no  { color: #c0392b; }
    board pan horizontally for wide tiers without shrinking cells to mush. */
 @media (max-width: 560px) {
   body { padding: 12px 8px 24px; }
+  .story-panel { padding: 8px 10px; }
+  .story-premise { font-size: 0.78rem; }
+  .cast-item { font-size: 0.76rem; padding: 6px 8px; }
   .clues-panel { padding: 8px 10px; }
   .clue-item { font-size: 0.78rem; padding: 6px 9px; line-height: 1.35; }
   .clues-list { gap: 4px; max-height: 38vh; overflow-y: auto; }

@@ -57,6 +57,16 @@
   </div>
 </div>
 
+<!-- STORY PANEL (shown only when a story pack is active) -->
+<div class="story-panel" id="storyPanel" style="display:none">
+  <div class="story-head">
+    <span class="story-label">Story</span>
+    <button class="btn-top" id="castBtn">Cast</button>
+  </div>
+  <p class="story-premise" id="storyPremise"></p>
+  <div class="cast-list" id="castList" style="display:none"></div>
+</div>
+
 <!-- CLUES -->
 <div class="clues-panel" id="cluesPanel">
   <div class="clues-head">
@@ -119,6 +129,11 @@
     <div class="pick-row" id="clearBgBtn">
       <span class="pick-icon">✕</span>No background<span class="pick-check">✓</span>
     </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-label">Story Pack</div>
+    <div id="packPickerList"></div>
   </div>
 
   <div class="settings-section">
@@ -199,6 +214,7 @@
 
 <script src="js/common.js"></script>
 <script src="js/theme.js"></script>
+<script src="js/logic-packs.js"></script>
 <script src="js/logic.js"></script>
 </body>
 </html>
