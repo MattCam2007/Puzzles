@@ -1,9 +1,19 @@
 /* ═══════════════════════════════════════════
    Logic Grid — Story Packs
-   A theme groups related packs. Each pack provides a self-contained
-   narrative scenario: a cast, themed categories (≥5 values each,
-   ordinal category last), a premise, character sketches, and the
+   A theme groups related packs and holds the shared flavor banks that
+   drive per-game variation. Each pack provides a self-contained
+   scenario: a cast, themed categories (≥5 values each, ordinal last),
+   one or more premise framings, base character sketches, and the
    "tell" that identifies the culprit.
+
+   VARIATION
+   At generation time the engine picks one premise framing at random and
+   draws a distinct "aside" for each cast member from the theme's bank,
+   so the prose reads differently every game. Those choices are baked
+   into the puzzle (and saved), so they stay stable across re-renders
+   and reloads. Asides are character-agnostic by design — they read
+   sensibly attached to anyone and never reference a category value, so
+   they can't spoil the randomly-assigned solution.
 
    WHODUNIT CONTRACT
    Each pack names a culprit by a single { category, value } tell —
@@ -12,13 +22,36 @@
    "who did it." The tell's category MUST sit within the first three
    categories so it is always present, even at Easy (which uses only
    the first three). On a win the verdict names the guilty party.
-
-   Sketches describe personality only — never the specific category
-   values, so they don't spoil the randomly-assigned solution.
 ═══════════════════════════════════════════ */
 
 const LOGIC_THEMES = {
-  'high-fantasy': { id: 'high-fantasy', name: 'High Fantasy', icon: '⚔️' },
+  'high-fantasy': {
+    id: 'high-fantasy',
+    name: 'High Fantasy',
+    icon: '⚔️',
+    /* Generic gossip beats — dry, character-agnostic, no category tells.
+       One distinct line is appended to each cast member's sketch per game. */
+    asides: [
+      'Rumor at the tavern is they cheat at dice — cheerfully, and badly.',
+      'Has not stopped reading the omens since the moon turned red.',
+      'Arrived owing money in at least two kingdoms.',
+      'Swears the old prophecy is about them. The prophecy is vague.',
+      'Travels with a ferret that nobody has agreed to acknowledge.',
+      'Was last seen arguing, at length, with a horse.',
+      'Claims to have died once. Will not elaborate.',
+      'Keeps a grudge the way other people keep gardens.',
+      'Insists the ale here is cursed. Drinks it anyway.',
+      'Has a tattoo they refuse to explain and cannot quite cover.',
+      'Brought a sword for luck and a second sword for the first sword.',
+      'Tells the same heroic story every night with a different ending.',
+      'Trusted by animals and almost no one else.',
+      'Has strong, unsolicited opinions about everyone else’s footwear.',
+      'Sleeps with one eye open and the other on their coin purse.',
+      'Pretends not to know the words to the festival songs. Knows them.',
+      'Once won a staring contest with a statue, allegedly.',
+      'Carries a lucky coin they have lost and "found" four times.',
+    ],
+  },
 };
 
 const LOGIC_PACKS = {
@@ -56,8 +89,11 @@ const LOGIC_PACKS = {
       { name: 'Rank', ordinal: true, values: ['1st', '2nd', '3rd', '4th', '5th'] },
     ],
 
-    premise:
-      "The Grand Tournament of Thornmere draws champions from across the Five Kingdoms every decade. This year's field is thin on legends and heavy on personality: Aldric, whose tournament record is legend (according to Aldric); Seraphine, who has been here three days and already knows more about this tournament than the organizers; Bramble, who definitely has a good reason for being here; Vex, who is not responsible for the stable fire (probably); and Lyria, who has already written the victory song. The night before the joust, someone torched the stables — and the saboteur was acting on the coin of the Thieves' Guild.",
+    premises: [
+      "The Grand Tournament of Thornmere draws champions from across the Five Kingdoms every decade, and this year's field is thin on legends and heavy on personality. The night before the joust, someone torched the stables — and the saboteur was acting on the coin of the Thieves' Guild. Five competitors remain under suspicion: Aldric, Seraphine, Bramble, Vex, and Lyria.",
+      "Smoke still hangs over Thornmere. The tournament stables burned to the ground in the dark hours before the opening joust, and it was no stray lantern — the arsonist was paid in Thieves' Guild silver. The marshals have confined the five remaining champions to the grounds: Aldric, Seraphine, Bramble, Vex, and Lyria. None of them did it, to hear them tell it.",
+      "Once a decade the Five Kingdoms send their finest to the Grand Tournament of Thornmere. This year they sent these five — Aldric, Seraphine, Bramble, Vex, and Lyria — and one of them is on the Thieves' Guild payroll. That one set fire to the stables the night before the joust. The trophy can wait; the marshals want a name first.",
+    ],
 
     /* the tell: whoever the Thieves sponsor set the fire */
     culprit: { category: 'Sponsor', value: 'Thieves' },
@@ -98,8 +134,11 @@ const LOGIC_PACKS = {
       { name: 'Tower Floor', ordinal: true, values: ['1st', '2nd', '3rd', '4th', '5th'] },
     ],
 
-    premise:
-      "The Adventurers' Guild of Ironhaven has a problem: the Vault of Relics was full on Monday night and stood empty by Tuesday morning. There was no forced entry — whoever emptied it walked out carrying the master Lockpick that opens every door in the tower. The Guildmaster has locked everyone in until the relics surface. Five members were in the building that night: Orin, Thessaly, Greymantle, Cinder, and Wren, each with a perfectly reasonable explanation for why it wasn't them.",
+    premises: [
+      "The Adventurers' Guild of Ironhaven has a problem: the Vault of Relics was full on Monday night and stood empty by Tuesday morning. There was no forced entry — whoever emptied it walked out carrying the master Lockpick that opens every door in the tower. The Guildmaster has sealed the doors. Five members were inside that night: Orin, Thessaly, Greymantle, Cinder, and Wren.",
+      "No alarm, no broken lock, no broken window — and yet by Tuesday dawn the Vault of Relics at Ironhaven stood bare. Only the master Lockpick could have opened it so quietly, and only one of the five members trapped in the tower was holding it: Orin, Thessaly, Greymantle, Cinder, or Wren. The Guildmaster wants the thief before anyone eats breakfast.",
+      "Ironhaven's proudest boast was that its Vault of Relics had never been robbed. That boast lasted until Tuesday morning. The thief left no mark on the door because they didn't need to — they had the master Lockpick. Five members had the run of the tower that night: Orin, Thessaly, Greymantle, Cinder, and Wren. One of them is lying.",
+    ],
 
     /* the tell: whoever was carrying the Lockpick robbed the vault */
     culprit: { category: 'Relic', value: 'Lockpick' },
