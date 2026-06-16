@@ -2,7 +2,16 @@
    Logic Grid — Story Packs
    A theme groups related packs. Each pack provides a self-contained
    narrative scenario: a cast, themed categories (≥5 values each,
-   ordinal category last), a premise, and character sketches.
+   ordinal category last), a premise, character sketches, and the
+   "tell" that identifies the culprit.
+
+   WHODUNIT CONTRACT
+   Each pack names a culprit by a single { category, value } tell —
+   e.g. whoever the Thieves sponsor set the fire. Solving the grid
+   matches one cast member to that value, so the grid literally answers
+   "who did it." The tell's category MUST sit within the first three
+   categories so it is always present, even at Easy (which uses only
+   the first three). On a win the verdict names the guilty party.
 
    Sketches describe personality only — never the specific category
    values, so they don't spoil the randomly-assigned solution.
@@ -36,21 +45,25 @@ const LOGIC_PACKS = {
         "Has already composed a victory anthem for someone at this tournament. Won't say who. The song is finished. She hums it when she thinks no one is listening.",
     },
 
-    /* Categories are ordered: most essential first, ordinal last.
-       Difficulty slices from the front, so Easy always gets Weapon + Kingdom + Mount,
-       Medium adds Sponsor, Hard/Expert add Rank. */
+    /* Ordered: the tell (Sponsor) sits in the first three so it survives
+       every difficulty slice; ordinal (Rank) stays last for comparative clues.
+       Easy → Weapon, Sponsor, Kingdom · Medium adds Mount · Hard/Expert add Rank. */
     categories: [
       { name: 'Weapon',  values: ['Longbow', 'Greatsword', 'Daggers', 'Staff', 'Warhammer'] },
+      { name: 'Sponsor', values: ['The Crown', 'Merchants', 'Templars', 'Thieves', 'Legion'] },
       { name: 'Kingdom', values: ['Thornmere', 'Ashfeld', 'Duskhollow', 'Irongate', 'Seawatch'] },
       { name: 'Mount',   values: ['Destrier', 'Griffin', 'Elk', 'Nightmare', 'Hippogriff'] },
-      { name: 'Sponsor', values: ['The Crown', 'Merchants', 'Templars', 'Thieves', 'Legion'] },
       { name: 'Rank', ordinal: true, values: ['1st', '2nd', '3rd', '4th', '5th'] },
     ],
 
     premise:
-      "The Grand Tournament of Thornmere draws champions from across the Five Kingdoms every decade. This year's field is thin on legends and heavy on personality: Aldric, whose tournament record is legend (according to Aldric); Seraphine, who has been here three days and already knows more about this tournament than the organizers; Bramble, who definitely has a good reason for being here; Vex, who is not responsible for the stable fire (probably); and Lyria, who has already written the victory song. Five competitors. Five kingdoms. One trophy — and the small matter of who burned down the stables.",
+      "The Grand Tournament of Thornmere draws champions from across the Five Kingdoms every decade. This year's field is thin on legends and heavy on personality: Aldric, whose tournament record is legend (according to Aldric); Seraphine, who has been here three days and already knows more about this tournament than the organizers; Bramble, who definitely has a good reason for being here; Vex, who is not responsible for the stable fire (probably); and Lyria, who has already written the victory song. The night before the joust, someone torched the stables — and the saboteur was acting on the coin of the Thieves' Guild.",
 
-    question: 'The stable fire was no accident. Someone here answers to the Thieves — and knowing who they sponsor will tell you who set it. Can you figure out who came from where, what they fight with, and who is really pulling their strings?',
+    /* the tell: whoever the Thieves sponsor set the fire */
+    culprit: { category: 'Sponsor', value: 'Thieves' },
+    question:
+      "One of these five fights on the secret coin of the Thieves' Guild — and that's who burned the stables. Work out each champion's weapon and kingdom until their sponsor is pinned down, and the arsonist names themselves. So — who set the fire?",
+    verdict: '{name} was riding on Thieves’ coin. The stable arsonist, caught.',
   },
 
   /* ── HIGH FANTASY: THE FALLEN GUILD ── */
@@ -75,19 +88,24 @@ const LOGIC_PACKS = {
         "Has been at the guild for eleven years and has never once been caught doing anything wrong. Whether that's admirable or suspicious depends entirely on who you ask.",
     },
 
-    /* Categories ordered: essential first, ordinal (Tower Floor) last. */
+    /* Ordered: the tell (Relic) sits in the first three; ordinal (Tower Floor) last.
+       Easy → Guild Role, Relic, District · Medium adds Familiar · Hard/Expert add Floor. */
     categories: [
-      { name: 'Guild Role',   values: ['Wizard', 'Rogue', 'Paladin', 'Druid', 'Monk'] },
-      { name: 'Familiar',     values: ['Raven', 'Cat', 'Toad', 'Fox', 'Owl'] },
-      { name: 'District',     values: ['Arcane', 'Thornside', 'Temple', 'Harbor', 'Crossway'] },
-      { name: 'Relic',        values: ['Spellbook', 'Lockpick', 'Seal', 'Amulet', 'Wraps'] },
+      { name: 'Guild Role',  values: ['Wizard', 'Rogue', 'Paladin', 'Druid', 'Monk'] },
+      { name: 'Relic',       values: ['Spellbook', 'Lockpick', 'Seal', 'Amulet', 'Wraps'] },
+      { name: 'District',    values: ['Arcane', 'Thornside', 'Temple', 'Harbor', 'Crossway'] },
+      { name: 'Familiar',    values: ['Raven', 'Cat', 'Toad', 'Fox', 'Owl'] },
       { name: 'Tower Floor', ordinal: true, values: ['1st', '2nd', '3rd', '4th', '5th'] },
     ],
 
     premise:
-      "The Adventurers' Guild of Ironhaven has a problem: the Vault of Relics was full on Monday night and stood empty by Tuesday morning. The Guildmaster has locked down the tower — nobody leaves until the missing relics are found. Five members were in the building that night: Orin, Thessaly, Greymantle, Cinder, and Wren. Each one has a perfectly reasonable explanation for why it wasn't them. Figure out who lives where, what role they hold in the guild, and which relic they were last seen near.",
+      "The Adventurers' Guild of Ironhaven has a problem: the Vault of Relics was full on Monday night and stood empty by Tuesday morning. There was no forced entry — whoever emptied it walked out carrying the master Lockpick that opens every door in the tower. The Guildmaster has locked everyone in until the relics surface. Five members were in the building that night: Orin, Thessaly, Greymantle, Cinder, and Wren, each with a perfectly reasonable explanation for why it wasn't them.",
 
-    question: "The vault had no forced entry. Whoever took the relics knew the lock — and knew which floor to avoid. Match everyone to their role, their familiar, and what they were last seen carrying. The answer is already in the grid.",
+    /* the tell: whoever was carrying the Lockpick robbed the vault */
+    culprit: { category: 'Relic', value: 'Lockpick' },
+    question:
+      "Only the thief left the vault holding the master Lockpick. Pin down each member's guild role and district until you know who carried which relic, and the culprit drops out of the grid. So — who robbed the vault?",
+    verdict: '{name} walked out with the Lockpick. The vault thief, unmasked.',
   },
 
 };
