@@ -253,6 +253,18 @@ table.logic-grid {
 .logic-grid th.corner { background: transparent; border: none; }
 /* spacer cells used to build the triangular stair */
 .logic-grid td.spacer, .logic-grid th.spacer { border: none; background: transparent; }
+/* …but the top-left HEADER corner must pin and occlude, like the row rail
+   below it — otherwise panned value headers poke out at the left edge
+   while the body rows correctly hide behind the sticky row headers. */
+.logic-grid thead th.corner,
+.logic-grid.triangular thead tr > th.spacer:first-child {
+  position: sticky; left: 0; z-index: 5;
+  background: var(--bg);
+}
+.logic-grid.triangular thead tr > th.spacer:nth-child(2) {
+  position: sticky; left: 21px; z-index: 5;
+  background: var(--bg);
+}
 
 /* sakura (light theme) — darker marks for legibility */
 html[data-theme="sakura"] .logic-grid td.cell.cell-yes { color: #1a7a48; }
@@ -291,7 +303,10 @@ html[data-theme="sakura"] .logic-grid td.cell.cell-no  { color: #c0392b; }
    no longer means scrolling back and forth. Wide tiers pan horizontally
    with the row headers held in place (sticky, above). */
 @media (max-width: 700px) and (min-height: 560px) {
-  .board-region {
+  /* .pin-ok is set by JS only while the board occupies ≤55% of the
+     viewport — a taller board (classic grid at hard/expert) would bury
+     the clues, so it stays in normal flow instead. */
+  .board-region.pin-ok {
     position: sticky; top: 0; z-index: 30;
     padding: 6px 0;
     background: color-mix(in srgb, var(--bg) 90%, transparent);

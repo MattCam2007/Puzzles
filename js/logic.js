@@ -450,6 +450,16 @@ function updateCellSize() {
   cell = Math.max(coarse ? 24 : 18, Math.min(40, cell));
   document.documentElement.style.setProperty('--cell', cell + 'px');
   updatePanHint();
+  updateBoardPin();
+}
+
+/* Pin the board to the top of a phone screen ONLY while it leaves real
+   room for the clue list underneath. A board taller than ~55% of the
+   viewport (the triangular layout at hard/expert) must scroll normally —
+   pinned, it would fill the screen and bury the clues entirely. */
+function updateBoardPin() {
+  const fits = $('#board').offsetHeight <= window.innerHeight * 0.55;
+  $('#boardRegion').classList.toggle('pin-ok', fits);
 }
 
 /* Show a fade at the board's right edge while there is hidden content to
