@@ -316,7 +316,7 @@ function renderTriangularGrid() {
   const colCats = all.slice(0, C);       // indices 0..C-1
   const rowCats = all.slice(1);          // indices 1..C  (allCats index = ri+1)
 
-  let h = '<table class="logic-grid"><thead><tr><th class="spacer"></th><th class="spacer"></th>';
+  let h = '<table class="logic-grid triangular"><thead><tr><th class="spacer"></th><th class="spacer"></th>';
   colCats.forEach(cat => { h += `<th class="cat-header" colspan="${cat.values.length}">${esc(cat.name)}</th>`; });
   h += '</tr><tr><th class="spacer"></th><th class="spacer"></th>';
   colCats.forEach(cat => cat.values.forEach(v => { h += `<th class="val-header"><span>${esc(v)}</span></th>`; }));
@@ -340,8 +340,11 @@ function renderTriangularGrid() {
 }
 
 function renderGrid() {
+  const wrap = $('#boardWrap');
+  const scrollLeft = wrap.scrollLeft;   // survive the innerHTML swap
   $('#board').innerHTML = cfg.boardLayout === 'triangular' ? renderTriangularGrid() : renderEntityGrid();
   updateCellSize();
+  wrap.scrollLeft = scrollLeft;
 }
 
 /* Category/value pairs a clue talks about (for entity filtering). */
@@ -430,7 +433,9 @@ function showStatus(msg, type) {
    Driven by the CSS viewport width (reliable, unlike a freshly-rendered
    wrapper's clientWidth) and the column count of the *current* layout.
    Cells shrink to fit small tiers; wide tiers hit the floor and the
-   board pans horizontally inside .board-wrap. */
+   board pans horizontally inside .board-wrap (row headers stay pinned).
+   On touch screens the floor is 24px — an 18px tap target is a misclick
+   machine — so mid/high tiers pan a little instead of shrinking. */
 function updateCellSize() {
   if (!PUZZLE) return;
   const N = PUZZLE.entities.length, C = PUZZLE.attrCats.length;
@@ -440,9 +445,19 @@ function updateCellSize() {
   const bodyPad = window.innerWidth <= 560 ? 16 : 28;
   const vw = Math.min(document.documentElement.clientWidth || window.innerWidth || 360, 660);
   const avail = vw - bodyPad - headerPx;
+  const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
   let cell = Math.floor(avail / valueCols);
-  cell = Math.max(18, Math.min(40, cell));       // floor 18 keeps marks legible
+  cell = Math.max(coarse ? 24 : 18, Math.min(40, cell));
   document.documentElement.style.setProperty('--cell', cell + 'px');
+  updatePanHint();
+}
+
+/* Show a fade at the board's right edge while there is hidden content to
+   pan to — without it, players don't discover the wide tiers scroll. */
+function updatePanHint() {
+  const wrap = $('#boardWrap');
+  const more = wrap.scrollWidth - wrap.clientWidth - wrap.scrollLeft > 4;
+  $('#boardRegion').classList.toggle('can-pan', more);
 }
 
 /* ═══════════════════════════════════════════
@@ -691,6 +706,7 @@ function restoreLogic() {
 }
 
 window.addEventListener('resize', updateCellSize);
+$('#boardWrap').addEventListener('scroll', updatePanHint, { passive: true });
 
 /* ── kick off ── */
 initPackPicker();

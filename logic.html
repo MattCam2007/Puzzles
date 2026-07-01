@@ -57,6 +57,9 @@
   </div>
 </div>
 
+<!-- STATUS LINE — feedback for the Check / Scan / Hint buttons above it -->
+<div class="status-line" id="statusLine"></div>
+
 <!-- STORY PANEL (shown only when a story pack is active) -->
 <div class="story-panel" id="storyPanel" style="display:none">
   <div class="story-head">
@@ -68,6 +71,15 @@
   <div class="cast-list" id="castList" style="display:none"></div>
 </div>
 
+<!-- BOARD — before the clues: on phones it pins to the top of the screen
+     while the clue list scrolls beneath it, so reading a clue and marking
+     the grid no longer means scrolling back and forth. -->
+<div class="board-region" id="boardRegion">
+  <div class="board-wrap" id="boardWrap">
+    <div id="board" aria-label="Logic grid"></div>
+  </div>
+</div>
+
 <!-- CLUES -->
 <div class="clues-panel" id="cluesPanel">
   <div class="clues-head">
@@ -77,14 +89,6 @@
   <div class="clue-filter" id="clueFilter" style="display:none"></div>
   <div class="clues-list" id="cluesList"></div>
 </div>
-
-<!-- BOARD -->
-<div class="board-wrap" id="boardWrap">
-  <div id="board" aria-label="Logic grid"></div>
-</div>
-
-<!-- STATUS LINE -->
-<div class="status-line" id="statusLine"></div>
 
 <!-- SETTINGS PANEL -->
 <div class="settings-backdrop" id="settingsBackdrop"></div>
