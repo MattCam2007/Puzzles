@@ -139,6 +139,10 @@ body {
 .clue-item.highlighted { background: var(--accent-dim); border-color: var(--accent); color: var(--text); }
 .clue-item.used { opacity: 0.5; text-decoration: line-through; }
 .clue-item .clue-num { color: var(--text-muted); font-weight: 700; margin-right: 4px; }
+.clue-empty {
+  font-size: 0.8rem; line-height: 1.45; font-style: italic;
+  padding: 8px 11px; color: var(--text-muted);
+}
 
 /* ── STATUS LINE ── */
 .status-line {
