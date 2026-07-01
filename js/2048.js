@@ -764,8 +764,15 @@ document.addEventListener('keydown',e=>{
 });
 
 let tx=0,ty=0,tActive=false;
-document.body.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;ty=e.touches[0].clientY;tActive=true;},{passive:false});
-document.body.addEventListener('touchmove', e=>e.preventDefault(),{passive:false});
+// Swipes drive the board, so touchmove is preventDefault-ed to stop the page
+// rubber-banding. Touches that begin inside the settings sheet must scroll it
+// normally, so those gestures are neither hijacked as moves nor blocked.
+const inSettings = e => e.target.closest('#settingsPanel');
+document.body.addEventListener('touchstart',e=>{
+  if(inSettings(e)){tActive=false;return;}
+  tx=e.touches[0].clientX;ty=e.touches[0].clientY;tActive=true;
+},{passive:false});
+document.body.addEventListener('touchmove', e=>{ if(!inSettings(e)) e.preventDefault(); },{passive:false});
 document.body.addEventListener('touchend',  e=>{
   if(!tActive) return; tActive=false;
   const dx=e.changedTouches[0].clientX-tx, dy=e.changedTouches[0].clientY-ty;
