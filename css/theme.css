@@ -7,12 +7,17 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&display=swap');
 
 :root {
-  /* ── surfaces ── */
+  /* ── surfaces ──
+     Ramp is intentionally spread out for contrast: cell-empty (recessed /
+     revealed / inactive play surface) sits below the bg-adjacent darks,
+     while surface2 (raised, clickable) and surface3 (edges) stay clearly
+     lighter. Minesweeper leans on surface2-vs-cell-empty to separate
+     covered cells from revealed ones, so keep that gap wide. */
   --bg:         #0f0f13;
-  --surface:    #1a1a24;
-  --surface2:   #22222f;
-  --surface3:   #2a2a3a;
-  --cell-empty: #1e1e2a;
+  --surface:    #1c1c28;
+  --surface2:   #2a2a3f;
+  --surface3:   #383852;
+  --cell-empty: #14141b;
 
   /* ── accents ── */
   --accent:      #7c6af7;
@@ -48,10 +53,10 @@
 
 html[data-theme="midnight"] {
   --bg:          #07090f;
-  --surface:     #0d1220;
-  --surface2:    #131a2e;
-  --surface3:    #1c2640;
-  --cell-empty:  #0f1828;
+  --surface:     #0e1422;
+  --surface2:    #1b2742;
+  --surface3:    #2a3b60;
+  --cell-empty:  #0a0f1c;
   --accent:      #38bdf8;
   --accent2:     #7dd3fc;
   --accent-rgb:  56, 189, 248;
@@ -62,11 +67,14 @@ html[data-theme="midnight"] {
 }
 
 html[data-theme="sakura"] {
+  /* light theme: the recessed/revealed surface goes brightest (near-white)
+     and surface2 (raised, clickable) goes a deeper pink, so the covered-vs-
+     revealed and fillable-vs-block separations read on a pale palette. */
   --bg:          #fdf4f5;
   --surface:     #fff7f8;
-  --surface2:    #fce8ec;
-  --surface3:    #f0cdd4;
-  --cell-empty:  #f8eaed;
+  --surface2:    #f4d3db;
+  --surface3:    #e1adb9;
+  --cell-empty:  #fffdfd;
   --accent:      #e0527a;
   --accent2:     #f472b6;
   --accent-rgb:  224, 82, 122;
@@ -78,10 +86,10 @@ html[data-theme="sakura"] {
 
 html[data-theme="terminal"] {
   --bg:          #020804;
-  --surface:     #080f08;
-  --surface2:    #0d180d;
-  --surface3:    #162416;
-  --cell-empty:  #0a120a;
+  --surface:     #0a140a;
+  --surface2:    #133013;
+  --surface3:    #1f421f;
+  --cell-empty:  #050b05;
   --accent:      #39d353;
   --accent2:     #85e89d;
   --accent-rgb:  57, 211, 83;

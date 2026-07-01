@@ -5,11 +5,15 @@
    ============================================================ */
 
 :root {
-  /* kakuro cell colours */
-  --block:     #14141c;
-  --clue:      #20202c;
+  /* kakuro cell colours.
+     The fillable ("letter goes here") cell gets its own light token, well
+     above block/clue, so it is unmistakable from the dead/clue cells
+     ("letter doesn't go here"). Each theme overrides this trio at the
+     bottom of the file. */
+  --block:     #121219;
+  --clue:      #1d1d29;
   --clue-line: var(--surface3);
-  --white:     var(--cell-empty);
+  --white:     #34344e;
   --white-ink: var(--text);
   --across:    var(--accent2);
   --down:      var(--cyan);
@@ -325,7 +329,20 @@ body {
 button:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
 .cell.white:focus-visible { outline: 2px solid var(--accent2); outline-offset: -2px; }
 
+/* per-theme kakuro cell trio — fillable always reads clearly lighter
+   than block & clue (or brightest, on the light theme). */
+html[data-theme="midnight"] {
+  --block: #0c1320;
+  --clue:  #172339;
+  --white: #2b3c5e;
+}
 html[data-theme="sakura"] {
-  --block: #e8d0d8;
-  --clue:  #f0dce2;
+  --block: #e6cdd5;
+  --clue:  #f1dde3;
+  --white: #ffffff;
+}
+html[data-theme="terminal"] {
+  --block: #060d06;
+  --clue:  #0f1e0f;
+  --white: #1b361b;
 }
