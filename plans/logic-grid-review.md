@@ -170,7 +170,10 @@ Shipped (all in `logic.html`/`css/logic.css`/`updateCellSize`):
 - **Pinned board.** The board renders *above* the clue list and sticks to
   the top of the screen on phones (blurred translucent backdrop). The
   clue list scrolls beneath it — clue→grid round-trips are gone. This is
-  the single biggest fix.
+  the single biggest fix. The pin is *adaptive* (`updateBoardPin`): it
+  engages only while the board occupies ≤55% of the viewport — the
+  triangular layout at hard/expert is taller than the screen, and
+  pinning it buried the clue list entirely (found on-device).
 - **Pinned headers.** Row headers (and the triangular category rail) are
   `position: sticky` during horizontal pan, with deliberately opaque
   backgrounds. The table had to move from `border-collapse: collapse` to

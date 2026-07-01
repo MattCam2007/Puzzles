@@ -65,8 +65,11 @@ python3 -m http.server 8000         # then exercise logic.html by hand
 ### Unit 5 — Mobile UX overhaul ✅
 *Commit: "mobile UX overhaul — pinned board, sticky headers, touch cells"*
 
-- Board above clues + pinned (`position: sticky`) on phones; sticky row
-  headers/category rail during horizontal pan (required
+- Board above clues + pinned (`position: sticky`) on phones — adaptive:
+  pins only while the board takes ≤55% of the viewport, so the tall
+  triangular tiers scroll normally instead of burying the clues
+  (follow-up commit, found on-device); sticky row headers/category rail
+  and the top-left header corner during horizontal pan (required
   `border-collapse: separate` border rework); 24px touch cell floor;
   pan-edge fade + preserved pan position; status line under its
   buttons; header fits one line; clue-list height cap removed; bigger
