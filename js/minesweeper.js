@@ -3,6 +3,9 @@
 ═══════════════════════════════════════════ */
 const DEFAULTS = {
   difficulty:    'intermediate',
+  customCols:    16,
+  customRows:    16,
+  customMines:   40,
   questionMarks: true,
   safeFirst:     true,
   chording:      true,
@@ -15,13 +18,38 @@ let cfg = Object.assign({}, DEFAULTS, loadJSON('minesweeper-cfg', {}));
 function saveCfg() { saveJSON('minesweeper-cfg', cfg); }
 
 /* ═══════════════════════════════════════════
-   CLASSIC LEVELS
+   CLASSIC LEVELS  (used as the base defaults for Custom too)
 ═══════════════════════════════════════════ */
 const LEVELS = {
   beginner:     { cols: 9,  rows: 9,  mines: 10 },
   intermediate: { cols: 16, rows: 16, mines: 40 },
   expert:       { cols: 30, rows: 16, mines: 99 },
 };
+
+/* board-size bounds for custom games */
+const SIZE_MIN = 5, SIZE_MAX = 40;
+
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+/* Resolve the active board dimensions. For 'custom', pull sanitized values
+   from cfg; otherwise use the matching classic level. */
+function currentLevel() {
+  if (cfg.difficulty === 'custom') {
+    const c = clamp(Math.round(cfg.customCols) || SIZE_MIN, SIZE_MIN, SIZE_MAX);
+    const r = clamp(Math.round(cfg.customRows) || SIZE_MIN, SIZE_MIN, SIZE_MAX);
+    // leave at least one safe (non-mine) cell; safe-first needs 9 for the
+    // opening area but 1 keeps a degenerate board playable.
+    const m = clamp(Math.round(cfg.customMines) || 1, 1, c * r - 1);
+    return { cols: c, rows: r, mines: m };
+  }
+  return LEVELS[cfg.difficulty] || LEVELS.intermediate;
+}
+
+/* Best-time bucket key: custom boards are tracked per exact size. */
+function bestKey() {
+  if (cfg.difficulty === 'custom') return `custom-${cols}x${rows}-${totalMines}`;
+  return cfg.difficulty;
+}
 
 /* ═══════════════════════════════════════════
    GAME STATE
@@ -92,8 +120,8 @@ function revealCell(i) {
   if (gameOver) return;
   if (cellState[i] === 2 || cellState[i] === 3) return; // flagged/question, do nothing
   if (cellState[i] === 1) {
-    // already revealed — try chord
-    if (cfg.chording) chordCell(i);
+    // already revealed — try chord / highlight
+    if (cfg.chording) pressNumber(i);
     return;
   }
 
@@ -135,11 +163,48 @@ function revealCell(i) {
   updateHUD();
 }
 
+/* Pressing a revealed number: if its mines are all accounted for by adjacent
+   flags, clear the remaining neighbours (chord). Otherwise, highlight the
+   covered neighbours that still need to be resolved for that number. */
+function pressNumber(i) {
+  if (counts[i] <= 0) return;
+  const nbs = neighbors(i);
+  const adjFlags = nbs.filter(nb => cellState[nb] === 2).length;
+  if (adjFlags === counts[i]) {
+    chordCell(i);
+  } else {
+    highlightRemaining(i);
+  }
+}
+
+let highlightTimer = null;
+
+/* Briefly highlight the still-covered neighbours of a number whose mines are
+   not yet fully flagged. Uses the theme accent via the .remaining class. */
+function highlightRemaining(i) {
+  clearHighlights();
+  const board = $('#board');
+  for (const nb of neighbors(i)) {
+    if (cellState[nb] === 0 || cellState[nb] === 3) {
+      const el = board.children[nb];
+      if (el) el.classList.add('remaining');
+    }
+  }
+  highlightTimer = setTimeout(clearHighlights, 1400);
+}
+
+function clearHighlights() {
+  clearTimeout(highlightTimer);
+  highlightTimer = null;
+  $$('.cell.remaining', $('#board')).forEach(el => el.classList.remove('remaining'));
+}
+
 function chordCell(i) {
   if (counts[i] <= 0) return;
   const nbs = neighbors(i);
   const adjFlags = nbs.filter(nb => cellState[nb] === 2).length;
   if (adjFlags !== counts[i]) return;
+  clearHighlights();
 
   let hitMine = false, explodeIdx = -1;
   for (const nb of nbs) {
@@ -223,13 +288,14 @@ function endGame(won, explodeIdx) {
 
   const ts = formatTime(seconds);
   if (won) {
+    const key = bestKey();
     const best = loadJSON('minesweeper-best', {});
-    const prev = best[cfg.difficulty];
+    const prev = best[key];
     if (!prev || seconds < prev) {
-      best[cfg.difficulty] = seconds;
+      best[key] = seconds;
       saveJSON('minesweeper-best', best);
     }
-    const newBest = best[cfg.difficulty];
+    const newBest = best[key];
     const improved = !prev || seconds <= prev;
     $('#overlayTitle').textContent = '🎉 Cleared!';
     $('#overlayMsg').textContent = `Solved in ${ts}${improved && prev ? ' — new best!' : '. Best: ' + formatTime(newBest)}`;
@@ -315,7 +381,7 @@ function updateCellSize() {
 function updateHUD() {
   $('#mineCount').textContent = totalMines - flagCount;
   const best = loadJSON('minesweeper-best', {});
-  const b = best[cfg.difficulty];
+  const b = best[bestKey()];
   $('#bestTime').textContent = b !== undefined ? formatTime(b) : '—';
   $('#timer').textContent = formatTime(seconds);
 }
@@ -335,7 +401,7 @@ function startTimer() {
    NEW GAME
 ═══════════════════════════════════════════ */
 function startGame() {
-  const level = LEVELS[cfg.difficulty];
+  const level = currentLevel();
   cols = level.cols; rows = level.rows; totalMines = level.mines;
 
   cellState = new Uint8Array(cols * rows);
@@ -528,6 +594,29 @@ $$('#flagDelayPicker .strike-opt').forEach(opt => {
   });
 });
 
+/* ── CUSTOM BOARD SIZE ──
+   Editing any field switches difficulty to Custom, persists, and starts a
+   fresh game at the new dimensions. */
+function commitCustomSize() {
+  const c = clamp(parseInt($('#customCols').value, 10)  || SIZE_MIN, SIZE_MIN, SIZE_MAX);
+  const r = clamp(parseInt($('#customRows').value, 10)  || SIZE_MIN, SIZE_MIN, SIZE_MAX);
+  const maxMines = c * r - 1;
+  const m = clamp(parseInt($('#customMines').value, 10) || 1, 1, maxMines);
+
+  cfg.customCols = c;
+  cfg.customRows = r;
+  cfg.customMines = m;
+  cfg.difficulty = 'custom';
+  saveCfg();
+  syncSettingsUI();
+  $('#difficultySelect').value = 'custom';
+  startGame();
+}
+
+['customCols', 'customRows', 'customMines'].forEach(id => {
+  $('#' + id).addEventListener('change', commitCustomSize);
+});
+
 function applySettingsToUI() {
   $('#difficultySelect').value = cfg.difficulty;
   // hold-time picker is only relevant when long-press flagging is on
@@ -546,6 +635,13 @@ function syncSettingsUI() {
   $$('#flagDelayPicker .strike-opt').forEach(opt => {
     opt.classList.toggle('active', +opt.dataset.val === cfg.longPressMs);
   });
+  $('#customCols').value  = cfg.customCols;
+  $('#customRows').value  = cfg.customRows;
+  $('#customMines').value = cfg.customMines;
+  const maxMines = cfg.customCols * cfg.customRows - 1;
+  $('#customMines').max = maxMines;
+  $('#customSizeHint').textContent =
+    `${SIZE_MIN}–${SIZE_MAX} per side · 1–${maxMines} mines. Editing switches to Custom.`;
 }
 
 /* ═══════════════════════════════════════════
