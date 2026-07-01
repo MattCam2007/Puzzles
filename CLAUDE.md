@@ -19,12 +19,16 @@ Puzzles/
 │   ├── common.js             ← $, $$, loadJSON, saveJSON, pushHistory, shuffle, formatTime
 │   ├── theme.js              ← applyTheme, loadTheme, syncThemePicker, bg image, board alpha
 │   ├── theme-builder.js      ← custom theme editor UI
-│   └── <game>.js             ← complete game logic
+│   ├── logic-engine.js       ← Logic Grid generation/solving (pure, DOM-free, Node-testable)
+│   ├── logic-packs.js        ← Logic Grid story packs (data; templated prose contract)
+│   └── <game>.js             ← complete game logic / UI layer
 ├── data/                     ← word lists and other data files (add here)
+├── tests/                    ← Node test suites (no deps; excluded from GitHub Pages)
 └── plans/                    ← internal planning docs (excluded from GitHub Pages by _config.yml)
 ```
 
-Every game HTML loads scripts in this order: `common.js` → `theme.js` → `<game>.js`.
+Every game HTML loads scripts in this order: `common.js` → `theme.js` → `<game>.js`
+(Logic Grid inserts `logic-packs.js` → `logic-engine.js` before `logic.js`).
 
 ## Local development
 
@@ -34,6 +38,12 @@ python3 -m http.server 8000   # or: npx http-server
 ```
 
 No install, no build. Edit files and reload.
+
+Tests (plain Node, no dependencies):
+
+```bash
+node tests/logic-engine.test.js   # Logic Grid engine: validity, no-guessing, packs
+```
 
 ## localStorage key conventions
 
