@@ -121,19 +121,8 @@ function selectTileMode(id) {
   renderInstant();
 }
 
-function openSettings() {
-  syncThemePicker();
-  $('#settingsBackdrop').classList.add('show');
-  $('#settingsPanel').classList.add('show');
-}
-
-function closeSettings() {
-  $('#settingsBackdrop').classList.remove('show');
-  $('#settingsPanel').classList.remove('show');
-}
-
-$('#settingsBtn').addEventListener('click', openSettings);
-$('#settingsBackdrop').addEventListener('click', closeSettings);
+// openSettings / closeSettings and their wiring are shared (see js/theme.js).
+// 2048 has no game-specific settings controls, so it defines no syncSettingsUI().
 
 // ── Canvas FX layer ──────────────────────────────────────
 const fxCanvas = $('#fx');
