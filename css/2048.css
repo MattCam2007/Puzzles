@@ -207,3 +207,13 @@ html[data-theme="terminal"] .tile-v512  { background: #208530; color: #fff;    }
 html[data-theme="terminal"] .tile-v1024 { background: #28a03a; color: #020804; }
 html[data-theme="terminal"] .tile-v2048 { background: #39d353; color: #020804; }
 html[data-theme="terminal"] .tile-vmax  { background: #39d353; color: #020804; }
+
+/* ── Outdoor / high-contrast mode ──
+   Toggled globally via data-contrast="high" on <html> (see theme.js). Outlines
+   empty slots and tiles so the grid stays legible in bright sunlight. */
+html[data-contrast="high"] .bg-cell {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--text) 16%, transparent);
+}
+html[data-contrast="high"] .tile {
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.28);
+}

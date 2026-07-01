@@ -247,3 +247,43 @@ html[data-theme="sakura"] {
   --pencil:     #e0527a;
   --pencil-hl:  rgba(224, 82, 122, 0.18);
 }
+
+/* ── Outdoor / high-contrast mode ──
+   Toggled globally via data-contrast="high" on <html> (see theme.js). Adds
+   crisp per-cell borders, marks givens as locked squares, and gives the
+   selected cell an unmistakable bright ring so the board reads in sunlight.
+   var(--text) is light on dark themes and dark on Sakura, so it contrasts on
+   every palette. */
+html[data-contrast="high"] .cell {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 22%, transparent);
+}
+/* stronger 3×3 box separators */
+html[data-contrast="high"] .cell[data-col="2"],
+html[data-contrast="high"] .cell[data-col="5"] {
+  border-right-color: color-mix(in srgb, var(--text) 55%, transparent);
+}
+html[data-contrast="high"] .cell[data-row="2"],
+html[data-contrast="high"] .cell[data-row="5"] {
+  border-bottom-color: color-mix(in srgb, var(--text) 55%, transparent);
+}
+/* givens read as locked, non-selectable squares */
+html[data-contrast="high"] .cell.given {
+  background: color-mix(in srgb, var(--text) 14%, var(--cell-empty));
+  color: var(--text);
+  font-weight: 800;
+}
+/* related-cell highlights get more punch */
+html[data-contrast="high"] .cell.box-hl,
+html[data-contrast="high"] .cell.line-hl {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+html[data-contrast="high"] .cell.same-number {
+  background: color-mix(in srgb, var(--accent2) 26%, transparent);
+}
+/* the selected cell: bright double ring */
+html[data-contrast="high"] .cell.selected,
+html[data-contrast="high"] .cell.numfirst-selected {
+  background: color-mix(in srgb, var(--accent) 55%, transparent) !important;
+  box-shadow: inset 0 0 0 3px var(--accent2), inset 0 0 0 5px var(--accent);
+  z-index: 2;
+}

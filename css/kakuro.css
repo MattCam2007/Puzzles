@@ -346,3 +346,25 @@ html[data-theme="terminal"] {
   --clue:  #0f1e0f;
   --white: #1b361b;
 }
+
+/* ── Outdoor / high-contrast mode ──
+   Toggled globally via data-contrast="high" on <html> (see theme.js). Borders
+   every cell so fillable whites separate cleanly from dead block/clue squares,
+   and turns the selected cell's ring into an unmistakable bright band. */
+html[data-contrast="high"] .cell.white {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 30%, transparent);
+}
+html[data-contrast="high"] .cell.white .big { font-weight: 800; }
+html[data-contrast="high"] .cell.block,
+html[data-contrast="high"] .cell.clue {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 16%, transparent);
+}
+html[data-contrast="high"] .cell.white.run::after {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+html[data-contrast="high"] .cell.white.sel {
+  box-shadow: inset 0 0 0 4px var(--accent), inset 0 0 0 6px var(--accent2);
+}
+html[data-contrast="high"] .cell.white.sel::after {
+  background: rgba(var(--accent-rgb), .30);
+}

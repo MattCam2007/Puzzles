@@ -248,3 +248,16 @@ html[data-theme="sakura"] .cell.n8 { color: #6b7280; }
   font-size: 0.95rem; font-weight: 700; padding: 12px 28px;
   border-radius: var(--radius-sm); cursor: pointer; width: 100%;
 }
+
+/* ── Outdoor / high-contrast mode ──
+   Toggled globally via data-contrast="high" on <html> (see theme.js). Deepens
+   the border on covered (clickable) cells so they separate from the flat
+   revealed squares, and thickens the cursor / remaining highlight rings. */
+html[data-contrast="high"] .cell.covered {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--text) 34%, transparent);
+}
+html[data-contrast="high"] .cell.revealed {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 14%, transparent);
+}
+html[data-contrast="high"] .cell.cursor,
+html[data-contrast="high"] .cell.remaining { outline-width: 3px; }

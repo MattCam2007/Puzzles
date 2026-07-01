@@ -7,6 +7,7 @@ const THEMES = [
 
 const BG_KEY            = 'puzzle-bg-image';
 const ALPHA_KEY         = 'puzzle-board-alpha';
+const CONTRAST_KEY      = 'puzzle-contrast';
 const CUSTOM_THEMES_KEY = 'puzzle-custom-themes';
 
 function _hexToRgb(hex) {
@@ -46,6 +47,27 @@ function applyBoardAlpha(value) {
 function loadBoardAlpha() {
   const saved = localStorage.getItem(ALPHA_KEY);
   document.documentElement.style.setProperty('--board-alpha', `${saved !== null ? parseInt(saved) : 100}%`);
+}
+
+/* ── outdoor / high-contrast mode ──
+   A global appearance toggle (like theme + board alpha) that lives in the
+   puzzle-* namespace so it stays consistent across every game. It flips
+   data-contrast="high" on <html>; each game's CSS keys crisper cell borders
+   and stronger selected/nonplayable separation off that attribute. */
+function applyContrast(on) {
+  if (on) {
+    document.documentElement.setAttribute('data-contrast', 'high');
+    localStorage.setItem(CONTRAST_KEY, '1');
+  } else {
+    document.documentElement.removeAttribute('data-contrast');
+    localStorage.setItem(CONTRAST_KEY, '0');
+  }
+}
+
+function loadContrast() {
+  if (localStorage.getItem(CONTRAST_KEY) === '1') {
+    document.documentElement.setAttribute('data-contrast', 'high');
+  }
 }
 
 function applyTheme(id) {
@@ -181,6 +203,12 @@ function syncThemePicker() {
     slider.value = alphaSaved !== null ? alphaSaved : 100;
     slider.oninput = () => applyBoardAlpha(parseInt(slider.value));
   }
+
+  const contrastToggle = document.getElementById('togOutdoor');
+  if (contrastToggle) {
+    contrastToggle.checked = localStorage.getItem(CONTRAST_KEY) === '1';
+    contrastToggle.onchange = () => applyContrast(contrastToggle.checked);
+  }
 }
 
 /* ── settings panel (shared open/close controller) ──
@@ -212,4 +240,5 @@ function initSettingsPanel() {
 loadTheme();
 loadBgImage();
 loadBoardAlpha();
+loadContrast();
 initSettingsPanel();
