@@ -207,3 +207,15 @@ html[data-theme="terminal"] .tile-v512  { background: #208530; color: #fff;    }
 html[data-theme="terminal"] .tile-v1024 { background: #28a03a; color: #020804; }
 html[data-theme="terminal"] .tile-v2048 { background: #39d353; color: #020804; }
 html[data-theme="terminal"] .tile-vmax  { background: #39d353; color: #020804; }
+
+/* ── Outdoor / high-contrast mode ──
+   Toggled globally via data-contrast="high" on <html> (see theme.js). Deepens
+   the empty slots and lifts the board frame so filled tiles pop in bright
+   light — a colour shift, not an added border. */
+html[data-contrast="high"] .bg-grid {
+  background: color-mix(in srgb, var(--surface2) var(--board-alpha), transparent);
+}
+html[data-contrast="high"] .bg-cell {
+  background: color-mix(in srgb,
+    color-mix(in srgb, #000 34%, var(--cell-empty)) var(--board-alpha), transparent);
+}

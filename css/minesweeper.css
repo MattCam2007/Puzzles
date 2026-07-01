@@ -248,3 +248,19 @@ html[data-theme="sakura"] .cell.n8 { color: #6b7280; }
   font-size: 0.95rem; font-weight: 700; padding: 12px 28px;
   border-radius: var(--radius-sm); cursor: pointer; width: 100%;
 }
+
+/* ── Outdoor / high-contrast mode ──
+   Toggled globally via data-contrast="high" on <html> (see theme.js). Widens
+   the *colour* gap between covered (raised, clickable) and revealed (flat,
+   dead) cells rather than drawing borders: covered lifts toward the lightest
+   raised token, revealed sinks toward the page background. var(--text) nudges
+   covered brighter on dark themes and deeper on Sakura, so the two states pull
+   apart on every palette. */
+html[data-contrast="high"] .cell.covered {
+  background: color-mix(in srgb,
+    color-mix(in srgb, var(--surface3) 80%, var(--text)) var(--board-alpha), transparent);
+}
+html[data-contrast="high"] .cell.revealed {
+  background: color-mix(in srgb,
+    color-mix(in srgb, var(--bg) 55%, var(--cell-empty)) var(--board-alpha), transparent);
+}

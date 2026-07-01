@@ -263,3 +263,21 @@ html[data-theme="sakura"] .logic-grid td.cell.cell-no  { color: #c0392b; }
   /* scroll hint: a soft fade at the right edge of a pannable board */
   .board-wrap { position: relative; }
 }
+
+/* ── Outdoor / high-contrast mode ──
+   Toggled globally via data-contrast="high" on <html> (see theme.js). Darkens
+   the grid lines and strengthens the ✓ / ✗ marks so the matrix reads in
+   direct sun. var(--text) contrasts on every theme (light on dark, dark on
+   Sakura). spacer / corner cells keep border:none, so colouring the border
+   here leaves them invisible. */
+html[data-contrast="high"] .logic-grid th,
+html[data-contrast="high"] .logic-grid td {
+  border-color: color-mix(in srgb, var(--text) 38%, transparent);
+}
+html[data-contrast="high"] .logic-grid td.cell { font-weight: 800; }
+html[data-contrast="high"] .logic-grid td.cell.cell-yes {
+  background: color-mix(in srgb, var(--success) 20%, transparent);
+}
+html[data-contrast="high"] .logic-grid td.cell.cell-no {
+  background: color-mix(in srgb, var(--error) 16%, transparent);
+}
