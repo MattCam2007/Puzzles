@@ -47,6 +47,7 @@
       <option value="beginner">Beginner</option>
       <option value="intermediate" selected>Intermediate</option>
       <option value="expert">Expert</option>
+      <option value="custom">Custom</option>
     </select>
   </div>
   <div class="board-top-right">
@@ -142,8 +143,8 @@
 
     <div class="setting-row">
       <div class="setting-info">
-        <div class="setting-name">Chording</div>
-        <div class="setting-desc">Tap a revealed number whose adjacent flag count matches it to reveal remaining neighbours.</div>
+        <div class="setting-name">Chording &amp; hints</div>
+        <div class="setting-desc">Tap a revealed number: if its flags match, clear the remaining neighbours; otherwise highlight the covered squares left to solve.</div>
       </div>
       <label class="toggle">
         <input type="checkbox" id="togChord" checked>
@@ -175,6 +176,32 @@
       <div class="strike-opt" data-val="650">Relaxed</div>
       <div class="strike-opt" data-val="900">Long</div>
     </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-label">Custom board size</div>
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-name">Width</div>
+        <div class="setting-desc">Number of columns.</div>
+      </div>
+      <input type="number" id="customCols" class="size-input" min="5" max="40" step="1" value="16">
+    </div>
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-name">Height</div>
+        <div class="setting-desc">Number of rows.</div>
+      </div>
+      <input type="number" id="customRows" class="size-input" min="5" max="40" step="1" value="16">
+    </div>
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-name">Mines</div>
+        <div class="setting-desc">How many mines to hide.</div>
+      </div>
+      <input type="number" id="customMines" class="size-input" min="1" max="1599" step="1" value="40">
+    </div>
+    <div class="setting-desc" id="customSizeHint" style="padding:2px 2px 0"></div>
   </div>
 
   <div class="settings-section">
