@@ -461,22 +461,8 @@ function syncSettingsUI() {
   });
 }
 
-/* ═══════════════════════════════════════════
-   SETTINGS PANEL OPEN/CLOSE
-═══════════════════════════════════════════ */
-function openSettings() {
-  syncSettingsUI();
-  syncThemePicker();
-  $('#settingsBackdrop').classList.add('show');
-  $('#settingsPanel').classList.add('show');
-}
-function closeSettings() {
-  $('#settingsBackdrop').classList.remove('show');
-  $('#settingsPanel').classList.remove('show');
-}
-
-$('#settingsBtn').addEventListener('click', openSettings);
-$('#settingsBackdrop').addEventListener('click', closeSettings);
+/* Settings panel open/close and its wiring are shared (see js/theme.js).
+   syncSettingsUI() below is invoked automatically when the panel opens. */
 
 /* ── toggle listeners ── */
 function onToggle(id, key, extra) {

@@ -618,16 +618,8 @@ function syncSettingsUI() {
   $('#togErasePencilMarks').checked = settings.erasePencilMarks;
 }
 
-function openSettings() {
-  syncSettingsUI();
-  syncThemePicker();
-  $('#settingsBackdrop').classList.add('show');
-  $('#settingsPanel').classList.add('show');
-}
-function closeSettings() {
-  $('#settingsBackdrop').classList.remove('show');
-  $('#settingsPanel').classList.remove('show');
-}
+/* Settings panel open/close and its wiring are shared (see js/theme.js).
+   syncSettingsUI() above is invoked automatically when the panel opens. */
 
 function onToggle(id, key, after) {
   $('#' + id).addEventListener('change', e => {
@@ -671,8 +663,6 @@ $('#hintBtn').addEventListener('click', doHint);
 $('#clearBtn').addEventListener('click', clearEntries);
 $('#eraseBtn').addEventListener('click', eraseCell);
 $('#notesBtn').addEventListener('click', () => { notesMode = !notesMode; syncNotesBtn(); renderNumpad(); });
-$('#settingsBtn').addEventListener('click', openSettings);
-$('#settingsBackdrop').addEventListener('click', closeSettings);
 $('#overlayBtn').addEventListener('click', () => { $('#overlay').classList.remove('show'); newGame(); });
 $('#overlay').addEventListener('click', e => { if (e.target === $('#overlay')) $('#overlay').classList.remove('show'); });
 $('#closeCombo').addEventListener('click', () => $('#comboSheet').classList.remove('show'));

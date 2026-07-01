@@ -183,6 +183,33 @@ function syncThemePicker() {
   }
 }
 
+/* ── settings panel (shared open/close controller) ──
+   Every game's settings panel uses the same bottom-sheet chrome and the same
+   #settingsBtn / #settingsBackdrop / #settingsPanel ids, so the open/close flow
+   lives here and all games behave identically. A game may define a global
+   syncSettingsUI() to mirror its own cfg into the panel's game-specific
+   controls; it is invoked (if present) each time the panel opens, before the
+   shared theme/background controls are refreshed via syncThemePicker(). */
+function openSettings() {
+  if (typeof syncSettingsUI === 'function') syncSettingsUI();
+  syncThemePicker();
+  document.getElementById('settingsBackdrop').classList.add('show');
+  document.getElementById('settingsPanel').classList.add('show');
+}
+
+function closeSettings() {
+  document.getElementById('settingsBackdrop').classList.remove('show');
+  document.getElementById('settingsPanel').classList.remove('show');
+}
+
+function initSettingsPanel() {
+  const btn = document.getElementById('settingsBtn');
+  const backdrop = document.getElementById('settingsBackdrop');
+  if (btn) btn.addEventListener('click', openSettings);
+  if (backdrop) backdrop.addEventListener('click', closeSettings);
+}
+
 loadTheme();
 loadBgImage();
 loadBoardAlpha();
+initSettingsPanel();

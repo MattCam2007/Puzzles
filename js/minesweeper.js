@@ -503,21 +503,9 @@ $('#difficultySelect').addEventListener('change', () => {
 
 /* ═══════════════════════════════════════════
    SETTINGS PANEL
+   Open/close and its wiring are shared (see js/theme.js). syncSettingsUI()
+   below is invoked automatically when the panel opens.
 ═══════════════════════════════════════════ */
-function openSettings() {
-  syncSettingsUI();
-  syncThemePicker();
-  $('#settingsBackdrop').classList.add('show');
-  $('#settingsPanel').classList.add('show');
-}
-function closeSettings() {
-  $('#settingsBackdrop').classList.remove('show');
-  $('#settingsPanel').classList.remove('show');
-}
-
-$('#settingsBtn').addEventListener('click', openSettings);
-$('#settingsBackdrop').addEventListener('click', closeSettings);
-
 function onToggle(id, key, extra) {
   $('#' + id).addEventListener('change', e => {
     cfg[key] = e.target.checked;
