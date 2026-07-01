@@ -102,11 +102,15 @@
           });
         }
         if (allowed.has('negative')) {
-          const wrongs = cat.values.filter(v => v !== correct);
-          const w = wrongs[Math.floor(Math.random() * wrongs.length)];
-          out.negative.push({
-            type: 'negative', e, cat: cat.name, val: w,
-            text: `${name}'s ${low(cat.name)} is not ${w}.`,
+          // every wrong value is a candidate; the greedy builder samples from
+          // the shuffled pool. (Emitting only one random wrong per cell used
+          // to starve the builder and force expensive regeneration retries.)
+          cat.values.forEach(w => {
+            if (w === correct) return;
+            out.negative.push({
+              type: 'negative', e, cat: cat.name, val: w,
+              text: `${name}'s ${low(cat.name)} is not ${w}.`,
+            });
           });
         }
       });
@@ -234,24 +238,254 @@
     return countSolutions(entities, attrCats, clues, 2) === 1;
   }
 
-  /* Greedy build to a unique clue set, then trim to minimal. */
+  /* ═══════════════════════════════════════════
+     DEDUCTION SOLVER (the "no guessing" guarantee)
+     Solves with the same rules a human uses on the elimination grid —
+     no backtracking, no trial-and-error. A puzzle is only shipped if
+     this solver finishes it, so a unique-but-guessy clue set (unique
+     solution, yet findable only by hypothesis testing) is rejected.
+
+     Rules, in escalating tiers (grade = hardest tier that was needed):
+       1  seeding + permutation propagation — a placed ✓ eliminates its
+          row/column; a value with one spot left is placed. (This is
+          what the in-game auto-eliminate assist does.)
+       2  link intersection — once X=Z is confirmed, X and Z must agree
+          with every other category; copy each other's eliminations.
+       3  ordinal bounds — comparative clues squeeze the possible
+          positions of both sides from either end.
+       4  triangulation — X can't be Y because no intermediate Z is
+          compatible with both. The deep cross-reference scan.
+  ═══════════════════════════════════════════ */
+  function makeDeductionSession(entities, attrCats) {
+    const N = entities.length;
+    const cats = [{ name: ANCHOR, values: entities.slice() }, ...attrCats];
+    const C = cats.length;
+    const catIdx = {}, valIdx = {};
+    cats.forEach((c, i) => {
+      catIdx[c.name] = i;
+      valIdx[c.name] = {};
+      c.values.forEach((v, k) => { valIdx[c.name][v] = k; });
+    });
+
+    // M[i][j] (i<j): N×N possibility grid; M[i][j][a][b] = "cats[i] value a
+    // can belong to the same entity as cats[j] value b".
+    const M = [];
+    for (let i = 0; i < C; i++) {
+      M[i] = [];
+      for (let j = 0; j < C; j++) {
+        M[i][j] = j > i ? Array.from({ length: N }, () => new Array(N).fill(1)) : null;
+      }
+    }
+    const poss = (i, a, j, b) => (i < j ? M[i][j][a][b] : M[j][i][b][a]);
+    function cut(i, a, j, b) {
+      if (i > j) { [i, j] = [j, i]; [a, b] = [b, a]; }
+      if (!M[i][j][a][b]) return false;
+      M[i][j][a][b] = 0;
+      return true;
+    }
+
+    // ── tier 1a: seed the direct facts of one clue ──
+    const comparatives = [];
+    function seed(cl) {
+      if (cl.type === 'positive') {
+        const j = catIdx[cl.cat], b = valIdx[cl.cat][cl.val];
+        for (let v = 0; v < N; v++) if (v !== b) cut(0, cl.e, j, v);
+        for (let e = 0; e < N; e++) if (e !== cl.e) cut(0, e, j, b);
+      } else if (cl.type === 'negative') {
+        cut(0, cl.e, catIdx[cl.cat], valIdx[cl.cat][cl.val]);
+      } else if (cl.type === 'relational') {
+        const i = catIdx[cl.cat1], a = valIdx[cl.cat1][cl.val1];
+        const j = catIdx[cl.cat2], b = valIdx[cl.cat2][cl.val2];
+        for (let v = 0; v < N; v++) if (v !== b) cut(i, a, j, v);
+        for (let v = 0; v < N; v++) if (v !== a) cut(i, v, j, b);
+      } else if (cl.type === 'comparative') {
+        comparatives.push(cl);
+      }
+    }
+
+    // ── tier 1b: permutation propagation (one sweep) ──
+    function passPropagate() {
+      let changed = false;
+      for (let i = 0; i < C; i++) for (let j = i + 1; j < C; j++) {
+        const m = M[i][j];
+        for (let a = 0; a < N; a++) {
+          let only = -1, n = 0;
+          for (let b = 0; b < N; b++) if (m[a][b]) { only = b; n++; }
+          if (n === 1) for (let a2 = 0; a2 < N; a2++) {
+            if (a2 !== a && m[a2][only]) { m[a2][only] = 0; changed = true; }
+          }
+        }
+        for (let b = 0; b < N; b++) {
+          let only = -1, n = 0;
+          for (let a = 0; a < N; a++) if (m[a][b]) { only = a; n++; }
+          if (n === 1) for (let b2 = 0; b2 < N; b2++) {
+            if (b2 !== b && m[only][b2]) { m[only][b2] = 0; changed = true; }
+          }
+        }
+      }
+      return changed;
+    }
+
+    // fixed yes-link: row a of (i,j) is a singleton {b} and column b is {a}
+    function fixedAt(i, j, a) {
+      const m = M[i][j];
+      let only = -1, n = 0;
+      for (let b = 0; b < N; b++) if (m[a][b]) { only = b; n++; }
+      if (n !== 1) return -1;
+      for (let a2 = 0; a2 < N; a2++) if (a2 !== a && m[a2][only]) return -1;
+      return only;
+    }
+
+    // ── tier 2: link intersection across confirmed pairs (one sweep) ──
+    function passLinks() {
+      let changed = false;
+      for (let i = 0; i < C; i++) for (let j = i + 1; j < C; j++) {
+        for (let a = 0; a < N; a++) {
+          const b = fixedAt(i, j, a);
+          if (b < 0) continue;
+          for (let k = 0; k < C; k++) {
+            if (k === i || k === j) continue;
+            for (let c = 0; c < N; c++) {
+              const pa = poss(i, a, k, c), pb = poss(j, b, k, c);
+              if (pa && !pb) { cut(i, a, k, c); changed = true; }
+              else if (pb && !pa) { cut(j, b, k, c); changed = true; }
+            }
+          }
+        }
+      }
+      return changed;
+    }
+
+    // ── tier 3: ordinal bounds from comparative clues (one sweep) ──
+    function passOrdinal() {
+      let changed = false;
+      for (const cl of comparatives) {
+        const r = catIdx[cl.refCat], o = catIdx[cl.ordCat];
+        const a = valIdx[cl.refCat][cl.refValA], b = valIdx[cl.refCat][cl.refValB];
+        let maxB = -1, minA = N;
+        for (let k = 0; k < N; k++) {
+          if (poss(r, b, o, k)) maxB = Math.max(maxB, k);
+          if (poss(r, a, o, k)) minA = Math.min(minA, k);
+        }
+        for (let k = 0; k < N; k++) {
+          if (k >= maxB && poss(r, a, o, k)) { cut(r, a, o, k); changed = true; }
+          if (k <= minA && poss(r, b, o, k)) { cut(r, b, o, k); changed = true; }
+        }
+      }
+      return changed;
+    }
+
+    // ── tier 4: triangulation / path consistency (one sweep) ──
+    function passTriangulate() {
+      let changed = false;
+      for (let i = 0; i < C; i++) for (let j = i + 1; j < C; j++) {
+        for (let k = 0; k < C; k++) {
+          if (k === i || k === j) continue;
+          for (let a = 0; a < N; a++) for (let b = 0; b < N; b++) {
+            if (!M[i][j][a][b]) continue;
+            let ok = false;
+            for (let c = 0; c < N; c++) {
+              if (poss(i, a, k, c) && poss(j, b, k, c)) { ok = true; break; }
+            }
+            if (!ok) { M[i][j][a][b] = 0; changed = true; }
+          }
+        }
+      }
+      return changed;
+    }
+
+    // solved iff every anchor×category matrix is a permutation matrix —
+    // once each entity's attributes are pinned, the attr×attr pairs are
+    // implied, and the game's win condition reads only the anchor rows.
+    function anchorSolved() {
+      for (let j = 1; j < C; j++) {
+        const m = M[0][j];
+        for (let a = 0; a < N; a++) {
+          let n = 0;
+          for (let b = 0; b < N; b++) if (m[a][b]) n++;
+          if (n !== 1) return false;
+        }
+      }
+      return true;
+    }
+
+    // escalate: cheap rules to fixpoint (and re-check solved) before
+    // reaching for expensive ones, so the grade reflects what a solver
+    // actually NEEDS, not every rule that could still fire afterwards.
+    // Matrices only ever lose possibilities, so a session can be reused
+    // incrementally: seed more clues and run() again — this is what makes
+    // greedy clue building cheap.
+    function run() {
+      let grade = 1, done = false;
+      while (!done) {
+        while (passPropagate()) {}
+        if (anchorSolved()) break;
+        if (passLinks())       { grade = Math.max(grade, 2); continue; }
+        if (passOrdinal())     { grade = Math.max(grade, 3); continue; }
+        if (passTriangulate()) { grade = Math.max(grade, 4); continue; }
+        done = true;
+      }
+
+      if (!anchorSolved()) return { solved: false, grade };
+
+      // read the deduced assignment off the anchor row (entity → value per cat)
+      const sol = {};
+      attrCats.forEach(cat => {
+        const j = catIdx[cat.name];
+        sol[cat.name] = entities.map((_, e) => {
+          for (let b = 0; b < N; b++) if (poss(0, e, j, b)) return cat.values[b];
+        });
+      });
+      return { solved: true, grade, sol };
+    }
+
+    return { seed, run };
+  }
+
+  /* One-shot solve: seed every clue into a fresh session and run it. */
+  function solveByDeduction(entities, attrCats, clues) {
+    const session = makeDeductionSession(entities, attrCats);
+    clues.forEach(cl => session.seed(cl));
+    return session.run();
+  }
+
+  /* Per-palette bounds on the deduction grade of a finished puzzle.
+     Lower bound keeps hard/expert from shipping a trivially-direct board;
+     upper bound keeps easy/medium free of the deep triangulation scans. */
+  const GRADE_BANDS = {
+    easy:     { min: 1, max: 2 },
+    balanced: { min: 1, max: 3 },
+    hard:     { min: 2, max: 4 },
+    expert:   { min: 2, max: 4 },
+  };
+
+  /* Greedy build to a deduction-solvable clue set, then trim to minimal.
+     Acceptance is solveByDeduction — NOT mere uniqueness — so every
+     shipped puzzle is finishable without trial-and-error. */
   function buildClues(entities, attrCats, sol, palette) {
     const cand = generateCandidates(entities, attrCats, sol, palette);
     // assemble candidate list in palette preference order, shuffled within type
     let ordered = [];
     PALETTES[palette].forEach(type => { ordered = ordered.concat(shuffle(cand[type])); });
 
+    const solvable = clues => solveByDeduction(entities, attrCats, clues).solved;
+
+    // Greedy phase reuses one incremental session: each added clue only
+    // cuts more possibilities, so nothing needs recomputing from scratch.
+    const session = makeDeductionSession(entities, attrCats);
     const chosen = [];
+    let complete = false;
     for (const cl of ordered) {
       chosen.push(cl);
-      if (isUnique(entities, attrCats, chosen)) break;
+      session.seed(cl);
+      if (session.run().solved) { complete = true; break; }
     }
-    if (!isUnique(entities, attrCats, chosen)) return null;
+    if (!complete) return null;
 
     // trim redundant clues
     for (let i = chosen.length - 1; i >= 0; i--) {
       const without = chosen.slice(0, i).concat(chosen.slice(i + 1));
-      if (isUnique(entities, attrCats, without)) chosen.splice(i, 1);
+      if (solvable(without)) chosen.splice(i, 1);
     }
 
     // Easy: leave a little slack — add back 1–2 direct positives for comfort.
@@ -260,7 +494,12 @@
         !chosen.some(c => c.type === 'positive' && c.e === p.e && c.cat === p.cat)));
       for (const ex of extras.slice(0, 2)) chosen.push(ex);
     }
-    return shuffle(chosen);
+
+    const band = GRADE_BANDS[palette];
+    const grade = solveByDeduction(entities, attrCats, chosen).grade;
+    if (grade < band.min || grade > band.max) return null;
+
+    return { clues: shuffle(chosen), grade };
   }
 
   function pickCategories(level, palette) {
@@ -316,10 +555,11 @@
       }));
       for (let attempt = 0; attempt < 60; attempt++) {
         const { sol, solIndex } = buildSolution(entities, attrCats);
-        const clues = buildClues(entities, attrCats, sol, palette);
-        if (clues) {
+        const built = buildClues(entities, attrCats, sol, palette);
+        if (built) {
           const allCats = [{ name: ANCHOR, values: entities }, ...attrCats];
-          return { entities, attrCats, allCats, sol, solIndex, clues, palette };
+          return { entities, attrCats, allCats, sol, solIndex,
+                   clues: built.clues, grade: built.grade, palette };
         }
         if (attempt === 45 && palette === 'expert') palette = 'hard';
       }
@@ -330,10 +570,11 @@
       const entities = shuffle(NAME_POOL)[0].slice(0, N);
       const attrCats = pickCategories(level, palette);
       const { sol, solIndex } = buildSolution(entities, attrCats);
-      const clues = buildClues(entities, attrCats, sol, palette);
-      if (clues) {
+      const built = buildClues(entities, attrCats, sol, palette);
+      if (built) {
         const allCats = [{ name: ANCHOR, values: entities }, ...attrCats];
-        return { entities, attrCats, allCats, sol, solIndex, clues, palette };
+        return { entities, attrCats, allCats, sol, solIndex,
+                 clues: built.clues, grade: built.grade, palette };
       }
       if (attempt === 45 && palette === 'expert') palette = 'hard';
     }
@@ -341,9 +582,9 @@
   }
 
   return {
-    ANCHOR, LEVELS, PALETTES, CATEGORY_POOL, NAME_POOL,
+    ANCHOR, LEVELS, PALETTES, CATEGORY_POOL, NAME_POOL, GRADE_BANDS,
     buildSolution, generateCandidates, clueCats,
-    countSolutions, isUnique, buildClues,
+    countSolutions, isUnique, solveByDeduction, makeDeductionSession, buildClues,
     pickCategories, sliceKeeping, generatePuzzle,
   };
 });

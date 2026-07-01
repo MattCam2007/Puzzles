@@ -85,14 +85,55 @@ function validatePuzzle(p, diffKey, label) {
 /* ═══ 1. random-pool generation, every difficulty ═══ */
 section('1. Random generation validity');
 {
-  const TRIALS = { easy: 8, medium: 8, hard: 4, expert: 3 };
+  const TRIALS = { easy: 20, medium: 20, hard: 20, expert: 20 };
   for (const diff of Object.keys(E.LEVELS)) {
-    const t0 = Date.now();
+    let genMs = 0;
     for (let t = 0; t < TRIALS[diff]; t++) {
-      validatePuzzle(E.generatePuzzle(diff, null), diff, `random/${diff}#${t}`);
+      const t0 = Date.now();
+      const p = E.generatePuzzle(diff, null);
+      genMs += Date.now() - t0;
+      validatePuzzle(p, diff, `random/${diff}#${t}`);
     }
-    report(`${diff}: ${TRIALS[diff]} puzzles in ${Date.now() - t0}ms`);
+    report(`${diff}: ${TRIALS[diff]} puzzles, generation ${genMs}ms (validation excluded)`);
+    // regression guard: generation runs on the UI thread — keep it snappy.
+    // (Validation uses the exponential backtracking oracle and is test-only.)
+    check(`${diff}: generation fast enough (avg < 150ms)`, genMs / TRIALS[diff] < 150,
+      `avg ${(genMs / TRIALS[diff]).toFixed(0)}ms`);
   }
+}
+
+/* ═══ 1b. no-guessing guarantee + grade bands ═══ */
+section('1b. Deduction solvability (no-guessing) + grade bands');
+{
+  for (const diff of Object.keys(E.LEVELS)) {
+    const palette = E.LEVELS[diff].palette;
+    const band = E.GRADE_BANDS[palette];
+    for (let t = 0; t < 10; t++) {
+      const p = E.generatePuzzle(diff, null);
+      if (!check(`${diff}#${t}: generated`, !!p)) continue;
+      const r = E.solveByDeduction(p.entities, p.attrCats, p.clues);
+      check(`${diff}#${t}: solvable by pure deduction`, r.solved);
+      if (r.solved) {
+        // solver's derived assignment must equal the planted solution
+        const agrees = p.attrCats.every(cat =>
+          p.sol[cat.name].every((v, e) => r.sol[cat.name][e] === v));
+        check(`${diff}#${t}: deduced solution matches planted solution`, agrees);
+      }
+      check(`${diff}#${t}: grade within band [${band.min},${band.max}]`,
+        p.grade >= band.min && p.grade <= band.max, `grade=${p.grade}`);
+    }
+  }
+  // solver sanity anchors
+  const p = E.generatePuzzle('medium', null);
+  check('solver: empty clue set is not "solved"',
+    !E.solveByDeduction(p.entities, p.attrCats, []).solved);
+  const allPositives = [];
+  p.entities.forEach((name, e) => p.attrCats.forEach(cat => {
+    allPositives.push({ type: 'positive', e, cat: cat.name, val: p.sol[cat.name][e] });
+  }));
+  const direct = E.solveByDeduction(p.entities, p.attrCats, allPositives);
+  check('solver: full positives solve at grade 1', direct.solved && direct.grade === 1,
+    `solved=${direct.solved} grade=${direct.grade}`);
 }
 
 /* ═══ 2. pack generation, every pack × difficulty ═══ */
