@@ -519,6 +519,22 @@
     }));
   }
 
+  /* Fill a story-pack text template with the ACTUAL cast of this puzzle.
+     {cast} → "A, B, C, and D" · {count}/{Count} → "four"/"Four".
+     Pack prose must use these instead of hard-coding names/counts, because
+     easy/medium play with a 4-person slice of the 5-person cast. */
+  const COUNT_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six'];
+  function fillStoryTokens(text, entities) {
+    if (!text) return '';
+    const cast = entities.length > 1
+      ? entities.slice(0, -1).join(', ') + (entities.length > 2 ? ',' : '') + ' and ' + entities[entities.length - 1]
+      : String(entities[0] || '');
+    const count = COUNT_WORDS[entities.length] || String(entities.length);
+    return text.replace(/\{cast\}/g, cast)
+               .replace(/\{count\}/g, count)
+               .replace(/\{Count\}/g, count.charAt(0).toUpperCase() + count.slice(1));
+  }
+
   /* Shuffle `values` and keep N — but guarantee `must` stays in when given,
      so a pack's culprit tell is never sliced out at lower difficulties. */
   function sliceKeeping(values, N, must) {
@@ -538,7 +554,10 @@
     const N = level.items, C = level.cats;
 
     if (pack) {
-      const entities = pack.cast.slice(0, N);
+      // rotate the cast so a 4-person tier doesn't always bench the same
+      // character (display order still follows the pack's cast order)
+      const kept = new Set(shuffle(pack.cast.map((_, i) => i)).slice(0, N));
+      const entities = pack.cast.filter((_, i) => kept.has(i));
       let packCats = pack.categories.slice(0, C);
       // ensure an ordinal category is present when the palette needs one
       const needOrdinal = palette === 'hard' || palette === 'expert';
@@ -585,6 +604,6 @@
     ANCHOR, LEVELS, PALETTES, CATEGORY_POOL, NAME_POOL, GRADE_BANDS,
     buildSolution, generateCandidates, clueCats,
     countSolutions, isUnique, solveByDeduction, makeDeductionSession, buildClues,
-    pickCategories, sliceKeeping, generatePuzzle,
+    pickCategories, sliceKeeping, fillStoryTokens, generatePuzzle,
   };
 });

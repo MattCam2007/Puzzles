@@ -180,6 +180,49 @@ for (const [id, pack] of Object.entries(LOGIC_PACKS)) {
   }
   const asides = (LOGIC_THEMES[pack.theme] || {}).asides || [];
   check(`${id}: theme has ≥5 asides (one per cast member)`, asides.length >= 5);
+
+  // prose must use {cast}/{count} templating — never hard-coded names or
+  // counts, because lower tiers play with a 4-person slice of the cast
+  const prose = [...(pack.premises || []), pack.question || ''];
+  prose.forEach((text, pi) => {
+    check(`${id}: prose #${pi} has no literal cast names`,
+      !pack.cast.some(name => text.includes(name)),
+      pack.cast.filter(name => text.includes(name)).join(','));
+  });
+  (pack.premises || []).forEach((text, pi) => {
+    check(`${id}: premise #${pi} uses {cast}`, text.includes('{cast}'));
+  });
+}
+
+/* ═══ 3b. story templating + cast rotation ═══ */
+section('3b. Story templating + cast rotation');
+{
+  const fill = E.fillStoryTokens;
+  check('fillStoryTokens: 4 names, Oxford comma',
+    fill('{Count} left: {cast}.', ['A', 'B', 'C', 'D']) === 'Four left: A, B, C, and D.');
+  check('fillStoryTokens: 2 names, no comma',
+    fill('the {count}: {cast}', ['A', 'B']) === 'the two: A and B');
+  check('fillStoryTokens: repeated tokens',
+    fill('{count} and {count}', ['A', 'B', 'C']) === 'three and three');
+
+  const pack = Object.values(LOGIC_PACKS)[0];
+  // filled premises never leak placeholders or name absent cast members
+  for (let t = 0; t < 6; t++) {
+    const p = E.generatePuzzle('easy', pack);
+    if (!check(`rotation#${t}: generated`, !!p)) continue;
+    const premise = fill(pack.premises[0], p.entities);
+    check(`rotation#${t}: no leftover placeholders`, !premise.includes('{'));
+    const absent = pack.cast.filter(n => !p.entities.includes(n));
+    check(`rotation#${t}: absent cast not named`, absent.every(n => !premise.includes(n)));
+  }
+  // the benched character varies across games (probabilistic but sure)
+  const casts = new Set();
+  for (let t = 0; t < 20; t++) {
+    const p = E.generatePuzzle('easy', pack);
+    if (p) casts.add(p.entities.join('|'));
+  }
+  check('cast rotation: multiple distinct 4-person casts over 20 games', casts.size >= 2,
+    `distinct=${casts.size}`);
 }
 
 /* ═══ 4. unit checks on engine pieces ═══ */

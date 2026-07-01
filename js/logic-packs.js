@@ -15,6 +15,13 @@
    sensibly attached to anyone and never reference a category value, so
    they can't spoil the randomly-assigned solution.
 
+   TEMPLATING — REQUIRED
+   Premises and questions must reference the suspects via {cast} and
+   {count}/{Count} placeholders, never by literal names or a literal
+   count: easy/medium play with a rotating 4-person slice of the cast,
+   so hard-coded prose would name someone who isn't in the puzzle.
+   (Sketches are per-character and may of course use their own name.)
+
    WHODUNIT CONTRACT
    Each pack names a culprit by a single { category, value } tell —
    e.g. whoever the Thieves sponsor set the fire. Solving the grid
@@ -89,16 +96,19 @@ const LOGIC_PACKS = {
       { name: 'Rank', ordinal: true, values: ['1st', '2nd', '3rd', '4th', '5th'] },
     ],
 
+    /* {count}/{Count} and {cast} are filled in at generation time with the
+       ACTUAL suspects — lower difficulties play with a 4-person cast, so
+       hard-coding "five" and all five names would accuse an absent suspect. */
     premises: [
-      "The Grand Tournament of Thornmere draws champions from across the Five Kingdoms every decade, and this year's field is thin on legends and heavy on personality. The night before the joust, someone torched the stables — and the saboteur was acting on the coin of the Thieves' Guild. Five competitors remain under suspicion: Aldric, Seraphine, Bramble, Vex, and Lyria.",
-      "Smoke still hangs over Thornmere. The tournament stables burned to the ground in the dark hours before the opening joust, and it was no stray lantern — the arsonist was paid in Thieves' Guild silver. The marshals have confined the five remaining champions to the grounds: Aldric, Seraphine, Bramble, Vex, and Lyria. None of them did it, to hear them tell it.",
-      "Once a decade the Five Kingdoms send their finest to the Grand Tournament of Thornmere. This year they sent these five — Aldric, Seraphine, Bramble, Vex, and Lyria — and one of them is on the Thieves' Guild payroll. That one set fire to the stables the night before the joust. The trophy can wait; the marshals want a name first.",
+      "The Grand Tournament of Thornmere draws champions from across the Five Kingdoms every decade, and this year's field is thin on legends and heavy on personality. The night before the joust, someone torched the stables — and the saboteur was acting on the coin of the Thieves' Guild. {Count} competitors remain under suspicion: {cast}.",
+      "Smoke still hangs over Thornmere. The tournament stables burned to the ground in the dark hours before the opening joust, and it was no stray lantern — the arsonist was paid in Thieves' Guild silver. The marshals have confined the {count} remaining champions to the grounds: {cast}. None of them did it, to hear them tell it.",
+      "Once a decade the Five Kingdoms send their finest to the Grand Tournament of Thornmere. This year the field has come down to {count} — {cast} — and one of them is on the Thieves' Guild payroll. That one set fire to the stables the night before the joust. The trophy can wait; the marshals want a name first.",
     ],
 
     /* the tell: whoever the Thieves sponsor set the fire */
     culprit: { category: 'Sponsor', value: 'Thieves' },
     question:
-      "One of these five fights on the secret coin of the Thieves' Guild — and that's who burned the stables. Work out each champion's weapon and kingdom until their sponsor is pinned down, and the arsonist names themselves. So — who set the fire?",
+      "One of these {count} fights on the secret coin of the Thieves' Guild — and that's who burned the stables. Work out each champion's weapon and kingdom until their sponsor is pinned down, and the arsonist names themselves. So — who set the fire?",
     verdict: '{name} was riding on Thieves’ coin. The stable arsonist, caught.',
   },
 
@@ -135,9 +145,9 @@ const LOGIC_PACKS = {
     ],
 
     premises: [
-      "The Adventurers' Guild of Ironhaven has a problem: the Vault of Relics was full on Monday night and stood empty by Tuesday morning. There was no forced entry — whoever emptied it walked out carrying the master Lockpick that opens every door in the tower. The Guildmaster has sealed the doors. Five members were inside that night: Orin, Thessaly, Greymantle, Cinder, and Wren.",
-      "No alarm, no broken lock, no broken window — and yet by Tuesday dawn the Vault of Relics at Ironhaven stood bare. Only the master Lockpick could have opened it so quietly, and only one of the five members trapped in the tower was holding it: Orin, Thessaly, Greymantle, Cinder, or Wren. The Guildmaster wants the thief before anyone eats breakfast.",
-      "Ironhaven's proudest boast was that its Vault of Relics had never been robbed. That boast lasted until Tuesday morning. The thief left no mark on the door because they didn't need to — they had the master Lockpick. Five members had the run of the tower that night: Orin, Thessaly, Greymantle, Cinder, and Wren. One of them is lying.",
+      "The Adventurers' Guild of Ironhaven has a problem: the Vault of Relics was full on Monday night and stood empty by Tuesday morning. There was no forced entry — whoever emptied it walked out carrying the master Lockpick that opens every door in the tower. The Guildmaster has sealed the doors. {Count} members were inside that night: {cast}.",
+      "No alarm, no broken lock, no broken window — and yet by Tuesday dawn the Vault of Relics at Ironhaven stood bare. Only the master Lockpick could have opened it so quietly, and only one of the {count} members trapped in the tower was holding it: {cast}. The Guildmaster wants the thief before anyone eats breakfast.",
+      "Ironhaven's proudest boast was that its Vault of Relics had never been robbed. That boast lasted until Tuesday morning. The thief left no mark on the door because they didn't need to — they had the master Lockpick. {Count} members had the run of the tower that night: {cast}. One of them is lying.",
     ],
 
     /* the tell: whoever was carrying the Lockpick robbed the vault */

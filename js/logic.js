@@ -68,7 +68,9 @@ function low(s) { return s.toLowerCase(); }
 function buildStory(pack, entities) {
   const theme = LOGIC_THEMES[pack.theme] || {};
   const premises = (pack.premises && pack.premises.length) ? pack.premises : [pack.premise];
-  const premise = premises[Math.floor(Math.random() * premises.length)];
+  const raw = premises[Math.floor(Math.random() * premises.length)];
+  // fill {cast}/{count} with the entities actually playing this puzzle
+  const premise = LogicEngine.fillStoryTokens(raw, entities);
   const bank = shuffle((theme.asides || []).slice());
   const asides = {};
   entities.forEach((name, i) => { if (bank.length) asides[name] = bank[i % bank.length]; });
@@ -406,8 +408,8 @@ function renderStory() {
   panel.style.display = '';
   const pack = LOGIC_PACKS[PUZZLE.packId];
   const story = PUZZLE.story || { premise: (pack.premises && pack.premises[0]) || pack.premise || '', asides: {} };
-  $('#storyPremise').textContent = story.premise;
-  $('#storyQuestion').textContent = pack.question || '';
+  $('#storyPremise').textContent = LogicEngine.fillStoryTokens(story.premise, PUZZLE.entities);
+  $('#storyQuestion').textContent = LogicEngine.fillStoryTokens(pack.question || '', PUZZLE.entities);
   $('#storyQuestion').style.display = pack.question ? '' : 'none';
   $('#castList').innerHTML = PUZZLE.entities.map(name => {
     const base = pack.sketches[name] || '';
