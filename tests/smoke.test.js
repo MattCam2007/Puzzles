@@ -226,6 +226,18 @@ async function main() {
 
       await checkKeyboardGuardOnSettings(page, name, { serialize: serialize2048, keys: 'wasd' });
 
+      await page.click('#settingsBtn');
+      await page.evaluate(() => {
+        [...document.querySelectorAll('#tilePicker .pick-row')].find(r => r.textContent.includes('Hex')).click();
+      });
+      const hexApplied = await page.evaluate(() => [...document.querySelectorAll('#tc .tile')].some(t => t.textContent.startsWith('0x')));
+      report(`${name}: tile mode applies`, hexApplied);
+      await page.evaluate(() => document.getElementById('settingsBackdrop').click());
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      const hexPersisted = await page.evaluate(() => [...document.querySelectorAll('#tc .tile')].some(t => t.textContent.startsWith('0x')));
+      const cfgTileMode = await page.evaluate(() => JSON.parse(localStorage.getItem('2048-cfg')).tileMode);
+      report(`${name}: tile mode persists after reload`, hexPersisted && cfgTileMode === 'hex', `hexPersisted=${hexPersisted} cfgTileMode=${cfgTileMode}`);
+
       // ends the game — keep last
       await page.evaluate(() => { showOverlay(false); saveHistory(); });
       await page.reload({ waitUntil: 'domcontentloaded' });

@@ -28,7 +28,11 @@ const ANIMS = [
   { id:'inferno',  icon:'🔥', label:'INFERNO',      tileClass:'tile-merged' },
 ];
 
-let currentAnim = 'clean';
+const CFG_DEFAULTS = { anim: 'clean', tileMode: 'numbers' };
+const cfg2048 = Object.assign({}, CFG_DEFAULTS, loadJSON('2048-cfg', {}));
+function saveCfg() { saveJSON('2048-cfg', cfg2048); }
+
+let currentAnim = ANIMS.some(a => a.id === cfg2048.anim) ? cfg2048.anim : 'clean';
 
 // ═══════════════════════════════════════════════════════════
 //  TILE MODE SYSTEM
@@ -79,7 +83,7 @@ const TILE_MODES = [
   },
 ];
 
-let currentTileMode = 'numbers';
+let currentTileMode = TILE_MODES.some(m => m.id === cfg2048.tileMode) ? cfg2048.tileMode : 'numbers';
 
 function tileLabel(val) {
   const mode = TILE_MODES.find(m=>m.id===currentTileMode) || TILE_MODES[0];
@@ -112,11 +116,15 @@ function buildTilePicker() {
 
 function selectAnim(id) {
   currentAnim = id;
+  cfg2048.anim = id;
+  saveCfg();
   buildAnimPicker();
 }
 
 function selectTileMode(id) {
   currentTileMode = id;
+  cfg2048.tileMode = id;
+  saveCfg();
   buildTilePicker();
   renderInstant();
 }
