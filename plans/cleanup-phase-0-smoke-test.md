@@ -176,3 +176,20 @@ the script actually behaves.
   note instead — phase 1 owns the known bugs).
 - Any change to js/css/html of the games.
 - CI wiring, screenshots, visual diffs, perf measurement.
+
+## Status (2026-07-06)
+
+Done. `node tests/smoke.test.js` passes 58/58 twice back-to-back; the
+canary check (temporary `throw new Error('smoke-canary')` at the top of
+`js/sudoku.js`, reverted after) correctly failed the sudoku suite with a
+`pageerror`. `node tests/logic-engine.test.js` still green (2307 passed).
+
+One environment wrinkle not anticipated by this doc: the sandbox doesn't
+just fail the Google Fonts `@import` in `css/theme.css` — it black-holes
+the request, which stalls CSSOM (and therefore script execution / load
+events) for ~13s per navigation. Three navigations per page-suite (initial
+load + 2 reloads) blew the 30s per-page budget. Fixed by aborting
+`https://fonts.googleapis.com/**` at the network layer via
+`context.route(...)` so the request fails instantly instead of hanging.
+No app code changed to work around this — it's isolated to the test
+harness.
