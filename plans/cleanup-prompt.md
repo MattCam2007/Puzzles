@@ -165,6 +165,73 @@ the unified conventions, verify it end-to-end, and reference it from the agent
 doc so it's discoverable. If a skill encodes a convention, that convention must
 also be stated in the doc — skill and doc agree.
 
+## Agents — create a model-tiered roster (opencode format)
+
+Create a set of purpose-built agents as opencode agent files (project-level:
+`.opencode/agent/<name>.md`). Each file is Markdown with YAML frontmatter and a
+system-prompt body:
+
+```markdown
+---
+description: >-
+  One or two sentences on exactly when to use this agent. opencode uses this to
+  route work, so be specific about the job and its boundaries.
+mode: subagent            # primary = orchestrates; subagent = invoked by others
+model: anthropic/claude-haiku-4-5   # provider/model slug — verify against the
+                                    # user's configured providers / models.dev
+temperature: 0.1
+tools:                    # least privilege: only what the job needs
+  write: false
+  edit: true
+  bash: true
+permission:
+  edit: allow
+  bash: ask
+---
+
+You are <role>. <Scope, method, what to do, what NOT to do, when to escalate.>
+```
+
+**Design principle — the expensive model decides, cheap models apply.** Pay the
+top tier once for auditing, architecture, and review; push fully-specified,
+mechanical, repetitive work down to the cheapest model that can do it reliably.
+Split a job into its own agent only when that split is both *possible* (the work
+is separable and well-scoped) and *meaningful* (it lets a cheaper model do work
+the expensive one would otherwise do, or it earns a tighter tool/permission
+scope). Don't manufacture agents that don't change the model tier or the
+privilege boundary.
+
+**Model tiers, cheapest → most expensive:** Z.AI/GLM (cheapest; good for
+fully-specified low-judgment work) → Haiku → Sonnet → Opus/Fable. Use exact
+`provider/model` slugs from the user's configured providers (look them up; don't
+guess). **Do not hardcode Fable as a durable role** — the user's Fable access is
+temporary, so pin Opus for the persistent top tier and treat Fable only as an
+optional override while available.
+
+Give each agent **least-privilege tools**: read-only agents get no `write`/`edit`
+(audit, verify); appliers get `edit` but stay tightly scoped by their prompt;
+reserve broad `bash`/permission for the agents that truly need it.
+
+Recommended roster (adjust names/count to what's meaningful — merging two is
+fine if the split buys nothing):
+
+| Agent | Mode | Tier | Job | Tools posture |
+|---|---|---|---|---|
+| **planner** | primary | **Opus** (Fable optional, while available) | The only place you spend top dollar. Runs the audit, ranks findings, designs the button taxonomy / layout contract / shared-chrome architecture, delegates to subagents, and reviews risky diffs. Thinks and reviews — rarely types. | read + plan; little/no direct editing |
+| **bug-hunter** | subagent | **Sonnet** | Find and fix correctness bugs (persistence/restore, leaks, edge cases). Real code reasoning, but Sonnet-grade; escalate genuinely gnarly ones to planner. | read + edit (js) |
+| **refactorer** | subagent | **Sonnet** | Implement the DRY consolidation and UI unification against the planner's spec: shared button system, shared settings-panel/chrome, extracted helpers. | read + edit (html/css/js) |
+| **sweeper** | subagent | **Haiku** (or Z.AI/GLM for the most mechanical batches) | The workhorse that keeps you off expensive models. Applies fully-decided, repetitive edits across many files: button-class renames, label casing, storage-key migration, dead-code deletion. The thinking is already done; it just applies it precisely and consistently. | read + edit, tightly scoped |
+| **skill-author** | subagent | **Sonnet** | Write and verify the skills (smoke-test with Playwright, add-theme, add-game). | read + edit + bash |
+| **docs-scribe** | subagent | **Z.AI/GLM** (or Haiku) | Reconcile the agent doc, skill descriptions, and README prose to match the final code. Well-specified writing at a low judgment bar. | read + edit (docs only) |
+| **verifier** | subagent | **Z.AI/GLM** or **Haiku** | Run the tests and the smoke-test skill, load each game, report console errors and state-persistence results. Executes and reports; never edits. | read + bash; **no edit/write** |
+
+Net effect to aim for: Opus/Fable touches only the audit, the architecture
+decisions, and the review of risky changes; Sonnet does implementation that
+needs judgment; Haiku/GLM do the high-volume mechanical edits, verification, and
+doc reconciliation. Wire the subagents so the planner can delegate to them, and
+make sure the cheap appliers are constrained enough (by prompt and by tool
+scope) that a smaller model can't wander outside its lane.
+
 ## Rules of engagement
 
 - Prefer many small, self-contained, reviewable commits over one giant diff.
@@ -185,6 +252,7 @@ also be stated in the doc — skill and doc agree.
 1. The audit / plan up front.
 2. The changes as incremental commits (bugs → UI unification + DRY →
    consistency → perf → polish), with docs updated alongside.
-3. The upgraded agent doc and the new skills, each verified.
+3. The upgraded agent doc, the new skills, and the opencode agent roster — each
+   verified (models set to durable tiers, not Fable).
 4. A short summary: what you fixed, what you deliberately left alone (and why),
    and anything risky you want a human to look at.
