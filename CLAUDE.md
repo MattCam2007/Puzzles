@@ -43,6 +43,7 @@ Tests (plain Node, no dependencies):
 
 ```bash
 node tests/logic-engine.test.js   # Logic Grid engine: validity, no-guessing, packs
+node tests/smoke.test.js          # headless-browser smoke suite: boots every game, checks settings/theme/reload
 ```
 
 ## localStorage key conventions

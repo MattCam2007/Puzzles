@@ -28,7 +28,11 @@ const ANIMS = [
   { id:'inferno',  icon:'🔥', label:'INFERNO',      tileClass:'tile-merged' },
 ];
 
-let currentAnim = 'clean';
+const CFG_DEFAULTS = { anim: 'clean', tileMode: 'numbers' };
+const cfg2048 = Object.assign({}, CFG_DEFAULTS, loadJSON('2048-cfg', {}));
+function saveCfg() { saveJSON('2048-cfg', cfg2048); }
+
+let currentAnim = ANIMS.some(a => a.id === cfg2048.anim) ? cfg2048.anim : 'clean';
 
 // ═══════════════════════════════════════════════════════════
 //  TILE MODE SYSTEM
@@ -79,7 +83,7 @@ const TILE_MODES = [
   },
 ];
 
-let currentTileMode = 'numbers';
+let currentTileMode = TILE_MODES.some(m => m.id === cfg2048.tileMode) ? cfg2048.tileMode : 'numbers';
 
 function tileLabel(val) {
   const mode = TILE_MODES.find(m=>m.id===currentTileMode) || TILE_MODES[0];
@@ -112,11 +116,15 @@ function buildTilePicker() {
 
 function selectAnim(id) {
   currentAnim = id;
+  cfg2048.anim = id;
+  saveCfg();
   buildAnimPicker();
 }
 
 function selectTileMode(id) {
   currentTileMode = id;
+  cfg2048.tileMode = id;
+  saveCfg();
   buildTilePicker();
   renderInstant();
 }
@@ -683,7 +691,14 @@ function restore2048(){
   prevGrid=null; prevScore=null;
   uid=0;
   for(let r=0;r<N;r++) for(let c=0;c<N;c++) if(grid[r][c]?.id>uid) uid=grid[r][c].id;
-  updateUI(); hideOverlay(); renderInstant();
+  updateUI(); renderInstant();
+  hideOverlay();
+  if(gameOver){
+    showOverlay(false);            // loss: re-show the Game Over banner
+  }else{
+    gameWon=false;
+    checkWin();                    // re-shows the win banner iff a milestone
+  }                                //   is reached and not yet acknowledged
   $('#undoBtn').disabled=true;
   return true;
 }
@@ -760,6 +775,7 @@ function hideOverlay(){$('#banner').classList.remove('show');}
 // ═══════════════════════════════════════════════════════════
 const KEYMAP={ArrowUp:0,w:0,W:0,ArrowRight:1,d:1,D:1,ArrowDown:2,s:2,S:2,ArrowLeft:3,a:3,A:3};
 document.addEventListener('keydown',e=>{
+  if(shouldIgnoreGameKeys(e)) return;
   if(KEYMAP[e.key]!==undefined){e.preventDefault();doMove(KEYMAP[e.key]);}
 });
 

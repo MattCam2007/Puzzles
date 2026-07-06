@@ -67,6 +67,7 @@ body {
 .mistakes-indicator { display: flex; gap: 4px; align-items: center; }
 .mistake-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--surface3); transition: background 0.2s; }
 .mistake-dot.used { background: var(--error); }
+.mistake-count { font-size: 0.82rem; font-weight: 700; color: var(--text); line-height: 1; }
 
 /* ── BOARD TOP BAR ── */
 .board-top-bar {

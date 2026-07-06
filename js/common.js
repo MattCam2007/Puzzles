@@ -37,6 +37,17 @@ function pushHistory(key, snapshot, limit) {
   saveJSON(key, history);
 }
 
+/* ── keyboard ── */
+/* true when a game's document-level key handler must ignore the event:
+   focus is in a text-entry control, or the settings sheet is open */
+function shouldIgnoreGameKeys(e) {
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' ||
+            t.tagName === 'SELECT' || t.isContentEditable)) return true;
+  const panel = document.getElementById('settingsPanel');
+  return !!(panel && panel.classList.contains('show'));
+}
+
 /* ── arrays ── */
 function shuffle(arr) {
   const a = [...arr];
