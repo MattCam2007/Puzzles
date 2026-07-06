@@ -157,6 +157,21 @@ async function checkStateSurvivesReload(page, name, { historyKey, serialize, int
   report(`${name}: state survives reload`, equal, equal ? '' : `${JSON.stringify(before)} vs ${JSON.stringify(after)}`);
 }
 
+async function checkKeyboardGuardOnSettings(page, name, { serialize, keys, beforeType }) {
+  if (beforeType) await page.evaluate(beforeType);
+  const before = await page.evaluate(serialize);
+  await page.click('#settingsBtn');
+  await page.click('#bgImageUrl');
+  await page.keyboard.type(keys);
+  const inputValue = await page.evaluate(() => document.getElementById('bgImageUrl').value);
+  report(`${name}: keyboard guard - text lands in input`, inputValue === keys, `got "${inputValue}"`);
+  const after = await page.evaluate(serialize);
+  const unchanged = JSON.stringify(before) === JSON.stringify(after);
+  report(`${name}: keyboard guard - game state unchanged`, unchanged, unchanged ? '' : `${JSON.stringify(before)} vs ${JSON.stringify(after)}`);
+  await page.evaluate(() => { document.getElementById('bgImageUrl').value = ''; });
+  await page.evaluate(() => document.getElementById('settingsBackdrop').click());
+}
+
 async function main() {
   const server = await startServer();
   const port = server.address().port;
@@ -190,6 +205,12 @@ async function main() {
       await checkOverlaySanity(page, name, '#banner');
       await checkSettingsAndTheme(page, name);
 
+      const serialize2048 = () => {
+        const score = document.getElementById('score').textContent;
+        const tiles = Array.from(document.querySelectorAll('#tc .tile')).map(t => t.textContent).sort();
+        return { score, tiles };
+      };
+
       await checkStateSurvivesReload(page, name, {
         historyKey: '2048-history',
         interact: async (p) => {
@@ -200,12 +221,10 @@ async function main() {
           await p.keyboard.press('ArrowRight');
           await p.waitForTimeout(300);
         },
-        serialize: () => {
-          const score = document.getElementById('score').textContent;
-          const tiles = Array.from(document.querySelectorAll('#tc .tile')).map(t => t.textContent).sort();
-          return { score, tiles };
-        },
+        serialize: serialize2048,
       });
+
+      await checkKeyboardGuardOnSettings(page, name, { serialize: serialize2048, keys: 'wasd' });
     });
 
     await runPageSuite(browser, baseUrl, 'sudoku', async (page) => {
@@ -217,6 +236,8 @@ async function main() {
 
       await checkOverlaySanity(page, name, '#overlay');
       await checkSettingsAndTheme(page, name);
+
+      const serializeSudoku = () => document.getElementById('board').innerText;
 
       await checkStateSurvivesReload(page, name, {
         historyKey: 'sudoku-history',
@@ -231,7 +252,21 @@ async function main() {
             await p.click(`#board .cell[data-row="${target.row}"][data-col="${target.col}"]`);
           }
         },
-        serialize: () => document.getElementById('board').innerText,
+        serialize: serializeSudoku,
+      });
+
+      await checkKeyboardGuardOnSettings(page, name, {
+        serialize: serializeSudoku,
+        keys: '123',
+        // force cell-first mode with a cell armed: this is the path where a
+        // typed digit actually writes into the board, not just arms a numpad number
+        beforeType: () => {
+          cfg.inputMode = 'cell';
+          const cell = Array.from(document.querySelectorAll('#board .cell:not(.given)'))
+            .find(c => c.textContent.trim() === '');
+          if (cell) selected = [+cell.dataset.row, +cell.dataset.col];
+          applyHighlights();
+        },
       });
     });
 
@@ -245,14 +280,18 @@ async function main() {
       await checkOverlaySanity(page, name, '#overlay');
       await checkSettingsAndTheme(page, name);
 
+      const serializeKakuro = () => document.getElementById('board').innerText;
+
       await checkStateSurvivesReload(page, name, {
         historyKey: 'kakuro-history',
         interact: async (p) => {
           await p.evaluate(() => document.querySelector('.cell.white').click());
           await p.keyboard.press('5');
         },
-        serialize: () => document.getElementById('board').innerText,
+        serialize: serializeKakuro,
       });
+
+      await checkKeyboardGuardOnSettings(page, name, { serialize: serializeKakuro, keys: '5' });
     });
 
     await runPageSuite(browser, baseUrl, 'minesweeper', async (page) => {
@@ -264,12 +303,25 @@ async function main() {
       await checkOverlaySanity(page, name, '#overlay');
       await checkSettingsAndTheme(page, name);
 
+      const serializeMinesweeper = () => document.getElementById('board').innerText;
+
       await checkStateSurvivesReload(page, name, {
         historyKey: 'minesweeper-history',
         interact: async (p) => {
           await p.evaluate(() => document.querySelectorAll('#board .cell')[0].click());
         },
-        serialize: () => document.getElementById('board').innerText,
+        serialize: serializeMinesweeper,
+      });
+
+      await checkKeyboardGuardOnSettings(page, name, {
+        serialize: serializeMinesweeper,
+        keys: 'f',
+        // point the keyboard cursor at a still-covered cell so 'f' has
+        // something to flag if the guard fails to block it
+        beforeType: () => {
+          const covered = Array.from(cellState).findIndex(v => v === 0);
+          if (covered >= 0) cursor = [Math.floor(covered / cols), covered % cols];
+        },
       });
     });
 

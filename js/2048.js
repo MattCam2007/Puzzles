@@ -760,6 +760,7 @@ function hideOverlay(){$('#banner').classList.remove('show');}
 // ═══════════════════════════════════════════════════════════
 const KEYMAP={ArrowUp:0,w:0,W:0,ArrowRight:1,d:1,D:1,ArrowDown:2,s:2,S:2,ArrowLeft:3,a:3,A:3};
 document.addEventListener('keydown',e=>{
+  if(shouldIgnoreGameKeys(e)) return;
   if(KEYMAP[e.key]!==undefined){e.preventDefault();doMove(KEYMAP[e.key]);}
 });
 

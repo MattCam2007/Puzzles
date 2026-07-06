@@ -520,6 +520,7 @@ $('#board').addEventListener('contextmenu', e => {
    KEYBOARD
 ═══════════════════════════════════════════ */
 document.addEventListener('keydown', e => {
+  if (shouldIgnoreGameKeys(e)) return;
   if (!cfg.useKeyboard || gameOver) return;
   if (cursor === null) cursor = [0, 0];
 

@@ -631,11 +631,11 @@ function onToggle(id, key, after) {
 
 /* ---------- keyboard ---------- */
 document.addEventListener('keydown', e => {
+  if (shouldIgnoreGameKeys(e)) return;
   if ($('#overlay').classList.contains('show')) {
     if (e.key === 'Enter') { $('#overlay').classList.remove('show'); newGame(); }
     return;
   }
-  if ($('#settingsPanel').classList.contains('show')) return;
   if ($('#comboSheet').classList.contains('show')) { if (e.key === 'Escape') $('#comboSheet').classList.remove('show'); return; }
   if (e.key >= '1' && e.key <= '9') { input(+e.key); e.preventDefault(); }
   else if (e.key === '0' || e.key === 'Backspace' || e.key === 'Delete') { eraseCell(); e.preventDefault(); }

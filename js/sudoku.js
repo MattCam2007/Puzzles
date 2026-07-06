@@ -547,6 +547,7 @@ $('#modeToggleBtn').addEventListener('click', () => {
    KEYBOARD
 ═══════════════════════════════════════════ */
 document.addEventListener('keydown', e => {
+  if (shouldIgnoreGameKeys(e)) return;
   if (!cfg.useKeyboard || gameOver) return;
   if (e.key>='1' && e.key<='9') { handleNumTap(+e.key); return; }
   if (e.key==='Backspace'||e.key==='Delete') { eraseCell(); return; }
