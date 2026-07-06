@@ -588,7 +588,12 @@ function restoreSudoku() {
   renderBoard(); renderNumpad();
   updateMistakeDots();
   applySettingsToUI();
-  $('#overlay').classList.remove('show');
+  if (gameOver) {
+    const won = playerBoard.every((row, r) => row.every((v, c) => v === solution[r][c]));
+    endGame(won);                  // re-fills title/message and shows overlay
+  } else {
+    $('#overlay').classList.remove('show');
+  }
   return true;
 }
 

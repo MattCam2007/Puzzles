@@ -683,7 +683,14 @@ function restore2048(){
   prevGrid=null; prevScore=null;
   uid=0;
   for(let r=0;r<N;r++) for(let c=0;c<N;c++) if(grid[r][c]?.id>uid) uid=grid[r][c].id;
-  updateUI(); hideOverlay(); renderInstant();
+  updateUI(); renderInstant();
+  hideOverlay();
+  if(gameOver){
+    showOverlay(false);            // loss: re-show the Game Over banner
+  }else{
+    gameWon=false;
+    checkWin();                    // re-shows the win banner iff a milestone
+  }                                //   is reached and not yet acknowledged
   $('#undoBtn').disabled=true;
   return true;
 }

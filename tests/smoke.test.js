@@ -225,6 +225,13 @@ async function main() {
       });
 
       await checkKeyboardGuardOnSettings(page, name, { serialize: serialize2048, keys: 'wasd' });
+
+      // ends the game — keep last
+      await page.evaluate(() => { showOverlay(false); saveHistory(); });
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      const bannerShown = await page.evaluate(() => document.getElementById('banner').classList.contains('show'));
+      const bannerTitle = await page.evaluate(() => document.getElementById('bannerTitle').textContent);
+      report(`${name}: game-over state survives reload`, bannerShown && bannerTitle === 'Game Over', `shown=${bannerShown} title="${bannerTitle}"`);
     });
 
     await runPageSuite(browser, baseUrl, 'sudoku', async (page) => {
@@ -268,6 +275,13 @@ async function main() {
           applyHighlights();
         },
       });
+
+      // ends the game — keep last
+      await page.evaluate(() => { endGame(false); saveGameState(); });
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      const overlayShown = await page.evaluate(() => document.getElementById('overlay').classList.contains('show'));
+      const overlayTitle = await page.evaluate(() => document.getElementById('overlayTitle').textContent);
+      report(`${name}: game-over state survives reload`, overlayShown && overlayTitle.includes('Game Over'), `shown=${overlayShown} title="${overlayTitle}"`);
     });
 
     await runPageSuite(browser, baseUrl, 'kakuro', async (page) => {
