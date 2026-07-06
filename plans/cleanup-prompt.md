@@ -202,11 +202,30 @@ scope). Don't manufacture agents that don't change the model tier or the
 privilege boundary.
 
 **Model tiers, cheapest → most expensive:** Z.AI/GLM (cheapest; good for
-fully-specified low-judgment work) → Haiku → Sonnet → Opus/Fable. Use exact
-`provider/model` slugs from the user's configured providers (look them up; don't
-guess). **Do not hardcode Fable as a durable role** — the user's Fable access is
-temporary, so pin Opus for the persistent top tier and treat Fable only as an
-optional override while available.
+fully-specified low-judgment work) → Haiku → Sonnet → Opus → **Fable (premium,
+metered API credits — most expensive)**. Use exact `provider/model` slugs from
+the user's configured providers (look them up; don't guess).
+
+**Fable is a paid, on-demand escalation tier, never a default.** The user pays
+per-call API credits for Fable, so it must NOT be the `model:` on any agent that
+gets invoked automatically or routinely — that silently burns money. Opus is the
+durable default top tier; Fable sits one notch above it and is spent
+deliberately.
+
+- **When to use Fable — only for make-or-break reasoning where a wrong answer is
+  expensive to unwind:** the one-shot architecture decision (final button
+  taxonomy + shared-chrome contract), or a specific bug/refactor that Opus has
+  genuinely tried and stalled on. A handful of calls across the whole project,
+  not a workflow.
+- **When NOT to use Fable — basically everywhere else:** implementation,
+  mechanical edits, verification, docs, exploration, or "just to be safe." Those
+  never touch Fable. If Opus can do it, Opus does it.
+- **How to use it cost-efficiently:** put it behind ONE dedicated escalation
+  agent (below), `mode: subagent`, invoked explicitly by the user or by planner
+  only with a stated justification. Hand it a distilled, tightly-scoped problem
+  statement and the minimum context needed — do NOT let it re-read the repo or
+  explore. You are paying premium rates for the reasoning token, so feed it the
+  decision, not the discovery. It returns a decision; cheaper agents apply it.
 
 Give each agent **least-privilege tools**: read-only agents get no `write`/`edit`
 (audit, verify); appliers get `edit` but stay tightly scoped by their prompt;
@@ -217,7 +236,8 @@ fine if the split buys nothing):
 
 | Agent | Mode | Tier | Job | Tools posture |
 |---|---|---|---|---|
-| **planner** | primary | **Opus** (Fable optional, while available) | The only place you spend top dollar. Runs the audit, ranks findings, designs the button taxonomy / layout contract / shared-chrome architecture, delegates to subagents, and reviews risky diffs. Thinks and reviews — rarely types. | read + plan; little/no direct editing |
+| **fable-oracle** | subagent | **Fable** (premium; invoke by hand only) | The paid escalation tier. Answers ONE distilled, high-stakes reasoning question at a time — the final architecture/taxonomy call, or a problem Opus stalled on. Not auto-routed; the user or planner invokes it deliberately with a stated reason and pre-distilled context. Returns a decision, doesn't implement. | read only; **no edit/write/bash** — it reasons, it doesn't do |
+| **planner** | primary | **Opus** (durable default top tier) | Where you spend by default. Runs the audit, ranks findings, designs the button taxonomy / layout contract / shared-chrome architecture, delegates to subagents, reviews risky diffs, and decides when a question is worth escalating to fable-oracle. Thinks and reviews — rarely types. | read + plan; little/no direct editing |
 | **bug-hunter** | subagent | **Sonnet** | Find and fix correctness bugs (persistence/restore, leaks, edge cases). Real code reasoning, but Sonnet-grade; escalate genuinely gnarly ones to planner. | read + edit (js) |
 | **refactorer** | subagent | **Sonnet** | Implement the DRY consolidation and UI unification against the planner's spec: shared button system, shared settings-panel/chrome, extracted helpers. | read + edit (html/css/js) |
 | **sweeper** | subagent | **Haiku** (or Z.AI/GLM for the most mechanical batches) | The workhorse that keeps you off expensive models. Applies fully-decided, repetitive edits across many files: button-class renames, label casing, storage-key migration, dead-code deletion. The thinking is already done; it just applies it precisely and consistently. | read + edit, tightly scoped |
@@ -225,12 +245,13 @@ fine if the split buys nothing):
 | **docs-scribe** | subagent | **Z.AI/GLM** (or Haiku) | Reconcile the agent doc, skill descriptions, and README prose to match the final code. Well-specified writing at a low judgment bar. | read + edit (docs only) |
 | **verifier** | subagent | **Z.AI/GLM** or **Haiku** | Run the tests and the smoke-test skill, load each game, report console errors and state-persistence results. Executes and reports; never edits. | read + bash; **no edit/write** |
 
-Net effect to aim for: Opus/Fable touches only the audit, the architecture
-decisions, and the review of risky changes; Sonnet does implementation that
-needs judgment; Haiku/GLM do the high-volume mechanical edits, verification, and
-doc reconciliation. Wire the subagents so the planner can delegate to them, and
-make sure the cheap appliers are constrained enough (by prompt and by tool
-scope) that a smaller model can't wander outside its lane.
+Net effect to aim for: Fable is spent on only a handful of make-or-break
+reasoning calls; Opus handles the routine audit, architecture, and review;
+Sonnet does implementation that needs judgment; Haiku/GLM do the high-volume
+mechanical edits, verification, and doc reconciliation. Wire the subagents so the
+planner can delegate to them, keep fable-oracle off any automatic path (it costs
+real money per call), and make sure the cheap appliers are constrained enough (by
+prompt and by tool scope) that a smaller model can't wander outside its lane.
 
 ## Rules of engagement
 
@@ -253,6 +274,7 @@ scope) that a smaller model can't wander outside its lane.
 2. The changes as incremental commits (bugs → UI unification + DRY →
    consistency → perf → polish), with docs updated alongside.
 3. The upgraded agent doc, the new skills, and the opencode agent roster — each
-   verified (models set to durable tiers, not Fable).
+   verified. Default agents pinned to durable tiers (Opus and below); Fable used
+   only on the dedicated, hand-invoked escalation agent.
 4. A short summary: what you fixed, what you deliberately left alone (and why),
    and anything risky you want a human to look at.
