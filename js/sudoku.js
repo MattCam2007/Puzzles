@@ -273,10 +273,20 @@ function renderNumpad() {
 }
 
 function updateMistakeDots() {
-  const lim = cfg.strikeLimit || 99;
-  for (let i=1;i<=3;i++) {
-    const dot = $('#m'+i);
-    if (dot) dot.classList.toggle('used', i<=mistakes);
+  const limit = cfg.strikeLimit;
+  const wrap = $('#mistakesIndicator');
+  wrap.innerHTML = '';
+  if (limit === 3 || limit === 5) {
+    for (let i=1;i<=limit;i++) {
+      const dot = document.createElement('div');
+      dot.className = 'mistake-dot' + (i<=mistakes ? ' used' : '');
+      wrap.appendChild(dot);
+    }
+  } else {
+    const span = document.createElement('span');
+    span.className = 'mistake-count';
+    span.textContent = limit === 10 ? `${mistakes}/10` : `${mistakes}`;
+    wrap.appendChild(span);
   }
 }
 
@@ -499,7 +509,7 @@ $('#segNumber').addEventListener('click', () => {
 $$('.strike-opt').forEach(opt => {
   opt.addEventListener('click', () => {
     cfg.strikeLimit = +opt.dataset.val;
-    saveCfg(); syncSettingsUI();
+    saveCfg(); syncSettingsUI(); updateMistakeDots();
   });
 });
 

@@ -253,6 +253,15 @@ async function main() {
       const givens = await page.evaluate(() => document.querySelectorAll('#board .given').length);
       report(`${name}: board renders`, cells === 81 && givens > 0, `cells=${cells} givens=${givens}`);
 
+      const dotsDefault = await page.evaluate(() => document.querySelectorAll('#mistakesIndicator .mistake-dot').length);
+      report(`${name}: lives dots default to 3`, dotsDefault === 3, `got ${dotsDefault}`);
+      await page.click('#settingsBtn');
+      await page.click('.strike-opt[data-val="5"]');
+      const dotsFive = await page.evaluate(() => document.querySelectorAll('#mistakesIndicator .mistake-dot').length);
+      report(`${name}: lives dots follow strike limit`, dotsFive === 5, `got ${dotsFive}`);
+      await page.click('.strike-opt[data-val="3"]');
+      await page.evaluate(() => document.getElementById('settingsBackdrop').click());
+
       await checkOverlaySanity(page, name, '#overlay');
       await checkSettingsAndTheme(page, name);
 
