@@ -168,8 +168,8 @@ Rules for the implementation window:
 
 | # | Phase | Plan doc | Status |
 |---|---|---|---|
-| 0 | Smoke-test harness + skill (safety net) | `cleanup-phase-0-smoke-test.md` | **planned — awaiting implementation** |
-| 1 | Correctness fixes (a1–a4) | not yet written | — |
+| 0 | Smoke-test harness + skill (safety net) | `cleanup-phase-0-smoke-test.md` | ✅ complete — merged PR #21; validated 2026-07-06 (58/58 twice, canary failure re-verified independently) |
+| 1 | Correctness fixes (a1–a4) | `cleanup-phase-1-correctness.md` | **planned — awaiting implementation** |
 | 2 | UI unification + DRY (b1–b3, b5, c1, c2, e2–e5) | not yet written | — |
 | 3 | Consistency: storage-key migration + Kakuro single persistence (e1, b4) + decisions 1 & 2 | not yet written | — |
 | 4 | Performance (d1, d3) | not yet written | — |
