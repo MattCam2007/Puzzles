@@ -139,36 +139,63 @@ body {
 .clue-item.highlighted { background: var(--accent-dim); border-color: var(--accent); color: var(--text); }
 .clue-item.used { opacity: 0.5; text-decoration: line-through; }
 .clue-item .clue-num { color: var(--text-muted); font-weight: 700; margin-right: 4px; }
+.clue-empty {
+  font-size: 0.8rem; line-height: 1.45; font-style: italic;
+  padding: 8px 11px; color: var(--text-muted);
+}
 
 /* ── STATUS LINE ── */
 .status-line {
   width: 100%; max-width: 640px;
-  min-height: 0; margin-top: 10px;
+  min-height: 0; margin: 0;
   font-size: 0.82rem; line-height: 1.45;
   border-radius: var(--radius-sm); padding: 0 12px;
   max-height: 0; overflow: hidden; opacity: 0;
-  transition: max-height 0.2s, opacity 0.2s, padding 0.2s;
+  transition: max-height 0.2s, opacity 0.2s, padding 0.2s, margin 0.2s;
 }
-.status-line.show { max-height: 120px; opacity: 1; padding: 9px 12px; }
+.status-line.show { max-height: 120px; opacity: 1; padding: 9px 12px; margin-bottom: 10px; }
 .status-line.ok   { background: color-mix(in srgb, var(--success) 15%, transparent); color: var(--success); border: 1px solid color-mix(in srgb, var(--success) 35%, transparent); }
 .status-line.err  { background: color-mix(in srgb, var(--error) 15%, transparent);   color: var(--error);   border: 1px solid color-mix(in srgb, var(--error) 35%, transparent); }
 .status-line.info { background: color-mix(in srgb, var(--accent) 15%, transparent);  color: var(--accent2); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
 
-/* ── BOARD WRAP ── */
+/* ── BOARD REGION / WRAP ──
+   .board-region is the positioned shell: it hosts the pan-hint fade and
+   pins the whole board to the top of the screen on phones (see MOBILE).
+   .board-wrap is the horizontal scroller for wide tiers. */
+.board-region { position: relative; width: 100%; max-width: 640px; }
 .board-wrap {
-  width: 100%; max-width: 640px;
+  width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+}
+/* right-edge fade while columns hide off-screen (JS toggles .can-pan) —
+   otherwise players never discover that the wide tiers scroll sideways */
+.board-region.can-pan::after {
+  content: '';
+  position: absolute; top: 0; right: 0; bottom: 0; width: 26px;
+  pointer-events: none;
+  background: linear-gradient(to right, transparent, var(--bg));
 }
 
 /* ── LOGIC GRID (shared cell chrome) ── */
 /* --cell is set on :root by JS (updateCellSize); this is the pre-JS fallback. */
 :root { --cell: 30px; }
 table.logic-grid {
-  border-collapse: collapse;
+  /* separate, not collapse: collapsed borders detach from position:sticky
+     row headers while the board pans, so each cell owns its right/bottom
+     edge instead (single 1px lines, no doubling) */
+  border-collapse: separate;
+  border-spacing: 0;
   background: color-mix(in srgb, var(--surface) var(--board-alpha), transparent);
 }
-.logic-grid th, .logic-grid td { border: 1px solid var(--surface3); }
+.logic-grid th, .logic-grid td {
+  border: 0;
+  border-right: 1px solid var(--surface3);
+  border-bottom: 1px solid var(--surface3);
+}
+.logic-grid thead tr:first-child th:not(.corner):not(.spacer) {
+  border-top: 1px solid var(--surface3);
+}
 .logic-grid td.cell {
   width: var(--cell); height: var(--cell);
   min-width: var(--cell); max-width: var(--cell);
@@ -178,6 +205,7 @@ table.logic-grid {
   background: color-mix(in srgb, var(--cell-empty) var(--board-alpha), transparent);
   transition: background 0.08s;
   -webkit-user-select: none; user-select: none;
+  touch-action: manipulation;   /* no double-tap-zoom delay on marks */
 }
 .logic-grid td.cell:active { background: color-mix(in srgb, var(--surface3) var(--board-alpha), transparent); }
 .logic-grid td.cell.cell-yes  { color: var(--success); }
@@ -203,21 +231,40 @@ table.logic-grid {
   display: inline-block; writing-mode: vertical-rl; transform: rotate(180deg);
   white-space: nowrap; max-height: 64px; overflow: hidden; text-overflow: ellipsis;
 }
-/* entity / left row headers — compact so the grid fits narrow screens */
+/* entity / left row headers — compact so the grid fits narrow screens.
+   Pinned while the board pans sideways; the background is deliberately
+   opaque (no --board-alpha mix) so panned cells can't show through. */
 .logic-grid th.row-header {
   font-size: 0.64rem; font-weight: 600; color: var(--text);
   padding: 3px 6px 3px 4px; text-align: right;
   white-space: nowrap; max-width: 78px; overflow: hidden; text-overflow: ellipsis;
-  background: color-mix(in srgb, var(--surface) var(--board-alpha), transparent);
+  position: sticky; left: 0; z-index: 3;
+  background: var(--surface);
 }
 /* triangular row-category label — vertical to save horizontal space */
 .logic-grid th.rowcat-label {
   writing-mode: vertical-rl; transform: rotate(180deg);
   width: 20px; padding: 2px 0; font-size: 0.52rem; letter-spacing: 0.04em;
+  position: sticky; left: 0; z-index: 4;
+  background: var(--surface2);
 }
+/* in the triangular layout the value header sits after the 21px label rail */
+.logic-grid.triangular th.row-header { left: 21px; }
 .logic-grid th.corner { background: transparent; border: none; }
 /* spacer cells used to build the triangular stair */
 .logic-grid td.spacer, .logic-grid th.spacer { border: none; background: transparent; }
+/* …but the top-left HEADER corner must pin and occlude, like the row rail
+   below it — otherwise panned value headers poke out at the left edge
+   while the body rows correctly hide behind the sticky row headers. */
+.logic-grid thead th.corner,
+.logic-grid.triangular thead tr > th.spacer:first-child {
+  position: sticky; left: 0; z-index: 5;
+  background: var(--bg);
+}
+.logic-grid.triangular thead tr > th.spacer:nth-child(2) {
+  position: sticky; left: 21px; z-index: 5;
+  background: var(--bg);
+}
 
 /* sakura (light theme) — darker marks for legibility */
 html[data-theme="sakura"] .logic-grid td.cell.cell-yes { color: #1a7a48; }
@@ -250,18 +297,38 @@ html[data-theme="sakura"] .logic-grid td.cell.cell-no  { color: #c0392b; }
   border-radius: var(--radius-sm); cursor: pointer; width: 100%;
 }
 
-/* ── MOBILE ── keep clues compact so the board is reachable, and let the
-   board pan horizontally for wide tiers without shrinking cells to mush. */
+/* ── MOBILE ──
+   The board sits above the clues and PINS to the top of the screen while
+   the clue list scrolls beneath it — reading a clue and marking the grid
+   no longer means scrolling back and forth. Wide tiers pan horizontally
+   with the row headers held in place (sticky, above). */
+@media (max-width: 700px) and (min-height: 560px) {
+  /* .pin-ok is set by JS only while the board occupies ≤55% of the
+     viewport — a taller board (classic grid at hard/expert) would bury
+     the clues, so it stays in normal flow instead. */
+  .board-region.pin-ok {
+    position: sticky; top: 0; z-index: 30;
+    padding: 6px 0;
+    background: color-mix(in srgb, var(--bg) 90%, transparent);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+}
 @media (max-width: 560px) {
   body { padding: 12px 8px 24px; }
+  .title { font-size: 1.4rem; }                /* keep the header on one line */
+  .score-box { padding: 4px 8px; min-width: 42px; }
   .story-panel { padding: 8px 10px; }
   .story-premise { font-size: 0.78rem; }
   .cast-item { font-size: 0.76rem; padding: 6px 8px; }
   .clues-panel { padding: 8px 10px; }
-  .clue-item { font-size: 0.78rem; padding: 6px 9px; line-height: 1.35; }
-  .clues-list { gap: 4px; max-height: 38vh; overflow-y: auto; }
-  /* scroll hint: a soft fade at the right edge of a pannable board */
-  .board-wrap { position: relative; }
+  .clue-item { font-size: 0.78rem; padding: 8px 10px; line-height: 1.35; }
+  .clues-list { gap: 4px; }   /* no height cap: the pinned board makes page scrolling natural */
+}
+/* touch ergonomics: real finger targets for the controls players hammer */
+@media (pointer: coarse) {
+  .btn-top { padding: 9px 13px; }
+  .filter-pill { padding: 7px 13px; font-size: 0.76rem; }
 }
 
 /* ── Outdoor / high-contrast mode ──

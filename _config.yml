@@ -7,3 +7,4 @@
 # the built site.
 exclude:
   - plans
+  - tests
