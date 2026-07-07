@@ -7,15 +7,20 @@ document per phase lives alongside this file (`cleanup-phase-<n>-*.md`).
 
 ## Workflow contract
 
-Two-window flow on branch `claude/puzzles-cleanup-unify-09mq96`:
+Updated after phase 1 (phases 0–1 ran on
+`claude/puzzles-cleanup-unify-09mq96`, now merged to main):
 
-1. **Planner window** writes the detailed plan for the current phase and
-   pushes it.
-2. **Implementation window** (separate session, same branch) implements
-   exactly that plan and pushes, in small behavior-preserving commits.
-3. **Planner window** validates the pushed work (runs the test suites, loads
-   the games, reviews the diff against the plan), updates the status table
-   below, then writes the next phase plan — or declares the pass done.
+1. Each phase gets a working branch cut from `main` (current:
+   `claude/puzzles-cleanup-phase-2`).
+2. **High-level plans** for the remaining phases live in
+   `plans/cleanup-phases-2-8-outline.md` (written by the validating
+   session). **The Opus planner** expands ONE phase at a time into a
+   detailed `cleanup-phase-<n>-*.md` — following the outline's "what a
+   detailed phase plan must contain" section — and pushes it.
+3. **Implementation window** implements exactly that plan and pushes, in
+   small behavior-preserving commits.
+4. **Validating session** reviews the diff against the plan, runs the
+   suites, updates the status table below, and gates the next phase.
 
 Rules for the implementation window:
 
@@ -169,17 +174,18 @@ Rules for the implementation window:
 | # | Phase | Plan doc | Status |
 |---|---|---|---|
 | 0 | Smoke-test harness + skill (safety net) | `cleanup-phase-0-smoke-test.md` | ✅ complete — merged PR #21; validated 2026-07-06 (58/58 twice, canary failure re-verified independently) |
-| 1 | Correctness fixes (a1–a4) | `cleanup-phase-1-correctness.md` | ✅ complete — 4 commits, 72/72 smoke checks twice back-to-back; each new regression check confirmed failing pre-fix |
-| 2 | UI unification + DRY (b1–b3, b5, c1, c2, e2–e5) | not yet written | — |
-| 3 | Consistency: storage-key migration + Kakuro single persistence (e1, b4) + decisions 1 & 2 | not yet written | — |
-| 4 | Performance (d1, d3) | not yet written | — |
-| 5 | Polish: dead code, stale comments (f) | not yet written | — |
-| 6 | Docs: `AGENTS.md` canonical, `CLAUDE.md` pointer, full reconcile | not yet written | — |
-| 7 | Skills: `add-theme`, `add-game` (smoke-test skill ships in phase 0) | not yet written | — |
-| 8 | opencode agent roster (`.opencode/agent/`) | not yet written | — |
+| 1 | Correctness fixes (a1–a4) | `cleanup-phase-1-correctness.md` | ✅ complete — merged PR #22; code-reviewed and accepted 2026-07-07 (4 commits match plan; fail-before-fix recorded in commit bodies) |
+| 2 | UI unification + DRY (b1–b3, b5, c1, c2, e2–e5) | high-level: `cleanup-phases-2-8-outline.md` §2 | awaiting detailed plan (Opus) |
+| 3 | Consistency: storage-key migration + Kakuro single persistence (e1, b4) + decisions 1 & 2 | high-level: outline §3 | awaiting detailed plan |
+| 4 | Performance (d1, d3) | high-level: outline §4 | awaiting detailed plan (may pair with 5) |
+| 5 | Polish: dead code, stale comments (f) | high-level: outline §5 | awaiting detailed plan (may pair with 4) |
+| 6 | Docs: `AGENTS.md` canonical, `CLAUDE.md` pointer, full reconcile | high-level: outline §6 | awaiting detailed plan |
+| 7 | Skills: `add-theme`, `add-game` (smoke-test skill ships in phase 0) | high-level: outline §7 | awaiting detailed plan |
+| 8 | opencode agent roster (`.opencode/agent/`) | high-level: outline §8 | awaiting detailed plan |
 
-Phase plans are written one at a time, after the previous phase is validated,
-so each plan reflects the code as it actually is.
+Detailed phase plans are written one at a time, after the previous phase is
+validated, so each plan reflects the code as it actually is. Recommended
+order: 2, 3, 4+5, 7, 6, 8 (rationale in the outline's sequencing note).
 
 ## Verification protocol (every phase)
 
