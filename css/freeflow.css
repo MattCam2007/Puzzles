@@ -1,0 +1,134 @@
+/* ============================================================
+   Free Flow — game-specific styles
+   Shared tokens, reset, body base and .title live in theme.css.
+   NOTE: .header, .score-box, .board-top-bar, .btn, .btn-top,
+   .difficulty-select, .board-wrap, .overlay are NOT in theme.css —
+   each game owns its own copy. This file is the Free Flow copy.
+   The pipes themselves are drawn on a <canvas> by js/freeflow.js.
+   ============================================================ */
+
+body {
+  padding: 14px 12px 24px;
+  overflow-x: hidden;
+}
+
+/* ── HEADER ── */
+.header {
+  width: 100%; max-width: 420px;
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.title { font-size: 1.8rem; }
+.header-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.score-box {
+  background: var(--surface); border-radius: var(--radius-sm);
+  padding: 5px 9px; text-align: center; min-width: 46px;
+}
+.score-box .label {
+  font-size: 0.58rem; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 1px;
+}
+.score-box .value { font-size: 0.95rem; font-weight: 700; }
+
+/* ── DIFFICULTY SELECT ── */
+.difficulty-select {
+  flex: none; background: var(--surface); border: 1px solid var(--surface3);
+  color: var(--text); font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.85rem; font-weight: 600; padding: 8px 28px 8px 10px;
+  border-radius: var(--radius-sm); outline: none; cursor: pointer;
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b6880' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+}
+
+/* ── BUTTONS ── */
+.btn {
+  background: var(--surface); border: 1px solid var(--surface3);
+  color: var(--text); font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.8rem; font-weight: 600; padding: 8px 14px;
+  border-radius: var(--radius-sm); cursor: pointer;
+  transition: background 0.15s; white-space: nowrap;
+}
+.btn:active { background: var(--surface3); }
+.btn.accent { background: var(--accent-dim); border-color: var(--accent); color: var(--accent2); }
+.btn.accent:active { background: rgba(var(--accent-rgb), 0.3); }
+
+/* ── BOARD TOP BAR ── */
+.board-top-bar {
+  width: 100%; max-width: 420px;
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: 8px; margin-bottom: 8px;
+}
+.board-top-left { display: flex; gap: 8px; align-items: center; }
+.board-top-right { display: flex; gap: 6px; align-items: center; margin-left: auto; }
+.btn-top {
+  background: var(--surface); border: 1px solid var(--surface3);
+  color: var(--text-dim); font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.78rem; font-weight: 600; padding: 7px 12px;
+  border-radius: var(--radius-sm); cursor: pointer;
+  transition: background 0.15s; white-space: nowrap;
+}
+.btn-top:active { background: var(--surface3); }
+
+/* ── BOARD ──
+   The board is a square container; the canvas inside draws the grid
+   lines, dots and pipes. In themed mode the container paints the
+   background (color-mix keeps the opacity slider working); in classic
+   mode the canvas paints its own black, so the container goes
+   transparent to avoid double-stacking alpha. */
+.board-wrap { width: 100%; max-width: 420px; }
+.board {
+  width: 100%; aspect-ratio: 1; position: relative;
+  background: color-mix(in srgb, var(--cell-empty) var(--board-alpha), transparent);
+  border: 2px solid var(--surface3); border-radius: var(--radius);
+  overflow: hidden; touch-action: none; cursor: pointer;
+}
+.board.classic {
+  background: transparent;
+  border-color: #2c2c33;
+}
+.board canvas { display: block; width: 100%; height: 100%; }
+
+html[data-contrast="high"] .board {
+  border-color: color-mix(in srgb, var(--surface3) 55%, var(--text));
+}
+
+/* ── WIN OVERLAY ── */
+.overlay {
+  position: fixed; inset: 0; background: rgba(15,15,19,0.9);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100; backdrop-filter: blur(4px);
+  opacity: 0; pointer-events: none; transition: opacity 0.3s;
+}
+.overlay.show { opacity: 1; pointer-events: all; }
+.overlay-card {
+  background: var(--surface); border: 1px solid #3d3a5a;
+  border-radius: 16px; padding: 32px 28px; text-align: center;
+  max-width: 300px; width: 90%;
+}
+.overlay-card h2 {
+  font-size: 1.8rem; font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text; margin-bottom: 8px;
+}
+.overlay-card p { color: var(--text-dim); font-size: 0.88rem; margin-bottom: 24px; line-height: 1.55; }
+.overlay-card .btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border: none; color: white; font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.95rem; font-weight: 700; padding: 12px 28px;
+  border-radius: var(--radius-sm); cursor: pointer; width: 100%;
+}
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; left: 50%; bottom: 26px;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--surface2); border: 1px solid var(--surface3);
+  color: var(--text); font-size: 13px; padding: 11px 18px;
+  border-radius: 11px; box-shadow: 0 10px 30px -6px rgba(0,0,0,.6);
+  opacity: 0; pointer-events: none; transition: .25s;
+  z-index: 70; max-width: 90vw; text-align: center;
+  font-family: 'Space Grotesk', sans-serif;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }

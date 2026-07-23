@@ -3,27 +3,31 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Logic Grid</title>
+<title>Free Flow</title>
 <link rel="stylesheet" href="css/theme.css">
-<link rel="stylesheet" href="css/logic.css">
+<link rel="stylesheet" href="css/freeflow.css">
 <link rel="stylesheet" href="css/theme-builder.css">
 </head>
 <body>
 
 <div class="header">
-  <div class="title">Logic Grid</div>
+  <div class="title">Free Flow</div>
   <div class="header-right">
+    <div class="score-box">
+      <div class="label">Flows</div>
+      <div class="value" id="flowsStat" style="font-variant-numeric:tabular-nums">0/0</div>
+    </div>
+    <div class="score-box">
+      <div class="label">Pipe</div>
+      <div class="value" id="pipeStat" style="font-variant-numeric:tabular-nums">0%</div>
+    </div>
+    <div class="score-box">
+      <div class="label">Moves</div>
+      <div class="value" id="movesStat" style="font-variant-numeric:tabular-nums">0</div>
+    </div>
     <div class="score-box">
       <div class="label">Time</div>
       <div class="value" id="timer" style="font-variant-numeric:tabular-nums">0:00</div>
-    </div>
-    <div class="score-box">
-      <div class="label">Hints</div>
-      <div class="value" id="hintCount" style="font-variant-numeric:tabular-nums">0</div>
-    </div>
-    <div class="score-box">
-      <div class="label">Best</div>
-      <div class="value" id="bestTime" style="font-variant-numeric:tabular-nums">—</div>
     </div>
     <div class="puzzle-switcher-wrap">
       <button class="icon-btn puzzle-switcher-btn" id="puzzleSwitcherBtn" title="Switch puzzle">☰</button>
@@ -51,44 +55,13 @@
     </select>
   </div>
   <div class="board-top-right">
-    <button class="btn-top" id="checkBtn">👁 Check</button>
-    <button class="btn-top" id="contraBtn">⚠️ Scan</button>
+    <button class="btn-top" id="undoBtn">↩️ Undo</button>
     <button class="btn-top" id="hintBtn">💡 Hint</button>
-    <button class="btn-top" id="resetBtn">↺ Reset</button>
   </div>
 </div>
 
-<!-- STATUS LINE — feedback for the Check / Scan / Hint buttons above it -->
-<div class="status-line" id="statusLine"></div>
-
-<!-- STORY PANEL (shown only when a story pack is active) -->
-<div class="story-panel" id="storyPanel" style="display:none">
-  <div class="story-head">
-    <span class="story-label">Story</span>
-    <button class="btn-top" id="castBtn">Cast</button>
-  </div>
-  <p class="story-premise" id="storyPremise"></p>
-  <p class="story-question" id="storyQuestion"></p>
-  <div class="cast-list" id="castList" style="display:none"></div>
-</div>
-
-<!-- BOARD — before the clues: on phones it pins to the top of the screen
-     while the clue list scrolls beneath it, so reading a clue and marking
-     the grid no longer means scrolling back and forth. -->
-<div class="board-region" id="boardRegion">
-  <div class="board-wrap" id="boardWrap">
-    <div id="board" aria-label="Logic grid"></div>
-  </div>
-</div>
-
-<!-- CLUES -->
-<div class="clues-panel" id="cluesPanel">
-  <div class="clues-head">
-    <span class="clues-label">Clues</span>
-    <button class="btn-top" id="filterBtn">Filter</button>
-  </div>
-  <div class="clue-filter" id="clueFilter" style="display:none"></div>
-  <div class="clues-list" id="cluesList"></div>
+<div class="board-wrap" id="boardWrap">
+  <div class="board" id="board" aria-label="Free Flow grid"></div>
 </div>
 
 <!-- SETTINGS PANEL -->
@@ -124,10 +97,20 @@
     <div class="setting-row">
       <div class="setting-info">
         <div class="setting-name">Outdoor mode</div>
-        <div class="setting-desc">Boost contrast for bright sunlight — crisper grid lines and stronger marks.</div>
+        <div class="setting-desc">Boost contrast for bright sunlight — crisper grid lines and stronger highlighting.</div>
       </div>
       <label class="toggle">
         <input type="checkbox" id="togOutdoor">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-name">Classic board</div>
+        <div class="setting-desc">The iconic look — black board, bright pipes — no matter the theme.</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="togClassic" checked>
         <span class="toggle-slider"></span>
       </label>
     </div>
@@ -148,73 +131,35 @@
   </div>
 
   <div class="settings-section">
-    <div class="settings-section-label">Story Pack</div>
-    <div id="packPickerList"></div>
-  </div>
-
-  <div class="settings-section">
-    <div class="settings-section-label">Board layout</div>
+    <div class="settings-section-label">Gameplay</div>
     <div class="setting-row">
       <div class="setting-info">
-        <div class="setting-name">Grid style</div>
-        <div class="setting-desc">Entity rows is compact and mobile-friendly. Classic grid is the traditional logic-puzzle matrix — wider, best on a big screen.</div>
-      </div>
-    </div>
-    <div class="seg-control" id="layoutSeg">
-      <button class="seg-btn" data-layout="entity">Entity rows</button>
-      <button class="seg-btn" data-layout="triangular">Classic grid</button>
-    </div>
-  </div>
-
-  <div class="settings-section">
-    <div class="settings-section-label">Assists</div>
-
-    <div class="setting-row">
-      <div class="setting-info">
-        <div class="setting-name">Auto-eliminate</div>
-        <div class="setting-desc">When you mark ✓, automatically cross out the cells it rules out.</div>
+        <div class="setting-name">Fill the whole board</div>
+        <div class="setting-desc">Solved only when every cell is covered by pipe, not just when all pairs connect. Every board has a full-coverage solution.</div>
       </div>
       <label class="toggle">
-        <input type="checkbox" id="togAutoElim" checked>
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
-
-    <div class="setting-row">
-      <div class="setting-info">
-        <div class="setting-name">Highlight contradictions</div>
-        <div class="setting-desc">Flag squares that conflict with your other marks as you play.</div>
-      </div>
-      <label class="toggle">
-        <input type="checkbox" id="togContra" checked>
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
-
-    <div class="setting-row">
-      <div class="setting-info">
-        <div class="setting-name">Show clue filter</div>
-        <div class="setting-desc">Show pills to filter clues by a single entity.</div>
-      </div>
-      <label class="toggle">
-        <input type="checkbox" id="togClueFilter" checked>
+        <input type="checkbox" id="togFill" checked>
         <span class="toggle-slider"></span>
       </label>
     </div>
   </div>
 
   <div class="settings-section">
-    <div class="settings-section-label">Rules</div>
-    <div class="setting-row">
-      <div class="setting-info">
-        <div class="setting-name">Require no wrong marks to win</div>
-        <div class="setting-desc">A stray ✗ is fine, but a wrong ✓ will block the win until you fix it.</div>
-      </div>
-      <label class="toggle">
-        <input type="checkbox" id="togNoWrong">
-        <span class="toggle-slider"></span>
-      </label>
+    <div class="settings-section-label">Board size</div>
+    <div class="strike-picker" id="sizePicker">
+      <div class="strike-opt" data-val="0">Auto</div>
+      <div class="strike-opt" data-val="5">5</div>
+      <div class="strike-opt" data-val="6">6</div>
+      <div class="strike-opt" data-val="7">7</div>
+      <div class="strike-opt" data-val="8">8</div>
+      <div class="strike-opt" data-val="9">9</div>
+      <div class="strike-opt" data-val="10">10</div>
+      <div class="strike-opt" data-val="11">11</div>
+      <div class="strike-opt" data-val="12">12</div>
+      <div class="strike-opt" data-val="13">13</div>
+      <div class="strike-opt" data-val="14">14</div>
     </div>
+    <div class="setting-desc" id="sizeHint" style="padding:8px 2px 0"></div>
   </div>
 
 </div>
@@ -228,10 +173,11 @@
   </div>
 </div>
 
+<div class="toast" id="toast"></div>
+
 <script src="js/common.js"></script>
 <script src="js/theme.js"></script>
-<script src="js/logic-packs.js"></script>
-<script src="js/logic-engine.js"></script>
-<script src="js/logic.js"></script>
+<script src="js/freeflow-engine.js"></script>
+<script src="js/freeflow.js"></script>
 </body>
 </html>
