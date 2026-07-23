@@ -182,7 +182,7 @@ async function main() {
     await runPageSuite(browser, baseUrl, 'index', async (page) => {
       await page.goto(`${baseUrl}/index.html`, { waitUntil: 'domcontentloaded' });
       const cardCount = await page.evaluate(() => document.querySelectorAll('.game-card').length);
-      report('index: 5 game-cards present', cardCount === 5, `got ${cardCount}`);
+      report('index: 6 game-cards present', cardCount === 6, `got ${cardCount}`);
       const tbLink = await page.evaluate(() => !!document.querySelector('a[href="theme-builder.html"]'));
       report('index: theme-builder link present', tbLink);
     });
@@ -358,6 +358,41 @@ async function main() {
           if (covered >= 0) cursor = [Math.floor(covered / cols), covered % cols];
         },
       });
+    });
+
+    await runPageSuite(browser, baseUrl, 'abacus', async (page) => {
+      const name = 'abacus';
+      await page.goto(`${baseUrl}/abacus.html`, { waitUntil: 'domcontentloaded' });
+      // default style is soroban: 9 rods × (1 heaven + 4 earth) beads
+      const beads = await page.evaluate(() => document.querySelectorAll('#board .bead').length);
+      report(`${name}: board renders`, beads === 45, `beads=${beads}`);
+
+      await checkOverlaySanity(page, name, '#overlay');
+      await checkSettingsAndTheme(page, name);
+
+      const serializeAbacus = () =>
+        JSON.stringify(rodState) + '|' +
+        document.getElementById('questionText').textContent + '|' +
+        document.getElementById('readout').textContent;
+
+      await checkStateSurvivesReload(page, name, {
+        historyKey: 'abacus-history',
+        interact: async (p) => {
+          await p.evaluate(() => document.querySelector('#board .bead').click());
+        },
+        serialize: serializeAbacus,
+      });
+
+      await page.click('#settingsBtn');
+      await page.evaluate(() => document.querySelector('[data-abacus-pick="schoty"]').click());
+      const schotyBeads = await page.evaluate(() => document.querySelectorAll('#board .srow .bead').length);
+      report(`${name}: abacus style applies`, schotyBeads === 70, `got ${schotyBeads}`);
+      await page.evaluate(() => document.getElementById('settingsBackdrop').click());
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      const cfgStyle = await page.evaluate(() => JSON.parse(localStorage.getItem('abacus-cfg')).style);
+      const schotyAfter = await page.evaluate(() => document.querySelectorAll('#board .srow .bead').length);
+      report(`${name}: abacus style persists after reload`, cfgStyle === 'schoty' && schotyAfter === 70,
+        `style=${cfgStyle} beads=${schotyAfter}`);
     });
 
     await runPageSuite(browser, baseUrl, 'logic', async (page) => {
