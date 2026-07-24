@@ -1,91 +1,181 @@
-# Free Flow — judgment calls made during the build
+# Free Flow — judgment calls and the generator rewrite
 
-The request: build Free Flow (connect coloured dots without crossing) in the
-style of the existing games, with feature parity, easy/medium/hard/expert,
-user-definable board size, and at least one classic-board/classic-colours view.
-Ambiguities were resolved with "strong end of medium" / best judgment, per the
-request. Each decision below is easy to revisit — file/function pointers included.
+Two passes are recorded here. The first built the game; the second replaced
+the board generator after the boards turned out to be solvable but not
+*forced*. Read "Why the first generator felt wrong" before changing anything
+in `js/freeflow-engine.js` — the current design is shaped almost entirely by
+those measurements.
 
-## Generation (the load-bearing math)
+---
 
-- **Algorithm: Hamiltonian-path partition.** A serpentine walk of the grid is
-  randomized with ~12·n² backbite moves, then cut into k contiguous segments of
-  ≥3 cells. Segments partition the grid, so **every board is solvable with 100%
-  coverage by construction** — no solver needed, no rejection loop that could
-  hang. (`js/freeflow-engine.js`, verified by `tests/freeflow-engine.test.js`,
-  664 checks across all sizes × difficulties.)
-- **Uniqueness is NOT enforced.** Boards may admit more than one valid
-  solution; any non-crossing, all-connected (and, by default, board-filling)
-  arrangement wins. Enforcing uniqueness needs an exact solver and heavy
-  rejection sampling at 14×14 — deliberately out of scope. Revisit in
-  `generate()` if wanted.
-- **Flow count = clamp(round(area / targetLen), 3, min(16, area/3))** with
-  targetLen 5 / 6.5 / 8 / 10 for easy→expert. Harder = fewer, longer, windier
-  flows (matches how the original scales). On big boards the 16-colour palette
-  caps the count, so a 14×14 "easy" and "expert" converge somewhat — accepted;
-  the alternative is repeating colours.
-- **Cosmetic re-sampling:** up to 6 paths × 14 cut samples are scored to avoid
-  flows whose two dots sit on adjacent cells and dead-straight flows. Best
-  score is accepted even if imperfect, so generation always terminates fast.
+## Why the first generator felt wrong
 
-## Difficulty & size
+The original generator cut a random Hamiltonian path into k contiguous
+segments. That is provably correct — the segments partition the grid, so a
+full-coverage solution always exists — and it is what the first version
+shipped. It produced boards that were valid, looked right, and did not play
+like Flow. Measuring them showed three concrete faults:
 
-- **Auto sizes: easy 5×5, medium 7×7, hard 9×9, expert 11×11.**
-- **Board size setting** is a chip row (Auto, 5–14) in Settings; square boards
-  only. Rectangular boards would work in the engine with minor changes but the
-  suite's boards are square and the classic game is too. An explicit size
-  applies to every difficulty; difficulty then only controls flow density.
+**1. The boards were not forced.** This is the big one. Counting
+board-filling solutions exactly (25 boards per tier):
 
-## Rules
+| tier | board | unique | median solutions | ≥50 solutions |
+|---|---|---|---|---|
+| easy | 5×5 | 9/25 | 2 | 0/25 |
+| medium | 7×7 | 0/25 | 14 | 2/25 |
+| hard | 9×9 | 0/25 | ≥50 | 24/25 |
+| expert | 11×11 | 0/25 | ≥50 | 25/25 |
 
-- **Win = all pairs connected AND every cell covered** (default). A settings
-  toggle ("Fill the whole board", `cfg.requireFill`) relaxes it to
-  connections-only, since players disagree on which rule is "the real one".
-  When all pairs connect but cells remain, a toast nudges toward coverage.
-- **Pipe interactions mirror the original:** drawing over another pipe severs
-  it from the crossed cell onward; dots block foreign pipes; dragging backwards
-  retracts; touching a dot restarts that flow; touching mid-pipe cuts it there;
-  a completed pipe can only be retracted, not extended.
-- **Moves** = strokes (or hints) that changed the board, matching the
-  original's counter. "Perfect" = solved in exactly one stroke per flow with no
-  hints.
+A real Flow board has exactly one solution, which is what makes a move feel
+earned: you deduce a route, and it is *the* route. With dozens or hundreds of
+solutions there is nothing to deduce — you wiggle pipes until the grid fills
+and any of a hundred arrangements is accepted. That is the "doesn't play the
+same" feeling, and it is entirely a generation property; no amount of UI work
+would have fixed it.
 
-## Feature parity choices
+**2. Dots came in kissing pairs.** 94–95% of all dots were orthogonally
+touching a dot of a *different* colour, because consecutive segments of one
+path always end and begin on neighbouring cells. Dots clustered instead of
+spreading. (At these dot densities, random placement alone yields ~70%, so
+the excess — not the absolute number — was the tell.)
 
-- **Timer starts on the first stroke**, not page load (mirrors Minesweeper's
-  first-click start). Best time is stored per `size×size-difficulty` bucket in
-  `freeflow-best`; hint-assisted solves don't record bests.
-- **Undo** (up to 60 strokes) and **Hint** (snaps one flow to the generated
-  solution path, severing anything in the way; counts as a move).
-- **No keyboard input.** Dragging is the game; arrow-key pipe-laying felt like
-  parity theater. `checkKeyboardGuardOnSettings` is therefore skipped in the
-  smoke suite. Easy to add later in `js/freeflow.js` if wanted.
+**3. Connecting every pair left the board half empty.** Taking a straight
+shot for each pair covered only 59–81% of the grid, so a player could connect
+everything and still be told to go cover 20–40% more. In a real Flow board
+the connections themselves force the fill.
+
+Rebuilt, the same measurements now read: **every board uniquely solvable**
+(asserted in the test suite for all sizes × difficulties), foreign-dot
+adjacency down to 78–92% (near the random-placement baseline for this
+density), and straight-shot coverage up to 74–83%.
+
+---
+
+## How the current generator works
+
+`js/freeflow-engine.js`, `generate()`. It runs *backwards* — from an
+over-constrained board toward a looser one — because that ordering is what
+makes the whole thing affordable.
+
+1. **Over-segment.** Cut a randomized Hamiltonian path into the shortest
+   legal flows (3 cells each). A board this tight is essentially always
+   forced, and verifying it costs ~2ms even at 11×11.
+2. **Merge down.** Repeatedly join two flows whose endpoints touch, keeping
+   a merge only when the board still has exactly one solution. Candidates
+   are tried shortest-first (merging two stubby flows loosens the board
+   least, so the accepted merge usually comes early), and merges are
+   verified in batches that halve on failure — the early merges from ~40
+   flows down to ~20 essentially never break uniqueness, so checking them
+   individually is wasted work.
+3. **Stop** at the difficulty's target flow count, at a wall-clock budget, or
+   when no merge can preserve uniqueness.
+
+**Why this ordering.** Proving uniqueness on a *loose* board is the one
+genuinely expensive operation — a single check on an 11×11 board with 12
+flows took up to 34 seconds. Merging down means every check runs on a board
+that is already tight, where the solver settles in well under a millisecond.
+The expensive direction is never taken.
+
+**Uniqueness is an invariant, not a filter.** Generation starts forced and
+only ever accepts merges that keep it forced. Running out of time therefore
+costs a few extra colours and never a mushier puzzle, which is what makes a
+tight time budget safe.
+
+### The solver
+
+`countSolutions(size, dots, limit, maxNodes)` counts board-filling solutions
+exactly. Colours grow one cell at a time from the first dot toward the
+second; at each node the colour with the fewest free neighbours is extended,
+which is a deterministic function of board state, so every solution is still
+enumerated exactly once while forced moves get played before speculative
+ones. Three prunes do the work, all following from one observation — an
+unfinished colour can only reach free cells by growing from its head, and can
+only leave free space by stepping onto its own goal dot:
+
+- a free cell with fewer than two usable neighbours can never be both entered
+  and left;
+- an unfinished colour's head and goal must share a region of free cells;
+- every free region must have some unfinished colour with *both* head and
+  goal touching it, or nothing can ever fill it.
+
+`maxNodes` makes the search bounded: it returns `-1` for "could not settle in
+budget", which callers must treat as unknown and never as a pass. Declining
+an unproven merge is always safe — it just leaves the board more constrained.
+
+### Flow counts are measured, not chosen
+
+A board only stays uniquely solvable down to a certain flow count, and that
+floor is a property of board size, not of taste. Measured stall points:
+5×5 ≈ 5 flows, 7×7 ≈ 8, 9×9 ≈ 11, 10×10 ≈ 13, 11×11 ≈ 15–18, 12×12 ≈ 18,
+13×13 and 14×14 ≈ 23–26. The difficulty targets are set at those floors so
+generation stops on arrival instead of paying to rediscover the wall — and
+they land in the same range the original game uses anyway. Difficulty is
+therefore mostly board size, which is how the real game scales too.
+
+Consequences:
+
+- **Expert is 10×10, not 11×11.** 11×11 cannot be made forced below ~15–18
+  flows, and that many colours reads as visual noise rather than difficulty.
+  11×11 is still available from the size picker.
+- **The size picker caps at 11.** 12×12 can be forced but needs several
+  seconds of merging; 13×13 and 14×14 need more colours than a player can
+  tell apart. Capping is what lets the generator promise that *every* board
+  it returns has exactly one solution.
+- **The palette grew to 20 colours.** The last four are only reached on the
+  largest boards.
+
+### Generation cost (measured, `tests/` sweep)
+
+| board | flows | forced | avg | worst |
+|---|---|---|---|---|
+| 5×5 | 5 | 8/8 | 3ms | 7ms |
+| 7×7 | 8 | 8/8 | 2ms | 3ms |
+| 9×9 | 11–13 | 8/8 | 15ms | 29ms |
+| 10×10 | 13–16 | 8/8 | 153ms | 660ms |
+| 11×11 | 16–20 | 8/8 | 416ms | 926ms |
+
+---
+
+## Still-open judgment calls
+
+- **Uniqueness is enforced under the fill rule, not the connect-only rule.**
+  Flow's actual rule is "connect every pair *and* cover every cell", so that
+  is what the solver counts. A board may still admit several ways to connect
+  all pairs while leaving cells empty; only one fills the grid. Turning off
+  "Fill the whole board" therefore loosens the puzzle by design.
+- **Dots still cluster more than a hand-made board.** Foreign-dot adjacency
+  sits near the random-placement baseline rather than below it. Adjacent
+  dots of different colours are load-bearing here — the merge loop already
+  rejected merging them because doing so would break uniqueness — so
+  spreading them further would cost forcedness. Left as is.
+- **No difficulty knob beyond size.** Since the flow floor is set by board
+  size, easy/medium/hard/expert are 5×5/7×7/9×9/10×10. A genuine
+  same-size difficulty axis would need a solve-difficulty metric (how deep
+  the forced-move chain runs before a guess is needed), which is a much
+  bigger piece of work.
+- **Generation is synchronous.** 10×10 and 11×11 can block the main thread
+  for a few hundred milliseconds on New Game. If that becomes annoying, move
+  the engine into a worker rather than loosening the budget.
+
+## Gameplay decisions (unchanged from the first pass)
+
+- **Win = all pairs connected AND every cell covered**, with a settings
+  toggle to relax it to connections-only.
+- **Pipe rules mirror the original:** drawing over another pipe severs it
+  from the crossed cell onward; dots block foreign pipes; dragging backwards
+  retracts; touching a dot restarts that flow; touching mid-pipe cuts it
+  there; a completed pipe only retracts.
+- **Moves** = strokes (or hints) that changed the board. "Perfect" = one
+  stroke per flow, no hints.
+- **Timer starts on the first stroke.** Best times are bucketed per
+  `size×size-difficulty`; hint-assisted solves do not record bests.
+- **Undo** (60 strokes) and **Hint** (snaps one flow to the solution —
+  now unambiguously *the* solution, since boards are forced).
+- **No keyboard input.** Dragging is the game.
 - **Win uses the overlay; there is no loss state**, so no banner.
-- Save/restore (`freeflow-history`, limit 2), settings (`freeflow-cfg`),
-  puzzle switcher, theme picker, board-opacity slider, outdoor mode, custom
-  themes: all wired per `plans/adding-a-game.md`.
-
-## The classic look
-
-- **"Classic board" toggle, ON by default** — black board, subtle light grid
-  lines, the classic bright palette (red, green, blue, yellow, orange, cyan,
-  pink, maroon, purple, white, grey, lime, tan, navy, teal, rose — 16 colours
-  in the classic order). This is the requested "you know the one" view and is
-  what a fresh install shows regardless of theme.
-- With the toggle OFF the board chrome follows the active theme (background,
-  grid lines, border, opacity slider), and on light themes six palette entries
-  (white/yellow/cyan/lime/tan/rose) swap to darker variants for contrast.
-  Pipes always stay classic-coloured — flows need maximal mutual contrast and
-  the theme accent ramp can't provide 16 distinguishable hues.
-- **Canvas rendering** (single `<canvas>` in `#board`) rather than DOM cells —
-  rounded pipes, glows, and 60fps dragging are impractical with divs. The
-  canvas re-reads theme tokens and redraws on theme/contrast/opacity changes
-  via a MutationObserver on `<html>`.
-
-## Misc
-
+- **Classic board toggle, on by default** — black board, bright classic
+  palette, regardless of theme. Off follows the active theme, and light
+  themes swap seven palette entries for darker variants.
+- **Canvas rendering** rather than DOM cells, redrawn on theme, contrast and
+  opacity changes via a MutationObserver on `<html>`.
 - **Name/emoji: "Free Flow" / 🌈** — avoids the trademarked name.
-- Dot-tap immediately clears that flow's old pipe (the original defers the
-  clear until you move); Undo covers accidental taps.
-- `CLAUDE.md`'s project-layout list predates Logic Grid and was left as-is
-  rather than partially updating it in a feature branch.

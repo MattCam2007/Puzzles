@@ -391,6 +391,10 @@ async function main() {
       report(`${name}: board renders`, boot.canvas && boot.flows >= 3 && boot.paths === boot.flows,
         JSON.stringify(boot));
       report(`${name}: live board passes engine validation`, boot.valid);
+      // the property that makes it play like Flow: exactly one way to fill it
+      const forced = await page.evaluate(
+        () => FlowEngine.countSolutions(size, FlowEngine.dotsOf(flows), 2) === 1);
+      report(`${name}: live board is uniquely solvable`, forced);
 
       await checkOverlaySanity(page, name, '#overlay');
       await checkSettingsAndTheme(page, name);

@@ -12,7 +12,10 @@ let cfg = Object.assign({}, DEFAULTS, loadJSON('freeflow-cfg', {}));
 function saveCfg() { saveJSON('freeflow-cfg', cfg); }
 
 function activeSize() {
-  if (cfg.boardSize) return cfg.boardSize;
+  // clamp so a size saved before the picker's range changed still boots
+  if (cfg.boardSize) {
+    return Math.max(FlowEngine.SIZE_MIN, Math.min(FlowEngine.SIZE_MAX, cfg.boardSize));
+  }
   return (FlowEngine.LEVELS[cfg.difficulty] || FlowEngine.LEVELS.medium).size;
 }
 
@@ -30,10 +33,14 @@ const PALETTE = [
   '#e23c32', '#37b34a', '#2e5ce6', '#f5d327', '#f28b24', '#28e0e0',
   '#ea3f8f', '#8e1b1b', '#7d2ee0', '#f0f0f0', '#8f8f8f', '#8ede3c',
   '#c9b47c', '#1b2a99', '#2e8f7a', '#ff80c0',
+  /* only reached on the largest boards, which need more than the
+     classic sixteen to stay uniquely solvable */
+  '#b8860b', '#5f9ea0', '#d95f02', '#9acd32',
 ];
 const PALETTE_LIGHT_OVERRIDES = {
   '#f5d327': '#d9a800', '#28e0e0': '#0d9aa8', '#f0f0f0': '#6b6b6b',
   '#8ede3c': '#56a11a', '#c9b47c': '#93794a', '#ff80c0': '#e0559d',
+  '#9acd32': '#6f8f16',
 };
 
 function flowColor(i, light) {
@@ -465,6 +472,7 @@ function startGame() {
   undoStack = [];
   allConnectedToastShown = false;
 
+  $('#difficultySelect').value = cfg.difficulty;
   applyBoardStyle();
   updateCanvasSize();
   render();
