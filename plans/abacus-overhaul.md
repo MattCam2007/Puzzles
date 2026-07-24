@@ -1,7 +1,11 @@
 # Abacus — overhaul plan (v1 → v2)
 
-Status: **plan only, not implemented.** Written to be executed step-by-step by an
-implementing model with no prior context on this codebase.
+Status: **implemented, all 6 phases (commits on `claude/abacus-math-game-11eomp`).**
+Phase 6's two explicitly-optional follow-ups (a portrait "rotate for more room"
+hint, and a decorative schoty quarter-wire) were left for a future pass — everything
+else, including every A1–A20 acceptance criterion and every catalogued defect
+(D1–D12), is done and covered by `tests/abacus-engine.test.js` /
+`tests/smoke.test.js`.
 
 Four goals, in priority order:
 
