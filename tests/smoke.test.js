@@ -542,6 +542,49 @@ async function main() {
       }));
       report(`${name}: A17 v1 cfg migrates without showing a Check button`,
         a17.checkHidden && a17.mode === 'practice' && a17.requireCheck === false, JSON.stringify(a17));
+
+      // A13/A14: every shape x material combination renders a nonzero,
+      // correctly-tagged bead for every style, including 'auto' shape
+      // resolving to each style's traditional default.
+      const combos = await page.evaluate(() => {
+        const out = [];
+        for (const style of ['soroban', 'suanpan', 'roman', 'schoty']) {
+          for (const shape of E.SHAPES.map(s => s.id)) {
+            for (const material of E.MATERIALS.map(m => m.id)) {
+              cfg.style = style; cfg.beadShape = shape; cfg.beadMaterial = material; saveCfg();
+              rodState = freshState(); buildAbacus(); updateReadout();
+              const board = document.getElementById('board');
+              const bead = document.querySelector('.bead');
+              const rect = bead ? bead.getBoundingClientRect() : { width: 0, height: 0 };
+              const resolved = E.resolveBeadShape(style, shape);
+              if (board.dataset.beadShape !== resolved || rect.width <= 0 || rect.height <= 0) {
+                out.push(`${style}/${shape}/${material}: tag=${board.dataset.beadShape} expected=${resolved} w=${rect.width} h=${rect.height}`);
+              }
+            }
+          }
+        }
+        return out;
+      });
+      report(`${name}: A13/A14 every style x shape x material renders correctly-tagged, nonzero beads`,
+        combos.length === 0, combos.slice(0, 5).join(' | '));
+
+      // A15: bead shape, bead material and frame all persist across reload
+      await page.evaluate(() => {
+        cfg.style = 'suanpan'; cfg.beadShape = 'faceted'; cfg.beadMaterial = 'jade'; cfg.frame = 'rosewood';
+        saveCfg(); rodState = freshState(); buildAbacus(); updateReadout();
+      });
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      const a15 = await page.evaluate(() => {
+        const board = document.getElementById('board');
+        return {
+          cfgShape: cfg.beadShape, cfgMaterial: cfg.beadMaterial, cfgFrame: cfg.frame,
+          domShape: board.dataset.beadShape, domMaterial: board.dataset.beadMaterial, domFrame: board.dataset.frame,
+        };
+      });
+      report(`${name}: A15 bead shape/material/frame persist across reload`,
+        a15.cfgShape === 'faceted' && a15.cfgMaterial === 'jade' && a15.cfgFrame === 'rosewood' &&
+        a15.domShape === 'faceted' && a15.domMaterial === 'jade' && a15.domFrame === 'rosewood',
+        JSON.stringify(a15));
     });
 
     await runPageSuite(browser, baseUrl, 'abacus-layout', async (page) => {

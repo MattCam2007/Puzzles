@@ -441,6 +441,42 @@ section('14. migrateCfg — v1 configs migrate to the v2 shape');
   check('migrateCfg: does not mutate its input', input.mode === 'flow', `got ${input.mode}`);
 }
 
+/* ═══════════════════════════════════════════
+   PHASE 5 — bead shapes, materials, board finishes (appearance axes)
+═══════════════════════════════════════════ */
+section('15. SHAPES / MATERIALS / FRAMES — catalogues');
+{
+  for (const [name, arr] of [['SHAPES', E.SHAPES], ['MATERIALS', E.MATERIALS], ['FRAMES', E.FRAMES]]) {
+    check(`${name}: is a non-empty array`, Array.isArray(arr) && arr.length > 0, `got ${arr}`);
+    const ids = arr.map(x => x.id);
+    check(`${name}: every entry has id/label/icon`, arr.every(x => x.id && x.label && x.icon));
+    check(`${name}: ids are unique`, new Set(ids).size === ids.length, `got ${ids}`);
+  }
+  check('SHAPES: includes "auto"', E.SHAPES.some(s => s.id === 'auto'));
+  check('MATERIALS: does not include "auto" (material always has an explicit default)',
+    !E.MATERIALS.some(m => m.id === 'auto'));
+}
+
+section('16. resolveBeadShape — auto maps to each style\'s traditional shape');
+{
+  const traditional = { soroban: 'biconical', suanpan: 'oblate', schoty: 'sphere', roman: 'pebble' };
+  for (const style of STYLE_NAMES) {
+    const got = E.resolveBeadShape(style, 'auto');
+    check(`resolveBeadShape(${style}, 'auto') -> ${traditional[style]}`, got === traditional[style], `got ${got}`);
+  }
+  // an explicit choice always wins over the style default
+  for (const style of STYLE_NAMES) {
+    check(`resolveBeadShape(${style}, 'sphere') -> sphere (explicit wins)`,
+      E.resolveBeadShape(style, 'sphere') === 'sphere');
+  }
+  // every traditional default is itself a real, catalogued shape id
+  const shapeIds = new Set(E.SHAPES.map(s => s.id));
+  for (const style of STYLE_NAMES) {
+    check(`resolveBeadShape(${style}, 'auto') result is a real catalogued shape`,
+      shapeIds.has(E.resolveBeadShape(style, 'auto')));
+  }
+}
+
 /* ── summary ── */
 process.stdout.write(`\n${passed} passed, ${failed} failed\n`);
 if (failed) {

@@ -337,6 +337,57 @@
     return c;
   }
 
+  /* ═══════════════════════════════════════════
+     APPEARANCE — bead shape, bead material and board finish are three
+     independent axes (mechanics — rod/bead counts, arithmetic — stay
+     entirely determined by `style`). CSS keys off these ids directly
+     ([data-bead-shape], [data-bead-material], [data-frame] in
+     css/abacus.css); shape rules only ever set geometry and material
+     rules only ever set colour, so any combination renders cleanly.
+  ═══════════════════════════════════════════ */
+  const SHAPES = [
+    { id: 'auto',           label: 'Style default',  icon: '✨' },
+    { id: 'biconical',      label: 'Biconical',       icon: '💠' },
+    { id: 'soft-biconical', label: 'Soft biconical',  icon: '🔷' },
+    { id: 'oblate',         label: 'Oblate',          icon: '⬭'  },
+    { id: 'sphere',         label: 'Sphere',          icon: '⚪' },
+    { id: 'barrel',         label: 'Barrel',          icon: '🛢️' },
+    { id: 'lentil',         label: 'Lentil',          icon: '🫘' },
+    { id: 'faceted',        label: 'Faceted',         icon: '💎' },
+    { id: 'pebble',         label: 'Pebble',          icon: '🪨' },
+  ];
+
+  const MATERIALS = [
+    { id: 'themed',     label: 'Match app theme', icon: '🎨' },
+    { id: 'dark-wood',  label: 'Dark wood',        icon: '🟤' },
+    { id: 'light-wood', label: 'Light wood',       icon: '🟠' },
+    { id: 'ivory',      label: 'Ivory',            icon: '🤍' },
+    { id: 'jade',       label: 'Jade',             icon: '🟢' },
+    { id: 'brass',      label: 'Brass',            icon: '🟡' },
+    { id: 'obsidian',   label: 'Obsidian',         icon: '⚫' },
+    { id: 'amber',      label: 'Amber',            icon: '🔶' },
+  ];
+
+  const FRAMES = [
+    { id: 'theme',    label: 'Match app theme', icon: '🎨' },
+    { id: 'wood',     label: 'Classic wood',     icon: '🪵' },
+    { id: 'dark',     label: 'Dark lacquer',     icon: '🖤' },
+    { id: 'brass',    label: 'Antique brass',    icon: '🥇' },
+    { id: 'walnut',   label: 'Walnut',           icon: '🌰' },
+    { id: 'bamboo',   label: 'Bamboo',           icon: '🎍' },
+    { id: 'rosewood', label: 'Rosewood',         icon: '🌹' },
+    { id: 'slate',    label: 'Slate',            icon: '🪨' },
+  ];
+
+  const AUTO_SHAPE_BY_STYLE = { soroban: 'biconical', suanpan: 'oblate', schoty: 'sphere', roman: 'pebble' };
+
+  /* 'auto' resolves to the style's traditional bead shape; any explicit
+     choice always wins over that default. */
+  function resolveBeadShape(style, beadShape) {
+    if (beadShape && beadShape !== 'auto') return beadShape;
+    return AUTO_SHAPE_BY_STYLE[style] || 'biconical';
+  }
+
   return {
     STYLES, LEVELS, PLACE_NAMES, placeLabel,
     freshState, abacusValue, maxBoardValue, setValue, toggleBead,
@@ -344,5 +395,6 @@
     styleUnits, computeUnit,
     beadsFromTrack, shovePositions, flingTarget, snapPositions,
     migrateCfg,
+    SHAPES, MATERIALS, FRAMES, resolveBeadShape,
   };
 });

@@ -69,6 +69,8 @@ function buildAbacus() {
   const board = $('#board');
   board.dataset.abacus = cfg.style;
   board.dataset.frame = cfg.frame;
+  board.dataset.beadShape = E.resolveBeadShape(cfg.style, cfg.beadShape);
+  board.dataset.beadMaterial = cfg.beadMaterial;
   board.classList.toggle('no-labels', !cfg.showLabels);
   board.innerHTML = '';
   beadRefs = [];
@@ -793,6 +795,8 @@ function syncSettingsUI() {
   $$('#trialPicker .strike-opt').forEach(o => o.classList.toggle('active', +o.dataset.val === cfg.trialSecs));
   $$('[data-abacus-pick]').forEach(r => r.classList.toggle('selected', r.dataset.abacusPick === cfg.style));
   $$('[data-frame-pick]').forEach(r => r.classList.toggle('selected', r.dataset.framePick === cfg.frame));
+  $$('[data-bead-shape-pick]').forEach(r => r.classList.toggle('selected', r.dataset.beadShapePick === cfg.beadShape));
+  $$('[data-bead-material-pick]').forEach(r => r.classList.toggle('selected', r.dataset.beadMaterialPick === cfg.beadMaterial));
 }
 
 function onToggle(id, key, extra) {
@@ -879,6 +883,20 @@ $$('[data-frame-pick]').forEach(r => r.addEventListener('click', () => {
   cfg.frame = r.dataset.framePick;
   saveCfg();
   $('#board').dataset.frame = cfg.frame;
+  syncSettingsUI();
+}));
+
+$$('[data-bead-shape-pick]').forEach(r => r.addEventListener('click', () => {
+  cfg.beadShape = r.dataset.beadShapePick;
+  saveCfg();
+  $('#board').dataset.beadShape = E.resolveBeadShape(cfg.style, cfg.beadShape);
+  syncSettingsUI();
+}));
+
+$$('[data-bead-material-pick]').forEach(r => r.addEventListener('click', () => {
+  cfg.beadMaterial = r.dataset.beadMaterialPick;
+  saveCfg();
+  $('#board').dataset.beadMaterial = cfg.beadMaterial;
   syncSettingsUI();
 }));
 

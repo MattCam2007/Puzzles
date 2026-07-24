@@ -133,50 +133,76 @@ body {
   width: 100%; flex: 1 1 auto; min-height: 0; overflow: hidden;
 }
 
-/* frame finishes — colour palettes for the abacus itself */
+/* frame finishes — colour palette for the board itself (border, back
+   panel, beam, wire). Bead colour is a fully independent axis — see
+   [data-bead-material] below — so any frame x material combination
+   renders correctly; never combine the two into one selector.
+   --frame-grain is an opacity (0-1) driving the wood-grain overlay a
+   few rules down: 0 for non-wood finishes, so it silently no-ops. */
 .board[data-frame="theme"] {
   --frame: var(--surface3);
   --abacus-bg: var(--surface);
   --beam: var(--surface2);
   --beam-ink: var(--text-muted);
   --wire: var(--surface2);
-  --bead: var(--accent);
-  --bead-hi: var(--accent2);
-  --bead-lo: color-mix(in srgb, var(--accent) 55%, black);
-  --bead-alt: var(--cyan);
+  --frame-grain: 0;
 }
 .board[data-frame="wood"] {
-  --frame: #5b3d20;
-  --abacus-bg: #7c5a34;
-  --beam: #46311a;
-  --beam-ink: #d8c0a0;
-  --wire: #3a2a18;
-  --bead: #b3742f;
-  --bead-hi: #e8b264;
-  --bead-lo: #6e4318;
-  --bead-alt: #8a2626;
+  --frame: #5b3d20; --abacus-bg: #7c5a34; --beam: #46311a;
+  --beam-ink: #d8c0a0; --wire: #3a2a18; --frame-grain: 0.5;
 }
 .board[data-frame="dark"] {
-  --frame: #0b0b10;
-  --abacus-bg: #191922;
-  --beam: #2a2a3f;
-  --beam-ink: #9b97b8;
-  --wire: #30304a;
-  --bead: #3d3d5c;
-  --bead-hi: #6a6a94;
-  --bead-lo: #20202f;
-  --bead-alt: #7c6af7;
+  --frame: #0b0b10; --abacus-bg: #191922; --beam: #2a2a3f;
+  --beam-ink: #9b97b8; --wire: #30304a; --frame-grain: 0;
 }
 .board[data-frame="brass"] {
-  --frame: #5a4614;
-  --abacus-bg: #8a7433;
-  --beam: #463610;
-  --beam-ink: #f0e0a8;
-  --wire: #3c2e0c;
-  --bead: #c9a227;
-  --bead-hi: #f2d675;
-  --bead-lo: #7a5f14;
-  --bead-alt: #8a3a1a;
+  --frame: #5a4614; --abacus-bg: #8a7433; --beam: #463610;
+  --beam-ink: #f0e0a8; --wire: #3c2e0c; --frame-grain: 0;
+}
+.board[data-frame="walnut"] {
+  --frame: #3a2418; --abacus-bg: #4f3221; --beam: #2c1c12;
+  --beam-ink: #d0b090; --wire: #22150d; --frame-grain: 0.6;
+}
+.board[data-frame="bamboo"] {
+  --frame: #a08238; --abacus-bg: #cbb06a; --beam: #7c6428;
+  --beam-ink: #3a2e10; --wire: #6a561f; --frame-grain: 0.35;
+}
+.board[data-frame="rosewood"] {
+  --frame: #4a1418; --abacus-bg: #6b2028; --beam: #350e12;
+  --beam-ink: #e8c8ca; --wire: #2a0a0d; --frame-grain: 0.55;
+}
+.board[data-frame="slate"] {
+  --frame: #2e3438; --abacus-bg: #3f484d; --beam: #232a2d;
+  --beam-ink: #b8c4c8; --wire: #1a1f22; --frame-grain: 0;
+}
+
+/* bead materials — colour only, orthogonal to bead shape below.
+   --bead-alt is the schoty "4/5" marker colour, tuned per material to
+   stay legible against --bead. */
+.board[data-bead-material="themed"] {
+  --bead: var(--accent); --bead-hi: var(--accent2);
+  --bead-lo: color-mix(in srgb, var(--accent) 55%, black); --bead-alt: var(--cyan);
+}
+.board[data-bead-material="dark-wood"] {
+  --bead: #b3742f; --bead-hi: #e8b264; --bead-lo: #6e4318; --bead-alt: #8a2626;
+}
+.board[data-bead-material="light-wood"] {
+  --bead: #d9b06a; --bead-hi: #f3dcac; --bead-lo: #9a743c; --bead-alt: #7a9c5e;
+}
+.board[data-bead-material="ivory"] {
+  --bead: #e8dfc8; --bead-hi: #fffaf0; --bead-lo: #a2977c; --bead-alt: #c0607a;
+}
+.board[data-bead-material="jade"] {
+  --bead: #4f9e77; --bead-hi: #9fdcbb; --bead-lo: #235440; --bead-alt: #d4a13a;
+}
+.board[data-bead-material="brass"] {
+  --bead: #c9a227; --bead-hi: #f2d675; --bead-lo: #7a5f14; --bead-alt: #8a3a1a;
+}
+.board[data-bead-material="obsidian"] {
+  --bead: #2c2c38; --bead-hi: #6a6a80; --bead-lo: #101014; --bead-alt: #9c6ad0;
+}
+.board[data-bead-material="amber"] {
+  --bead: #d97a2c; --bead-hi: #f8c878; --bead-lo: #8a4610; --bead-alt: #4a6c8a;
 }
 
 /* border-width and (inner) padding are set inline from js/abacus.js
@@ -196,8 +222,28 @@ body {
   border-style: solid;
   border-color: var(--frame);
   border-radius: calc(var(--u) * 0.32);
-  background: color-mix(in srgb, var(--abacus-bg) var(--board-alpha), transparent);
-  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.35), 0 4px 16px rgba(0, 0, 0, 0.3);
+  background-color: color-mix(in srgb, var(--abacus-bg) var(--board-alpha), transparent);
+  /* wood-grain overlay: opacity driven entirely by --frame-grain (0 for
+     non-wood finishes, so this silently no-ops), layered as a
+     background-image rather than a pseudo-element so it's guaranteed to
+     paint beneath the rods/beads without any z-index bookkeeping —
+     an element's own background always paints below its children. */
+  background-image: repeating-linear-gradient(
+    87deg,
+    rgba(0, 0, 0, calc(0.22 * var(--frame-grain))) 0px,
+    rgba(0, 0, 0, calc(0.22 * var(--frame-grain))) 1px,
+    transparent 1px, transparent 6px,
+    rgba(255, 255, 255, calc(0.08 * var(--frame-grain))) 6px,
+    rgba(255, 255, 255, calc(0.08 * var(--frame-grain))) 7px,
+    transparent 7px, transparent 13px
+  );
+  /* bevel (bright top-left edge, dark bottom-right edge) layered with
+     the original recessed-panel + drop shadows */
+  box-shadow:
+    inset 0 calc(var(--u) * 0.07) calc(var(--u) * 0.12) rgba(255, 255, 255, 0.10),
+    inset 0 calc(var(--u) * -0.07) calc(var(--u) * 0.12) rgba(0, 0, 0, 0.4),
+    inset 0 2px 10px rgba(0, 0, 0, 0.35),
+    0 4px 16px rgba(0, 0, 0, 0.3);
 }
 .abacus.vertical { display: flex; justify-content: center; align-items: center; }
 .abacus.rows {
@@ -212,7 +258,13 @@ body {
 .rod .wire {
   position: absolute; left: 50%; transform: translateX(-50%);
   top: calc(var(--u) * -0.2); bottom: calc(var(--u) * -0.2); width: calc(var(--u) * 0.08);
-  background: var(--wire); border-radius: calc(var(--u) * 0.04);
+  border-radius: calc(var(--u) * 0.04);
+  /* dark edge -> light centre -> dark edge so the rod reads cylindrical
+     rather than a flat painted bar */
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--wire) 55%, black) 0%,
+    color-mix(in srgb, var(--wire) 60%, white) 50%,
+    color-mix(in srgb, var(--wire) 55%, black) 100%);
 }
 .beam-seg {
   position: absolute; left: 0; right: 0; z-index: 1;
@@ -221,12 +273,40 @@ body {
   font-size: clamp(0.5rem, calc(var(--u) * 0.22), 0.72rem);
   font-weight: 700; letter-spacing: 0.5px;
   color: var(--beam-ink);
+  /* inset shadow top+bottom (recessed into the frame) plus a hairline
+     highlight along the top edge */
+  box-shadow:
+    inset 0 calc(var(--u) * 0.05) 0 rgba(255, 255, 255, 0.08),
+    inset 0 calc(var(--u) * 0.06) calc(var(--u) * 0.08) rgba(0, 0, 0, 0.3),
+    inset 0 calc(var(--u) * -0.06) calc(var(--u) * 0.08) rgba(0, 0, 0, 0.3);
 }
+/* Beads are built from four layers so every shape/material combination
+   reads as an object, not a flat CSS shape:
+     1. body      — 3-stop radial-gradient (base .bead rule)
+     2. ::before  — specular highlight, upper-left, consistent light
+                    source across the whole board
+     3. ::after   — contact shadow where the rod passes through
+     4. filter    — drop-shadow cast onto the tray behind it. Uses
+                    drop-shadow (not box-shadow) specifically because it
+                    follows the bead's actual rendered silhouette —
+                    including clip-path shapes like biconical/faceted —
+                    where box-shadow would just draw a rectangle. */
 .bead {
   position: absolute; z-index: 2; cursor: pointer;
   background: radial-gradient(circle at 35% 30%, var(--bead-hi), var(--bead) 55%, var(--bead-lo));
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
-  border-radius: 50%;
+  border-radius: 50%; /* sphere is the safe default; shape rules below override */
+  filter: drop-shadow(0 calc(var(--u) * 0.06) calc(var(--u) * 0.09) rgba(0, 0, 0, 0.45));
+}
+.bead::before,
+.bead::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+}
+.bead::before {
+  background: radial-gradient(ellipse 55% 40% at 32% 26%, rgba(255, 255, 255, 0.65), transparent 72%);
+  mix-blend-mode: screen;
+}
+.bead::after {
+  background: radial-gradient(ellipse 34% 62% at 50% 50%, rgba(0, 0, 0, 0.4), transparent 75%);
 }
 .rod .bead {
   left: 50%; transform: translateX(-50%);
@@ -234,17 +314,34 @@ body {
      slot with a small bounce, rather than a flat linear snap */
   transition: top 0.16s cubic-bezier(.34, 1.56, .64, 1);
 }
-.bead:active { filter: brightness(1.15); }
-.bead.set { filter: saturate(1.2) brightness(1.08); }
+.bead:active { filter: drop-shadow(0 calc(var(--u) * 0.06) calc(var(--u) * 0.09) rgba(0, 0, 0, 0.45)) brightness(1.15); }
+.bead.set { filter: drop-shadow(0 calc(var(--u) * 0.06) calc(var(--u) * 0.09) rgba(0, 0, 0, 0.45)) saturate(1.2) brightness(1.08); }
 /* live-dragged beads track the pointer 1:1 — no transition lag */
 .bead.dragging { transition: none !important; }
 
-/* soroban beads are sharp double-cones — render as diamonds */
-.board[data-abacus="soroban"] .bead {
-  border-radius: 4px;
-  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-  box-shadow: none;
+/* bead silhouettes — geometry only, orthogonal to the material colour
+   variables above. Never combine a shape selector with a material
+   selector: material sets colour custom properties on [data-board],
+   shape sets border-radius/clip-path on .bead, and any combination of
+   the two composes correctly because neither touches the other's
+   properties. */
+.board[data-bead-shape="biconical"] .bead {
+  /* turned wooden bead with flat facets at the tips, not a sharp
+     4-point rhombus — that's what makes it read as biconical rather
+     than a diamond */
+  border-radius: 0;
+  clip-path: polygon(50% 0%, 88% 22%, 100% 50%, 88% 78%, 50% 100%, 12% 78%, 0% 50%, 12% 22%);
 }
+.board[data-bead-shape="soft-biconical"] .bead { border-radius: 50% / 30%; }
+.board[data-bead-shape="oblate"]         .bead { border-radius: 50% / 38%; }
+.board[data-bead-shape="sphere"]         .bead { border-radius: 50%; }
+.board[data-bead-shape="barrel"]         .bead { border-radius: 28% / 42%; }
+.board[data-bead-shape="lentil"]         .bead { border-radius: 50% / 20%; }
+.board[data-bead-shape="faceted"] .bead {
+  border-radius: 0;
+  clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+}
+.board[data-bead-shape="pebble"] .bead { border-radius: 46% 54% 52% 48% / 48% 46% 54% 52%; }
 
 /* roman: a bronze plate with grooves and small round counters */
 .board[data-abacus="roman"] .rod .wire {
@@ -260,14 +357,19 @@ body {
 .srow .wire {
   position: absolute; top: 50%; transform: translateY(-50%);
   left: calc(var(--u) * -0.1); right: calc(var(--u) * -0.1); height: calc(var(--u) * 0.08);
-  background: var(--wire); border-radius: calc(var(--u) * 0.04);
+  border-radius: calc(var(--u) * 0.04);
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--wire) 55%, black) 0%,
+    color-mix(in srgb, var(--wire) 60%, white) 50%,
+    color-mix(in srgb, var(--wire) 55%, black) 100%);
   /* slight sag like a real schoty wire */
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
 }
 .srow .bead {
   top: 50%; transform: translateY(-50%);
   transition: left 0.16s cubic-bezier(.34, 1.56, .64, 1);
-  border-radius: 45%;
+  /* shape comes from [data-bead-shape] above; .bead's border-radius:50%
+     default already gives a reasonable round fallback here */
 }
 .srow .bead.mid {
   background: radial-gradient(circle at 35% 30%,
