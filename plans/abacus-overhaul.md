@@ -3,18 +3,22 @@
 Status: **plan only, not implemented.** Written to be executed step-by-step by an
 implementing model with no prior context on this codebase.
 
-This plan fixes four things the v1 build got wrong:
+Four goals, in priority order:
 
-1. The abacus is a **fixed 610×242 px block** at every screen size. It never scales.
-2. Beads only respond to **tap**. You cannot drag them with a finger.
-3. The default mode makes you press **Check** after every answer.
-4. The beads/frame are flat CSS shapes — **low fidelity**.
+1. **Fit the screen.** The abacus is a fixed 610×242 px block at every screen size.
+2. **Kinetic beads.** Keep tap-to-set, *add* finger-sliding with real physical feel —
+   shove, sweep, snap.
+3. **Appearance is a choice.** Bead shape, bead material and board finish become
+   independent user-selectable sets, not values baked into the abacus style.
+4. **Auto-advance by default.** No Check button in the normal flow.
+
+Plus: fix the bugs catalogued in §0.2, which were confirmed by running the build.
 
 ---
 
 ## 0. Evidence — what is actually wrong
 
-Measured on the current build (`node` + Playwright, real viewports):
+### 0.1 Layout (measured, real viewports, Playwright)
 
 | Viewport | Abacus size | % of screen | Problem |
 |---|---|---|---|
@@ -26,25 +30,37 @@ Measured on the current build (`node` + Playwright, real viewports):
 Root cause: every dimension in `STYLES` (`js/abacus.js`) is a hard-coded pixel
 constant (`bw: 52, bh: 26, rodW: 62, beamH: 16`), and no code path ever reads the
 viewport. The board renders identically on a 4K monitor and a 390 px phone.
+`overflow-x: auto` on `.board-wrap` was a workaround; fitting is the fix.
 
-### Secondary defects found in review
+### 0.2 Defects
 
-| # | File / line | Defect | Severity |
+**Confirmed by execution** — each was reproduced against the live build:
+
+| # | Where | Defect | Evidence |
 |---|---|---|---|
-| D1 | `js/abacus.js` `genQuestion()` div branch | `nums` is only assigned inside `if (start <= cap)`. If all 40 attempts fail, `nums` stays `[]` and the question renders as the empty string `" ="`. Unreachable with today's `LEVELS`, but latent: any harder tier or smaller `rods` count makes it live. | Latent bug |
-| D2 | `js/abacus.js` `genQuestion()` mul branch | Same loop shape: on exhaustion it silently keeps the last over-cap `answer`, producing a question that **cannot be represented on the board**. No guaranteed-solvable fallback. | Latent bug |
-| D3 | `js/abacus.js` `saveGameState()` | Called on **every bead move**, and uses `pushHistory(..., limit 20)` — a read-parse-push-stringify-write of a 20-entry ring buffer per tap. Only `h[h.length-1]` is ever read. ~20× the storage and a synchronous localStorage write per interaction. | Perf |
-| D4 | `js/abacus.js` | `attempts` is incremented, persisted, and restored, but never displayed or used anywhere. Dead state. | Cruft |
-| D5 | `js/abacus.js` | `genQuestion()` calls `Math.random()` directly, so question generation **cannot be unit-tested deterministically**. This is why v1 has no engine test suite. | Testability |
-| D6 | `js/abacus.js` | No keyboard input at all. Every other game in the suite supports it (`shouldIgnoreGameKeys` exists in `common.js` for exactly this). | Gap |
-| D7 | `js/abacus.js` `nextQuestion()` | With `autoClear` off in auto-advance mode, the board still holds the previous answer when the next question appears. If the new answer equals what is already displayed, the user must move a bead away and back to trigger the check. | UX wart |
-| D8 | `css/abacus.css` | Bead fidelity: single `radial-gradient`, `box-shadow: none` on soroban, flat 4 px wire, flat beam rectangle. No specular, no contact shadow, no frame bevel, no grain. | Visual |
+| **D1** | `checkAnswer()` | The 800 ms `setTimeout` that advances after a correct answer is **never cancelled**. Answer correctly, then hit New Game inside that window: the orphan timer fires `nextQuestion()` and silently replaces the question you were just given. | Reproduced: New Game showed `6 + 7 =`, one second later it had become `14 − 9 =` with no user action. |
+| **D2** | `bestKey()` | Returns `trial-${difficulty}-${trialSecs}` — ignores chain length **and** the operation mix. A 2-number addition best and a 6-number division best fight over one slot, so "Best" is not a comparable number. | All three configs produced the identical key `trial-easy-60`. |
+| **D3** | style pickers | Switching abacus style silently wipes the in-progress board. No warning, no undo. | Board reading 8, clicked Schoty, board reads 0. |
+| **D4** | `.bead` elements | Plain `<div>`s: `tabindex` null, `role` null, no `aria-label`, `tabIndex < 0`. Not focusable, not announced, invisible to assistive tech and to keyboard users. | Probed directly. |
+
+**Found by code review** (not independently reproducible, but real):
+
+| # | Where | Defect | Severity |
+|---|---|---|---|
+| D5 | `genQuestion()` div branch | `nums` is only assigned inside `if (start <= cap)`. If all 40 attempts fail, `nums` stays `[]` and the question renders as the bare string `" ="`. | Latent |
+| D6 | `genQuestion()` mul branch | Same loop shape: on exhaustion it keeps the last over-cap `answer`, producing a question that cannot be represented on the board. **Correction to the previous draft of this plan:** I claimed this was reachable. It is not — a 6,000-sample sweep over every difficulty × chain length × operation puts the maximum answer at **570,240**, well inside the smallest (7-rod) board's 9,999,999 capacity. Still worth a defensive fallback, but it is latent-only. | Latent |
+| D7 | `saveGameState()` | Called on every bead move, using `pushHistory(..., limit 20)` — a read-parse-push-stringify-write of a 20-entry ring buffer per tap, when only `h[h.length-1]` is ever read. | Perf |
+| D8 | `genQuestion()` | Calls `Math.random()` directly, so question generation cannot be tested deterministically. This is why v1 ships with no engine test suite. | Testability |
+| D9 | `attempts` | Incremented, persisted and restored; never displayed or used. Dead state. | Cruft |
+| D10 | whole file | No keyboard input. Every other game in the suite has it (`shouldIgnoreGameKeys` exists in `common.js` for exactly this purpose). | Gap |
+| D11 | `nextQuestion()` | With `autoClear` off in auto-advance mode, the board still holds the previous answer when the next question appears. If the new answer equals what is already shown, the user must move a bead away and back to trigger the check. | UX |
+| D12 | timers | `setInterval(…, 1000)` for a *timed* mode. Measured drift at idle was 0%, so this is **not** currently a bug — but interval timers are throttled in background tabs, so a backgrounded trial will under-count. Switch to timestamp-derived time when convenient. | Low |
 
 ---
 
 ## 1. Target outcomes (acceptance criteria)
 
-Every one of these must be an **automated assertion**, not a judgement call.
+Every one must be an **automated assertion**, not a judgement call.
 
 **Layout**
 - A1. At 844×390 (phone landscape): `scrollHeight <= innerHeight + 1` — zero page scroll.
@@ -52,28 +68,42 @@ Every one of these must be an **automated assertion**, not a judgement call.
 - A3. At 390×844 (phone portrait): `boardWrap.scrollWidth <= boardWrap.clientWidth` — zero horizontal scroll, all rods visible.
 - A4. At 390×844: abacus ≥ **40%** of viewport area.
 - A5. At 1280×800: abacus ≥ **55%** of viewport area.
-- A6. Every style (soroban / suanpan / schoty / roman) satisfies A1–A5.
+- A6. Every abacus style satisfies A1–A5.
 - A7. Smallest interactive bead dimension ≥ **28 px** at 844×390.
 
-**Interaction**
-- A8. A pointer drag down a rod moves multiple beads in one gesture; the value changes to match the finger's final position.
-- A9. A tap (zero-distance drag) still toggles a bead — existing behaviour preserved.
-- A10. Beads visually track the finger *during* the drag, not only on release.
+**Kinetics**
+- A8. A pointer drag along a rod moves beads continuously; beads track the finger
+      *during* the gesture, not only on release.
+- A9. **Tap still works** — a zero-distance press toggles a bead with the existing
+      prefix semantics. This is a preserved feature, not a fallback.
+- A10. Dragging a bead into its neighbours **shoves them** — the contiguous run moves
+      together, as on a real abacus.
+- A11. A fast flick sweeps the whole group to the end of its track.
+- A12. On release beads snap to rest positions; no bead is ever left between slots.
+
+**Appearance**
+- A13. Bead shape, bead material and board finish are **three independent settings**;
+      any combination renders without visual breakage.
+- A14. Each abacus style has a traditional default (`auto`), which the user can override.
+- A15. All combinations persist across reload and work under all four app themes plus
+      custom themes.
 
 **Flow**
-- A11. In the default mode, no `#checkBtn` is visible, and a correct value auto-advances.
-- A12. An existing saved `abacus-cfg` from v1 migrates without the user seeing a Check button.
+- A16. In the default mode no `#checkBtn` is visible, and a correct value auto-advances.
+- A17. An existing v1 `abacus-cfg` migrates without the user seeing a Check button.
 
-**Engine**
-- A13. `node tests/abacus-engine.test.js` passes with a seeded RNG — question generation is deterministic and table-testable.
-- A14. Generated questions are **always** representable on the current board (fixes D1/D2), asserted over all difficulty × chain-length × style combinations.
+**Engine / correctness**
+- A18. `node tests/abacus-engine.test.js` passes with a seeded RNG.
+- A19. Generated questions are always representable on the current board, asserted
+      across every difficulty × chain length × style (fixes D5/D6).
+- A20. Regression tests exist for **D1, D2, D3** specifically.
 
 ---
 
 ## 2. Architecture decisions (already made — do not re-litigate)
 
-**AD1 — Extract a pure engine.** Create `js/abacus-engine.js`, DOM-free, following the
-exact UMD wrapper used by `js/logic-engine.js`:
+**AD1 — Extract a pure engine.** Create `js/abacus-engine.js`, DOM-free, using the
+exact UMD wrapper from `js/logic-engine.js`:
 
 ```js
 (function (root, factory) {
@@ -86,39 +116,58 @@ exact UMD wrapper used by `js/logic-engine.js`:
 });
 ```
 
-Load order in `abacus.html` becomes: `common.js` → `theme.js` → `abacus-engine.js` → `abacus.js`.
+Load order in `abacus.html`: `common.js` → `theme.js` → `abacus-engine.js` → `abacus.js`.
 
-**AD2 — Geometry in abstract units, not pixels.** One unit `U` = one bead height.
-All geometry is expressed in `U`; a single JS-computed CSS variable `--u: Npx` scales
-the whole board. CSS uses `calc(var(--u) * n)` throughout.
+**AD2 — Geometry in abstract units.** One unit `U` = one bead height. All geometry is
+expressed in `U`; a single JS-computed CSS variable `--u: Npx` scales the whole board.
+CSS uses `calc(var(--u) * n)` throughout.
 
-**AD3 — Injected RNG.** `genQuestion(cfg, rng)` takes `rng` (a `() => [0,1)` function).
-Production passes `Math.random`; tests pass a seeded generator. This is what makes
-TDD possible at all.
+**AD3 — Injected RNG.** `genQuestion(cfg, rng)` where `rng` is a `() => [0,1)`
+function. Production passes `Math.random`; tests pass a seeded generator.
 
-**AD4 — Pointer Events for drag.** Use `pointerdown` / `pointermove` / `pointerup`
-with `setPointerCapture`. Listeners go on the **rod/row element**, not on individual
-beads, so a drag that leaves the bead still tracks. One code path serves mouse, touch
-and stylus. A tap is a zero-distance drag, so A9 falls out for free.
+**AD4 — Pointer Events.** `pointerdown` / `pointermove` / `pointerup` with
+`setPointerCapture`, bound to the **rod/row element** rather than individual beads, so
+a gesture that leaves the bead still tracks. One code path for mouse, touch and stylus.
 
-**AD5 — Uniform drag math.** For every group of beads (heaven, earth, schoty row),
-define a *track* running from the **active wall** (the beam edge, or the left wall on
-schoty) outward. Let `t` = distance from the active wall to the finger, measured along
-the track. Then:
+**AD5 — Four independent appearance axes.** This is the key change from the previous
+draft. Bead shape was hard-coded per abacus style; it becomes a user choice.
+
+| cfg key | Controls | Note |
+|---|---|---|
+| `cfg.style` | **Mechanics** — soroban / suanpan / schoty / roman | Determines rod count, bead counts, arithmetic, guide text. *Not* an appearance setting. |
+| `cfg.beadShape` | Bead silhouette | `auto` + 8 explicit shapes |
+| `cfg.beadMaterial` | Bead colour/finish ramp | 8 materials |
+| `cfg.frame` | Board frame + back panel | 8 finishes |
+
+Shape × material is **orthogonal**: 8 shapes + 8 materials = 16 CSS blocks yielding 64
+bead looks, not 64 hand-authored sets. Never write a `[shape][material]` combined rule.
 
 ```
-beadsSweptToWall = clamp(round(t / beadSize), 0, groupSize)
+shapes:    auto | biconical | soft-biconical | oblate | sphere | barrel | lentil | faceted | pebble
+materials: themed | dark-wood | light-wood | ivory | jade | brass | obsidian | amber
+frames:    theme | wood | dark | brass | walnut | bamboo | rosewood | slate
 ```
 
-This single formula covers all three groups — only the axis and origin differ. It is a
-pure function and is the core unit test target.
+`auto` maps to each style's traditional shape — soroban → `biconical`,
+suanpan → `oblate`, schoty → `sphere`, roman → `pebble` — so defaults stay authentic
+while anyone who dislikes the sharp diamond can pick `soft-biconical` or `oblate` and
+have it apply everywhere.
 
-**AD6 — Collapse modes.** Three modes, not four:
-`freestyle` | `practice` (auto-advance, **default**) | `trial`.
-The old `flow` mode becomes the practice behaviour. A settings toggle
-`requireCheck` (default `false`) brings the Check button back for anyone who wants it.
+**AD6 — Kinetic model.** A drag is not "recompute a count." Beads hold **free
+positions** while the finger is down and only quantise on release:
 
-**AD7 — No new dependencies, no build step.** Plain Node tests + the existing
+- The dragged bead follows the pointer 1:1, clamped to the track.
+- Beads between the dragged bead and the wall it is moving toward are **shoved** —
+  each pushed to `draggedPos ± k × beadSize`.
+- Beads behind it do not move (you cannot pull beads on a real abacus).
+- On release: snap to nearest rest slot with a short overshoot easing (~120 ms).
+- A release above a velocity threshold **flings** the group to the end of the track.
+
+**AD7 — Collapse modes.** `freestyle` | `practice` (auto-advance, **default**) |
+`trial`. The old `flow` mode becomes the practice behaviour. A `requireCheck` setting
+(default `false`) brings the Check button back for anyone who wants it.
+
+**AD8 — No new dependencies, no build step.** Plain Node tests + the existing
 Playwright smoke suite. Do **not** add `package.json`.
 
 ---
@@ -127,31 +176,32 @@ Playwright smoke suite. Do **not** add `package.json`.
 
 Follow these literally.
 
-1. **Red first.** Write the test. Run it. *Paste the failure into your notes.* A test
-   that has never failed proves nothing.
-2. **Green minimally.** Write only enough code to pass. No speculative extras.
-3. **Verify before moving on.** Each phase below ends with a `VERIFY` block: run that
-   exact command and confirm the exact expected output.
-4. **One phase per commit.** Commit message: `Abacus: <phase title>`.
-5. **Never skip the regression run.** `node tests/smoke.test.js` must stay at
-   **0 failed** after every phase. If a pre-existing assertion breaks, fix the code,
-   do not weaken the assertion.
-6. If a phase's acceptance criterion cannot be met, **stop and report** — do not
-   loosen the threshold to make it pass.
+1. **Red first.** Write the test. Run it. *Record the failure.* A test that has never
+   failed proves nothing.
+2. **Green minimally.** Only enough code to pass. No speculative extras.
+3. **Verify before moving on.** Each phase ends with a `VERIFY` block: run that exact
+   command, confirm that exact output.
+4. **One phase per commit**, message `Abacus: <phase title>`.
+5. **Regression run every phase.** `node tests/smoke.test.js` must stay at **0 failed**.
+   If a pre-existing assertion breaks, fix the code — never weaken the assertion.
+6. If an acceptance criterion cannot be met, **stop and report**. Do not lower a
+   threshold to make it pass.
+7. Every bug in §0.2 that you fix gets a **regression test written first**, which fails
+   for the documented reason before the fix lands.
 
-Test file naming follows the repo: `tests/abacus-engine.test.js`, using the same
-micro-runner (`check(name, cond, detail)` / `section(title)`) copied from
-`tests/logic-engine.test.js` lines 20–32.
+Test file: `tests/abacus-engine.test.js`, reusing the micro-runner
+(`check(name, cond, detail)` / `section(title)`) from `tests/logic-engine.test.js`
+lines 20–32.
 
 ---
 
-## Phase 1 — Engine extraction + deterministic questions
+## Phase 1 — Engine extraction, deterministic questions, confirmed bug fixes
 
-Fixes D1, D2, D5. Unblocks every later phase. **Nothing visual changes.**
+Fixes D1, D2, D5, D6, D7, D8, D9. **Nothing visual changes.**
 
 ### RED
 
-Create `tests/abacus-engine.test.js`. Include a seeded RNG helper:
+Create `tests/abacus-engine.test.js` with a seeded RNG:
 
 ```js
 function seededRng(seed) {           // mulberry32 — deterministic, dependency-free
@@ -165,27 +215,31 @@ function seededRng(seed) {           // mulberry32 — deterministic, dependency
 }
 ```
 
-Write these tests against an API that does not exist yet:
+Tests against an API that does not exist yet:
 
-- `abacusValue(state, style)` — `[{h:1,e:2},...]` on soroban reads 7 in the ones place.
-- `freshState(style)` — correct length and shape per style; all zeros.
-- `setValue(n, style)` — round-trips: `abacusValue(setValue(n, s), s) === n` for
-  `n` in `[0, 1, 9, 10, 99, 5, 50, 12345, maxBoardValue(s)]`, every style.
+- `abacusValue(state, style)` — `{h:1,e:2}` in the ones place reads 7.
+- `freshState(style)` — correct shape per style, all zeros.
+- `setValue(n, style)` — round-trips for `[0,1,9,10,99,5,50,12345,maxBoardValue(style)]`, every style.
 - `maxBoardValue(style)` — `10^rods - 1`.
-- `toggleBead(state, style, rod, group, i)` — prefix semantics: clicking bead `i`
-  when `count > i` sets count to `i`; otherwise to `i + 1`.
-- `genQuestion(cfg, rng)` **determinism**: same seed + same cfg ⇒ identical question.
-- `genQuestion` **integrity**, looped over all 4 difficulties × chain lengths 2–6 ×
-  all 4 styles × 200 seeds:
-  - `question.text` is non-empty and contains no `" ="` with an empty left side *(catches D1)*
-  - `0 <= question.answer <= maxBoardValue(style)` *(catches D2)*
-  - operand count equals `cfg.chainLen`
-  - division: re-evaluating the printed expression left-to-right yields `answer` with **zero remainder** at every step
+- `toggleBead(state, style, rod, group, i)` — prefix semantics: count `> i` sets `i`, else `i + 1`.
+- `genQuestion(cfg, rng)` determinism — same seed + cfg ⇒ identical question.
+- `genQuestion` integrity, over 4 difficulties × chain 2–6 × 4 styles × 200 seeds:
+  - `text` non-empty, never an operand-less `" ="` *(D5)*
+  - `0 <= answer <= maxBoardValue(style)` *(D6)*
+  - operand count `=== cfg.chainLen`
+  - division: re-evaluating left-to-right yields `answer` with zero remainder at every step
   - subtraction: `answer >= 0`
   - only enabled operations appear
-- `genQuestion` **fallback**: with an artificially tiny style (`rods: 1`) and
-  `difficulty: 'expert'`, it must still return a solvable question rather than an
-  empty or over-cap one.
+- `genQuestion` fallback — with a synthetic `rods: 1` style at `expert`, still returns
+  a solvable in-range question.
+- **`bestKey(cfg)` regression for D2** — keys must differ when `chainLen` differs and
+  when the op mix differs:
+  ```js
+  check('D2: best key separates chain length',
+    bestKey({...base, chainLen:2}) !== bestKey({...base, chainLen:6}));
+  check('D2: best key separates op mix',
+    bestKey({...base, ops:{add:true}}) !== bestKey({...base, ops:{div:true}}));
+  ```
 
 VERIFY (must FAIL):
 ```
@@ -195,67 +249,67 @@ node tests/abacus-engine.test.js
 
 ### GREEN
 
-Create `js/abacus-engine.js` with the UMD wrapper from AD1. Move from `js/abacus.js`:
-`STYLES`, `LEVELS`, `PLACE_NAMES`, `placeLabel`, `freshState`, `abacusValue`,
-`maxBoardValue`, `genQuestion`. Add new: `setValue`, `toggleBead`.
+Create `js/abacus-engine.js` (UMD per AD1). Move from `js/abacus.js`: `STYLES`,
+`LEVELS`, `PLACE_NAMES`, `placeLabel`, `freshState`, `abacusValue`, `maxBoardValue`,
+`genQuestion`, `bestKey`. Add `setValue`, `toggleBead`.
 
-Change `genQuestion(cfg)` → `genQuestion(cfg, rng)`; replace every `Math.random()`
-with `rng()`. Route `randInt`/`rr` through the injected `rng`.
+- `genQuestion(cfg)` → `genQuestion(cfg, rng)`; every `Math.random()` becomes `rng()`.
+- **D5/D6:** after each attempt loop, if `!nums.length || answer > cap`, fall back to a
+  trivially in-range chain (e.g. all operands 2). Exact shape is your choice — the
+  Phase-1 tests are the contract.
+- **D2:** `bestKey(cfg)` becomes
+  `trial-${difficulty}-${trialSecs}-c${chainLen}-${enabledOpsSorted.join('')}`.
+  Old keys are simply orphaned; do not migrate scores (they were not comparable).
 
-**Fix D1/D2 with a guaranteed fallback.** Restructure both loops so that on
-exhaustion they degrade to something provably representable, e.g.:
+In `js/abacus.js`, delete the moved code, use `const E = AbacusEngine;`, and:
 
+- **D1:** store the advance timer in a module-level `advanceTimer`, clear it in
+  `startGame()` and `nextQuestion()`:
+  ```js
+  function clearAdvance() { if (advanceTimer) { clearTimeout(advanceTimer); advanceTimer = null; } }
+  ```
+- **D7:** replace `pushHistory` with `saveJSON('abacus-history', [snapshot])` — keep it
+  an array of one so the existing `history key non-empty` smoke assertion still passes.
+- **D9:** delete `attempts` entirely.
+
+**D1 also needs a smoke regression** (it is a UI-layer bug):
 ```js
-// after the attempt loop, if nothing fit the board:
-if (!nums.length || answer > cap) {
-  // smallest valid chain for this op: all operands = 2 (or 1 for div)
-  ...build a trivially in-range chain...
-}
+// answer correctly, immediately New Game, wait past the old 800ms window
+const q1 = await page.evaluate(() => question.text);
+await page.waitForTimeout(1000);
+const q2 = await page.evaluate(() => question.text);
+report('abacus: D1 new game survives pending advance', q1 === q2, `${q1} -> ${q2}`);
 ```
-
-The exact fallback is your choice — it only has to satisfy the Phase-1 tests.
-
-In `js/abacus.js`, delete the moved code and read from the engine:
-`const E = AbacusEngine;` then `E.genQuestion(cfg, Math.random)`, `E.abacusValue(...)`, etc.
-
-Also in this phase: **delete `attempts`** (D4) and replace `pushHistory` with a direct
-`saveJSON('abacus-history', [snapshot])` (D3) — keep the key an array of one so the
-existing smoke assertion `history key non-empty` still passes.
 
 VERIFY:
 ```
 node tests/abacus-engine.test.js     # expect: "N passed, 0 failed"
 node tests/smoke.test.js abacus      # expect: 0 failed
-node tests/smoke.test.js             # expect: 0 failed  (full regression)
+node tests/smoke.test.js             # expect: 0 failed
 ```
 
 ---
 
-## Phase 2 — Responsive scaling (fixes the mobile problem)
+## Phase 2 — Responsive scaling
 
-Delivers A1–A7. **The highest-value phase — do not reorder it.**
+Delivers A1–A7. **Highest-value phase — do not reorder it.**
 
 ### RED — engine tests
 
-Add to `tests/abacus-engine.test.js`:
-
-- `styleUnits(style)` returns `{ w, h }`, the board's size **in units**. Assert
-  soroban `h === (1+1) + 0.62 + (4+1)` ± padding, i.e. that height grows with
-  `heaven + earth` and width grows with `rods`.
-- `computeUnit(availW, availH, style, opts)` returns px-per-unit. Assert:
-  - fits: `computeUnit(w,h,s) * styleUnits(s).w <= w + 0.01` and same for height
+- `styleUnits(style)` → `{ w, h }` in units. Assert height grows with `heaven + earth`
+  and width grows with `rods`.
+- `computeUnit(availW, availH, style, opts)` → px per unit:
+  - fits: `computeUnit(w,h,s) * styleUnits(s).w <= w + 0.01`, same for height
   - monotonic: a larger box never yields a smaller unit
-  - clamped: never exceeds `opts.max`, never below `opts.min`
-  - width-bound vs height-bound: a wide-short box is height-bound; a tall-narrow box is width-bound
-  - fills: for any box, **at least one** axis is within 1% of exact fit (i.e. it
-    actually maximises, rather than under-filling both axes)
+  - clamped to `[opts.min, opts.max]`
+  - a wide-short box is height-bound; a tall-narrow box is width-bound
+  - maximises: for any box at least one axis is within 1% of exact fit
 
 VERIFY (must FAIL): `node tests/abacus-engine.test.js`
 
 ### GREEN — engine
 
-Implement `styleUnits` and `computeUnit`. Convert the `STYLES` table from pixels to
-units. Suggested shape (tune to taste, tests are the contract):
+Convert `STYLES` from pixels to units. Suggested (tests are the contract):
 
 ```js
 soroban: { kind:'vertical', rods:9, heaven:1, earth:4,
@@ -268,27 +322,25 @@ schoty:  { kind:'rows',     rods:7, beads:10,
            beadH:1, beadW:1.25, rowH:1.35, padX:0.6, padY:0.35, frame:0.45 },
 ```
 
-`computeUnit(availW, availH, style, {min = 9, max = 46})`:
 ```js
-const u = styleUnits(style);
-return clamp(Math.min(availW / u.w, availH / u.h), min, max);
+function computeUnit(availW, availH, style, { min = 9, max = 46 } = {}) {
+  const u = styleUnits(style);
+  return clamp(Math.min(availW / u.w, availH / u.h), min, max);
+}
 ```
 
 ### GREEN — layout
 
-**`css/abacus.css`:**
-- Replace every hard-coded bead/rod/beam px value with `calc(var(--u) * n)`.
-- Make the play area own the leftover space:
-  ```css
-  body { height: 100dvh; overflow: hidden; }        /* no page scroll, ever */
+`css/abacus.css`:
+- Every bead/rod/beam px value → `calc(var(--u) * n)`.
+- ```css
+  body { height: 100dvh; overflow: hidden; }
   .board-wrap { flex: 1 1 auto; min-height: 0; display: grid; place-items: center;
-                overflow: hidden; }                  /* no scrollbars — we fit instead */
+                overflow: hidden; }
   ```
-- Remove `overflow-x: auto` from `.board-wrap`. Scrolling was the workaround; fitting
-  is the fix.
-- Drop `max-width: 980px` on `.board-wrap` — let it use the full width.
+- Remove `overflow-x: auto` and `max-width: 980px` from `.board-wrap`.
 
-**`js/abacus.js`:** add a `fitAbacus()` that measures and applies:
+`js/abacus.js`:
 ```js
 function fitAbacus() {
   const box = $('.board-wrap').getBoundingClientRect();
@@ -296,22 +348,20 @@ function fitAbacus() {
   $('#board').style.setProperty('--u', u + 'px');
 }
 ```
-Call it from `buildAbacus()`, and on `resize` + `orientationchange`, debounced with
-`requestAnimationFrame`. Use a `ResizeObserver` on `.board-wrap` if available — it
-catches the settings sheet opening/closing too.
+Call from `buildAbacus()` and on `resize` / `orientationchange`, debounced via
+`requestAnimationFrame`. Prefer a `ResizeObserver` on `.board-wrap` — it also catches
+the settings sheet opening.
 
-**Chrome compaction** (needed to hit A1/A2 — the header currently eats 340 of 390 px):
-- Under `@media (max-height: 480px)`: shrink `.title` to ~1.2 rem, header padding to
-  4 px, collapse `.score-box` labels, reduce `.question-bar` to a single line, and
-  shrink `.action-row` buttons. Target total chrome ≤ **110 px**.
-- Under `@media (max-width: 560px)`: move the mode/difficulty/ops controls out of the
-  top bar and into the settings sheet (they already have equivalents there — add the
-  missing mode/difficulty/op rows to `#settingsPanel`). Keep only New Game + Guide +
-  Clear in the bar.
-- The readout and question bar must never wrap to a second line on phone.
+**Chrome compaction** (required for A1/A2 — chrome currently eats 340 of 390 px):
+- `@media (max-height: 480px)`: `.title` ~1.2 rem, header padding 4 px, collapse
+  `.score-box` labels, single-line `.question-bar`, smaller `.action-row`. Target total
+  chrome ≤ **110 px**.
+- `@media (max-width: 560px)`: move mode / difficulty / op controls out of the top bar
+  into the settings sheet (add the missing rows there). Keep only New Game, Guide, Clear.
+- Question bar and readout must never wrap to a second line on phone.
 
-VERIFY — add to `tests/smoke.test.js` a new `abacus-layout` page-suite that loops
-`[[844,390],[390,844],[1280,800]] × [soroban,suanpan,schoty,roman]` and asserts A1–A7:
+VERIFY — add an `abacus-layout` smoke suite looping
+`[[844,390],[390,844],[1280,800]] × [soroban,suanpan,schoty,roman]`:
 ```js
 const m = await page.evaluate(() => {
   const ab = document.querySelector('.abacus').getBoundingClientRect();
@@ -324,77 +374,100 @@ const m = await page.evaluate(() => {
 });
 ```
 ```
-node tests/smoke.test.js abacus      # expect: 0 failed, all A1–A7 assertions pass
+node tests/smoke.test.js abacus      # expect: 0 failed, A1–A7 pass
 node tests/smoke.test.js             # expect: 0 failed
 ```
 
 ---
 
-## Phase 3 — Finger drag
+## Phase 3 — Kinetic beads (keep the click, add the slide)
 
-Delivers A8–A10.
+Delivers A8–A12. **Tap is a preserved feature — do not regress it.**
 
-### RED
+The goal is not "drag support," it is *feel*: beads that have weight, shove each
+other, and can be swept with a flick.
 
-Add to `tests/abacus-engine.test.js`, testing AD5's uniform formula:
+### RED — engine tests (all pure functions)
 
-- `beadsFromTrack(t, groupSize, beadSize)`:
-  - `t = 0` → `0`
-  - `t = 0.4 * beadSize` → `0`
-  - `t = 0.6 * beadSize` → `1`
-  - `t = 2.5 * beadSize` → `3` (rounds up at .5)
-  - `t = 99 * beadSize` → `groupSize` (clamped)
-  - `t < 0` → `0` (clamped)
-- `dragToState(state, style, rod, group, t)` — returns a **new** state (no mutation),
-  with only that group's count changed. Assert the input object is untouched.
+- `beadsFromTrack(t, groupSize, beadSize)` — quantiser:
+  - `t = 0` → `0`; `0.4×` → `0`; `0.6×` → `1`; `2.5×` → `3`; `99×` → `groupSize`; `t < 0` → `0`
+- `shovePositions(state, group, dragIndex, dragPos, beadSize)` → array of **free**
+  (unquantised) positions during a drag:
+  - the dragged bead sits exactly at `dragPos` (clamped to the track)
+  - beads between it and the target wall are pushed to `dragPos ± k × beadSize`
+  - beads behind the dragged bead **do not move** (you cannot pull beads)
+  - positions are monotonic and never overlap: `|pos[i+1] - pos[i]| >= beadSize`
+  - input state object is not mutated
+- `flingTarget(velocity, count, groupSize, threshold)`:
+  - `|v| < threshold` → `count` unchanged
+  - `v` toward the wall above threshold → `groupSize`
+  - `v` away from the wall above threshold → `0`
+- `snapPositions(freePositions, beadSize)` — every returned position is an exact
+  multiple of `beadSize` from the wall (guarantees A12: no bead left between slots).
 
 VERIFY (must FAIL): `node tests/abacus-engine.test.js`
 
-### GREEN
+### GREEN — engine
 
-Implement `beadsFromTrack` and `dragToState` in the engine.
+Implement the four functions above.
 
-In `js/abacus.js`, replace the per-bead `click` listeners with per-rod pointer
-handling:
+### GREEN — UI
+
+Replace the per-bead `click` listeners with per-rod pointer handling:
 
 ```js
 rod.addEventListener('pointerdown', e => {
   rod.setPointerCapture(e.pointerId);
-  drag = { rod: r, group: hitTestGroup(e, r), startCount: /* current */ };
+  drag = { rod: r, group: hitTestGroup(e, r), index: hitTestBead(e, r),
+           startPos: axisPos(e), lastPos: axisPos(e), lastT: performance.now(),
+           velocity: 0, moved: 0 };
   e.preventDefault();
 });
 rod.addEventListener('pointermove', e => {
   if (!drag) return;
-  const t = axisDistanceFromWall(e, drag);          // px along the track
-  const n = E.beadsFromTrack(t, groupSize, unitPx);
-  if (n !== currentCount) { applyCount(n); renderBeads(); updateReadout(); }
+  const p = axisPos(e);
+  const now = performance.now();
+  drag.velocity = (p - drag.lastPos) / Math.max(1, now - drag.lastT);  // px/ms
+  drag.moved = Math.max(drag.moved, Math.abs(p - drag.startPos));
+  drag.lastPos = p; drag.lastT = now;
+  paintFree(E.shovePositions(rodState[r], drag.group, drag.index, p, unitPx));
 });
-rod.addEventListener('pointerup', e => { drag = null; onBeadMoved(); });
-rod.addEventListener('pointercancel', () => { drag = null; });
+rod.addEventListener('pointerup', () => { endDrag(); });
+rod.addEventListener('pointercancel', () => { endDrag(true); });
 ```
 
-Notes for the implementer:
-- `hitTestGroup` decides heaven vs earth from the pointer's position relative to the
-  beam; on schoty there is only one group per row.
-- **Tap = zero-distance drag.** On `pointerup`, if the pointer never moved more than
-  ~4 px, fall back to the old `toggleBead` prefix semantics so single taps still feel
-  right and A9 holds.
-- Set `touch-action: none` on `.rod` / `.srow` so vertical drags don't scroll the page.
-- Update the DOM **during** `pointermove` (A10), but only call `saveGameState()` /
-  `flowCheck()` on `pointerup` — not on every move frame.
-- Add `.bead.dragging { transition: none; }` so beads track the finger with zero lag,
-  then re-enable the 0.13 s transition on release for the snap.
+`endDrag()`:
+- If `drag.moved <= 4` px → **treat as a tap**: `E.toggleBead(...)`, existing prefix
+  semantics. This is A9.
+- Else → `E.flingTarget(...)` if velocity exceeds threshold, otherwise
+  `E.beadsFromTrack(...)`; commit the count, re-enable the transition, snap.
+- Then, once only: `onBeadMoved()` → `saveGameState()`, `flowCheck()`.
+
+Implementation notes:
+- `hitTestGroup` picks heaven vs earth from the pointer's position relative to the
+  beam; schoty rows have one group.
+- `touch-action: none` on `.rod` / `.srow` so a vertical drag never scrolls the page.
+- `.bead.dragging { transition: none; }` for 1:1 tracking; restore the transition on
+  release and use an overshoot curve for the snap:
+  `transition: top 120ms cubic-bezier(.34,1.56,.64,1)`.
+- Update the DOM on every `pointermove`, but call `saveGameState()` / `flowCheck()`
+  **only** on release — not per frame.
+- Optional polish, both behind settings: `navigator.vibrate(6)` as each bead crosses a
+  slot (default **on**), and a synthesized WebAudio click (default **off**, no asset
+  files). Wrap motion flourishes in `@media (prefers-reduced-motion: no-preference)`.
 
 ### VERIFY
 
-Add a smoke assertion driving a real pointer sequence:
+Smoke assertions driving a real pointer sequence:
 ```js
 await page.mouse.move(x, yTop); await page.mouse.down();
-await page.mouse.move(x, yTop + 3 * unit, { steps: 10 });
+await page.mouse.move(x, yTop + 3*unit, { steps: 10 });
+const midValue = await page.evaluate(() => abacusValue());   // A8: changes before mouseup
 await page.mouse.up();
-// assert the rod's digit changed by the expected number of beads
 ```
-Assert also that the value changed **before** `mouse.up()` (proves A10).
+Assert: value changed before `mouse.up()` (A8); three beads moved from one gesture
+(A10); a fast two-step drag sweeps the full group (A11); every bead's offset is an
+exact multiple of the unit after release (A12); and a plain `click()` still toggles (A9).
 ```
 node tests/abacus-engine.test.js     # expect: 0 failed
 node tests/smoke.test.js             # expect: 0 failed
@@ -404,109 +477,143 @@ node tests/smoke.test.js             # expect: 0 failed
 
 ## Phase 4 — Auto-advance by default
 
-Delivers A11–A12.
+Delivers A16–A17. Fixes D11.
 
 ### RED
 
-Add to `tests/abacus-engine.test.js`:
-- `migrateCfg(oldCfg)`:
-  - `{mode:'flow'}` → `{mode:'practice', requireCheck:false}`
-  - `{mode:'practice'}` (v1, button-based) → `{mode:'practice', requireCheck:false}`
-  - `{mode:'trial'}` → unchanged mode, `requireCheck:false`
-  - `{mode:'freestyle'}` → unchanged
-  - unknown/absent mode → `practice`
-  - an already-migrated cfg passes through unchanged (idempotent)
+`migrateCfg(oldCfg)`:
+- `{mode:'flow'}` → `{mode:'practice', requireCheck:false}`
+- `{mode:'practice'}` (v1, button-based) → `{mode:'practice', requireCheck:false}`
+- `{mode:'trial'}` → mode unchanged, `requireCheck:false`
+- `{mode:'freestyle'}` → unchanged
+- unknown/absent → `practice`
+- idempotent: an already-migrated cfg passes through unchanged
+- appearance keys absent (v1 cfg) → filled with the AD5 defaults
 
 VERIFY (must FAIL): `node tests/abacus-engine.test.js`
 
 ### GREEN
 
-- Implement `migrateCfg` in the engine; call it in `js/abacus.js` immediately after
-  `loadJSON('abacus-cfg', {})`, then `saveCfg()`.
+- Implement `migrateCfg`; call it right after `loadJSON('abacus-cfg', {})`, then `saveCfg()`.
 - `DEFAULTS`: `mode: 'practice'`, add `requireCheck: false`.
-- Delete the `flow` mode. `abacus.html` `#modeSelect` becomes three options:
-  `Freestyle` / `Practice` / `Time Trial`.
+- Delete `flow`. `#modeSelect` → `Freestyle` / `Practice` / `Time Trial`.
 - Auto-advance runs in `practice` **and** `trial` whenever `!cfg.requireCheck`.
-- Add a settings toggle `#togRequireCheck` → `cfg.requireCheck`, described as
-  *"Confirm each answer with a Check button instead of advancing automatically."*
+- Add `#togRequireCheck` → *"Confirm each answer with a Check button instead of
+  advancing automatically."*
 - `#checkBtn` / `#revealBtn` visibility keys off `cfg.requireCheck`, not off mode.
-- **Fix D7**: when `autoClear` is off, after `nextQuestion()` immediately evaluate
-  whether the board already reads the new answer, and if so require one bead move
-  before it can count (guard with a `armed` flag set on the first `pointerup` after
-  a new question).
-- Make the auto-advance feel deliberate: on a correct value, glow the **abacus frame**
-  green for ~350 ms and flash a ✓ near the readout, then advance. Wrap the animation
-  in `@media (prefers-reduced-motion: no-preference)`.
+- **D11:** after `nextQuestion()` with `autoClear` off, set an `armed = false` flag;
+  require one bead release before a correct value can count.
+- Make the advance feel deliberate: glow the abacus frame green ~350 ms and flash a ✓
+  near the readout, then advance.
 
 VERIFY:
 ```
 node tests/abacus-engine.test.js     # expect: 0 failed
-node tests/smoke.test.js abacus      # assert #checkBtn hidden by default; assert
-                                     # a correct value auto-advances with no click
+node tests/smoke.test.js abacus      # #checkBtn hidden by default; correct value
+                                     # auto-advances with no click; seeded v1 cfg
+                                     # shows no Check button (A17)
 node tests/smoke.test.js             # expect: 0 failed
 ```
-Also seed a v1 cfg into `localStorage` before load and assert no Check button appears (A12).
 
 ---
 
-## Phase 5 — Fidelity pass
+## Phase 5 — Bead sets, board sets, fidelity
 
-Purely visual. **No test may change in this phase** — if `node tests/smoke.test.js`
-goes from 0 failed to anything else, you broke something.
+Delivers A13–A15. This replaces the old "fidelity" phase: appearance becomes a
+**menu**, not a single opinionated look.
 
-Work in `css/abacus.css`. Concrete recipe:
+### RED
 
-**Beads** — four layers instead of one gradient:
-1. Body: 3-stop `radial-gradient` off-centre (light source top-left, consistent across
-   the whole board).
-2. `::before` — specular highlight: small ellipse, `mix-blend-mode: screen`,
-   `opacity: .3`, positioned upper-left.
-3. `::after` — contact shadow / rod occlusion: a dark soft ellipse where the rod
-   enters the bead, so the rod reads as passing *through*.
-4. `filter: drop-shadow(0 calc(var(--u)*0.06) calc(var(--u)*0.08) rgba(0,0,0,.45))`
-   for a cast shadow on the back panel.
+- Engine: `resolveBeadShape(style, beadShape)` — returns the explicit shape,
+  mapping `auto` to the style default (soroban→`biconical`, suanpan→`oblate`,
+  schoty→`sphere`, roman→`pebble`); an explicit choice always wins over the default.
+- Engine: `SHAPES`, `MATERIALS`, `FRAMES` are exported arrays of
+  `{ id, label, icon }`, each with unique ids.
 
-**Silhouettes** — per style, and stop using a plain rhombus for the soroban:
-- soroban: biconical with flat tips — a 6-point `clip-path` polygon, not a 4-point diamond.
-- suanpan: oblate/rounded, `border-radius: 50% / 38%`.
-- schoty: flattened sphere, `border-radius: 46%`.
-- roman: small round counter sitting *in* a groove — add an inset groove shadow.
+VERIFY (must FAIL): `node tests/abacus-engine.test.js`
 
-**Frame:**
-- Bevel: nested `inset` box-shadows (light top-left, dark bottom-right) at `--u` scale.
-- Wood: 2–3 layered `repeating-linear-gradient`s at ~87° with low alpha for grain,
-  over the base colour.
-- Brass: multi-stop `linear-gradient` with 2 bright specular bands.
-- Back panel slightly darker than the frame so beads have something to cast onto.
+### GREEN — the three pickers
 
-**Rod / wire:** 2-stop gradient (dark edge → light centre) so it reads cylindrical, not
-as a flat bar. **Beam:** inset shadow top and bottom, plus a hairline highlight.
+`abacus.html` — three new settings sections mirroring the existing `pick-row` markup,
+with `data-bead-shape-pick`, `data-bead-material-pick`, `data-frame-pick`. Wire them
+exactly like the existing style picker (see `js/abacus.js` `$$('[data-abacus-pick]')`).
 
-Everything must remain expressed in `--u` so it scales with Phase 2, and all four
-frame finishes must still work under all four app themes plus custom themes.
+`js/abacus.js` — apply as data attributes on `#board`:
+```js
+board.dataset.beadShape    = E.resolveBeadShape(cfg.style, cfg.beadShape);
+board.dataset.beadMaterial = cfg.beadMaterial;
+board.dataset.frame        = cfg.frame;
+```
+
+`css/abacus.css` — **orthogonal only.** Shape rules set geometry, material rules set
+colour variables. Never write a combined `[shape][material]` selector.
+
+```css
+/* silhouettes */
+[data-bead-shape="biconical"]      .bead { clip-path: polygon(50% 0, 88% 38%, 100% 50%, 88% 62%, 50% 100%, 12% 62%, 0 50%, 12% 38%); }
+[data-bead-shape="soft-biconical"] .bead { border-radius: 50% / 30%; clip-path: none; }
+[data-bead-shape="oblate"]         .bead { border-radius: 50% / 38%; }
+[data-bead-shape="sphere"]         .bead { border-radius: 50%; }
+[data-bead-shape="barrel"]         .bead { border-radius: 28% / 42%; }
+[data-bead-shape="lentil"]         .bead { border-radius: 50% / 22%; }
+[data-bead-shape="faceted"]        .bead { clip-path: polygon(50% 0, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%); }
+[data-bead-shape="pebble"]         .bead { border-radius: 46% 54% 52% 48% / 48% 46% 54% 52%; }
+
+/* materials — colour ramp only */
+[data-bead-material="jade"]     { --bead:#4f9e77; --bead-hi:#9fdcbb; --bead-lo:#25543f; }
+[data-bead-material="ivory"]    { --bead:#e8dfc8; --bead-hi:#fffaf0; --bead-lo:#a2977c; }
+/* …obsidian, amber, brass, dark-wood, light-wood; themed = current accent tokens */
+```
+
+Note the biconical polygon has **flat tips** (8 points), not the 4-point rhombus v1
+used — that is what makes it read as a turned wooden bead rather than a diamond.
+`soft-biconical` and `oblate` exist specifically as the rounder alternatives.
+
+### GREEN — fidelity (applies to every shape/material)
+
+Four layers per bead instead of one gradient:
+1. Body: 3-stop `radial-gradient`, light source consistently top-left across the board.
+2. `::before` — specular highlight: small ellipse, `mix-blend-mode: screen`, `opacity: .3`.
+3. `::after` — contact shadow where the rod enters, so the rod reads as passing *through*.
+4. `filter: drop-shadow(0 calc(var(--u)*.06) calc(var(--u)*.08) rgba(0,0,0,.45))`.
+
+Frame: bevel via nested `inset` box-shadows at `--u` scale; wood grain from 2–3 layered
+`repeating-linear-gradient`s at ~87° with low alpha; brass from a multi-stop gradient
+with two specular bands; back panel darker than the frame so beads cast onto it.
+Rod: 2-stop gradient (dark edge → light centre) so it reads cylindrical.
+Beam: inset shadow top and bottom plus a hairline highlight.
+
+Everything in `--u` so it scales with Phase 2.
 
 VERIFY:
 ```
-node tests/smoke.test.js             # expect: 0 failed — unchanged
+node tests/abacus-engine.test.js     # expect: 0 failed
+node tests/smoke.test.js abacus      # every shape × material renders with nonzero
+                                     # bead size; all three pickers persist reload (A15)
+node tests/smoke.test.js             # expect: 0 failed
 ```
-Then screenshot all 4 styles × 4 frames at 1280×800 and 844×390 and review them
-visually before committing.
+Then screenshot a shape × material contact sheet at 1280×800 plus all frames, and
+review visually before committing.
 
 ---
 
-## Phase 6 — Optional follow-ups (only after 1–5 are green)
+## Phase 6 — Remaining defects and follow-ups
 
-- **Keyboard support (D6):** arrow keys move a rod cursor, digits `0–9` set a rod
-  directly, `C` clears. Must route through `shouldIgnoreGameKeys(e)` from
-  `common.js` — see how `sudoku.js` does it — and add the
-  `checkKeyboardGuardOnSettings` smoke assertion the other games have.
-- **Portrait handling:** if `computeUnit` returns below the legibility floor
-  (`min`), show a dismissible "rotate for more room" hint rather than blocking
-  portrait outright.
-- **Bead sound / haptics:** `navigator.vibrate(8)` on bead settle, behind a setting,
-  default off.
-- **Schoty quarter-wire:** real schoty boards have a 4-bead wire for quarter-rubles.
-  Currently not modelled — decorative only, cosmetic authenticity.
+- **D3 (confirmed):** switching abacus style silently discards the board. Either
+  preserve the value across the switch (`setValue(oldValue, newStyle)` when it fits) or
+  confirm before clearing. Write the regression test first.
+- **D4 (confirmed) + D10:** accessibility and keyboard. Beads become focusable
+  (`tabindex="0"`, `role="button"`, `aria-label="hundreds rod, 3 beads set"`), arrow
+  keys move a rod cursor, digits `0–9` set a rod directly, `C` clears. Must route
+  through `shouldIgnoreGameKeys(e)` from `common.js` — copy the pattern in
+  `js/sudoku.js` — and add the `checkKeyboardGuardOnSettings` smoke assertion the
+  other games have.
+- **D12:** switch trial timing from `setInterval` counting to timestamp-derived
+  elapsed time so a backgrounded tab cannot under-count.
+- **Portrait hint:** if `computeUnit` bottoms out at `min`, show a dismissible
+  "rotate for more room" hint rather than blocking portrait.
+- **Schoty quarter-wire:** real boards have a 4-bead wire for quarter-rubles.
+  Cosmetic authenticity only.
 
 ---
 
@@ -514,20 +621,21 @@ visually before committing.
 
 | File | Phase | Change |
 |---|---|---|
-| `js/abacus-engine.js` | 1,2,3,4 | **new** — pure, DOM-free, UMD, Node-testable |
-| `tests/abacus-engine.test.js` | 1,2,3,4 | **new** — plain Node, no deps |
-| `js/abacus.js` | 1–5 | thins to a UI layer; pointer drag; fit; mode collapse |
-| `css/abacus.css` | 2,5 | unit-based sizing; responsive chrome; fidelity |
-| `abacus.html` | 1,2,4 | engine `<script>`; mode options; new settings rows |
-| `tests/smoke.test.js` | 2,3,4 | new `abacus-layout` suite; drag + auto-advance assertions |
-| `CLAUDE.md` | 5 | document the engine split and the `--u` unit system |
+| `js/abacus-engine.js` | 1,2,3,4,5 | **new** — pure, DOM-free, UMD, Node-testable |
+| `tests/abacus-engine.test.js` | 1,2,3,4,5 | **new** — plain Node, no deps |
+| `js/abacus.js` | 1–6 | thins to a UI layer; kinetic pointer input; fit; mode collapse; pickers |
+| `css/abacus.css` | 2,5 | unit-based sizing; responsive chrome; shape/material/frame axes; fidelity |
+| `abacus.html` | 1,2,4,5 | engine `<script>`; mode options; three appearance pickers |
+| `tests/smoke.test.js` | 1,2,3,4,5 | `abacus-layout` suite; D1 regression; drag, auto-advance, picker assertions |
+| `CLAUDE.md` | 5 | document the engine split, the `--u` unit system, and the appearance axes |
 
 ## Commit sequence
 
 ```
-Abacus: extract pure engine, seed RNG, fix latent question-generation bugs
+Abacus: extract pure engine, seed RNG, fix orphan-timer and best-key bugs
 Abacus: scale the board to the viewport, compact chrome on small screens
-Abacus: drag beads with pointer events
+Abacus: kinetic bead dragging with shove, fling and snap
 Abacus: auto-advance by default, collapse modes, migrate saved config
-Abacus: high-fidelity bead, rod and frame rendering
+Abacus: selectable bead shapes, materials and board finishes
+Abacus: accessibility, keyboard input, remaining defects
 ```
