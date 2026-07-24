@@ -1,11 +1,10 @@
 # Abacus — overhaul plan (v1 → v2)
 
-Status: **implemented, all 6 phases (commits on `claude/abacus-math-game-11eomp`).**
-Phase 6's two explicitly-optional follow-ups (a portrait "rotate for more room"
-hint, and a decorative schoty quarter-wire) were left for a future pass — everything
-else, including every A1–A20 acceptance criterion and every catalogued defect
-(D1–D12), is done and covered by `tests/abacus-engine.test.js` /
-`tests/smoke.test.js`.
+Status: **fully implemented — all 6 phases plus both optional follow-ups
+(commits on `claude/abacus-math-game-11eomp`).** Every A1–A20 acceptance
+criterion, every catalogued defect (D1–D12), the portrait "rotate for more
+room" hint, and the decorative schoty quarter-wire are done and covered by
+`tests/abacus-engine.test.js` / `tests/smoke.test.js`.
 
 Four goals, in priority order:
 
