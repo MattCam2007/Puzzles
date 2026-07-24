@@ -264,13 +264,37 @@
      here.
   ═══════════════════════════════════════════ */
 
-  /* Continuous track position -> discrete active count. */
-  function beadsFromTrack(t, groupSize, beadSize) {
-    return clamp(Math.round(t / beadSize), 0, groupSize);
-  }
-
   function _restPos(i, count, beadSize) {
     return (i < count ? i : i + 1) * beadSize;
+  }
+
+  /* Which bead the pointer is actually over, given a track position.
+     Beads do NOT tile the track uniformly: with `count` active, slots
+     0..count-1 hold the active beads, slot `count` is the empty gap,
+     and slots count+1..groupSize hold the inactive ones. Ignoring that
+     gap (or rounding instead of flooring) makes a press land on a
+     different bead than the one under the finger — off by one at the
+     gap, off by two past it. */
+  function beadIndexAtTrack(t, count, groupSize, beadSize) {
+    const slot = clamp(Math.floor(t / beadSize), 0, groupSize);
+    if (slot < count) return slot;
+    if (slot > count) return clamp(slot - 1, 0, groupSize - 1);
+    // exactly in the gap — grab whichever neighbouring cluster is nearer
+    if (count > 0 && (t - count * beadSize) < beadSize / 2) return count - 1;
+    return clamp(count, 0, groupSize - 1);
+  }
+
+  /* The active count implied by having dragged bead `dragIndex` to
+     `beadPos`. Because a drag shoves the beads ahead of it and cannot
+     pull the ones behind, grabbing bead i can only ever resolve to
+     i active-beads-before-it (pushed away from the wall) or i+1 (pushed
+     toward it) — so the decision is just which rest slot the dragged
+     bead ended up nearer. This is what makes a drag predictable: what
+     you see the grabbed bead do is exactly what you get. Sweeping the
+     whole group still works naturally — drag the outermost bead to the
+     wall and every bead ahead of it is shoved along too. */
+  function countFromDrag(beadPos, dragIndex, beadSize) {
+    return beadPos < (dragIndex + 0.5) * beadSize ? dragIndex + 1 : dragIndex;
   }
 
   /* Free (unquantised) positions of every bead in a group — currently
@@ -296,24 +320,6 @@
       positions[i] = Math.max(_restPos(i, count, beadSize), positions[i - 1] + beadSize);
     }
     return positions;
-  }
-
-  /* A release velocity whose magnitude clears `threshold` is a decisive
-     flick that overrides normal quantization and sweeps the whole group
-     to one end of the track: negative velocity (moving toward the wall)
-     -> fully active (groupSize); positive (moving away) -> fully
-     inactive (0). Below threshold, the count is left for the caller's
-     normal quantizer (beadsFromTrack) to decide. */
-  function flingTarget(velocity, count, groupSize, threshold) {
-    if (Math.abs(velocity) < threshold) return count;
-    return velocity < 0 ? groupSize : 0;
-  }
-
-  /* Rounds every free position to the nearest exact multiple of
-     beadSize — the rest-position grid every bead must land on after a
-     drag ends, so no bead is ever left visually between slots (A12). */
-  function snapPositions(freePositions, beadSize) {
-    return freePositions.map(p => Math.round(p / beadSize) * beadSize);
   }
 
   /* ═══════════════════════════════════════════
@@ -393,7 +399,7 @@
     freshState, abacusValue, maxBoardValue, setValue, toggleBead,
     genQuestion, bestKey,
     styleUnits, computeUnit,
-    beadsFromTrack, shovePositions, flingTarget, snapPositions,
+    beadIndexAtTrack, shovePositions, countFromDrag,
     migrateCfg,
     SHAPES, MATERIALS, FRAMES, resolveBeadShape,
   };

@@ -269,16 +269,38 @@ section('9. computeUnit — fits, clamps, maximises');
    renderBeads()'s rest positions — no phantom jump the instant a drag
    begins, before the pointer has even moved.
 ═══════════════════════════════════════════ */
-section('10. beadsFromTrack — continuous position to discrete count');
+section('10. beadIndexAtTrack — the bead you press is the bead you get');
 {
-  const groupSize = 5, beadSize = 20;
-  const cases = [
-    [0, 0], [0.4 * beadSize, 0], [0.6 * beadSize, 1],
-    [2.5 * beadSize, 3], [99 * beadSize, groupSize], [-10, 0],
-  ];
-  for (const [t, expected] of cases) {
-    const got = E.beadsFromTrack(t, groupSize, beadSize);
-    check(`beadsFromTrack(${t}, ${groupSize}, ${beadSize}) === ${expected}`, got === expected, `got ${got}`);
+  const groupSize = 4, beadSize = 20;
+  // The single most important property: for every possible count, a
+  // pointer anywhere inside a bead must resolve to THAT bead's index.
+  // (Regression for the original bug: rounding instead of flooring, and
+  // ignoring the empty gap slot, made a press land up to two beads off.)
+  let allOk = true;
+  const misses = [];
+  for (let count = 0; count <= groupSize; count++) {
+    for (let i = 0; i < groupSize; i++) {
+      const slot = i < count ? i : i + 1;      // where bead i actually sits
+      for (const frac of [0.05, 0.25, 0.5, 0.75, 0.95]) {
+        const t = (slot + frac) * beadSize;    // pointer inside bead i
+        const got = E.beadIndexAtTrack(t, count, groupSize, beadSize);
+        if (got !== i) { allOk = false; misses.push(`count=${count} bead=${i} frac=${frac} -> ${got}`); }
+      }
+    }
+  }
+  check('beadIndexAtTrack: a pointer inside a bead always resolves to that bead',
+    allOk, misses.slice(0, 6).join(' | '));
+
+  // out-of-range pointers clamp to a real bead rather than going negative
+  check('beadIndexAtTrack: clamps below the track', E.beadIndexAtTrack(-500, 0, groupSize, beadSize) === 0);
+  check('beadIndexAtTrack: clamps above the track',
+    E.beadIndexAtTrack(9999, 0, groupSize, beadSize) === groupSize - 1);
+  // a press in the empty gap grabs a neighbouring bead, never a phantom index
+  for (let count = 1; count < groupSize; count++) {
+    const inGap = (count + 0.5) * beadSize;
+    const got = E.beadIndexAtTrack(inGap, count, groupSize, beadSize);
+    check(`beadIndexAtTrack: gap press (count=${count}) yields a real bead index`,
+      got >= 0 && got < groupSize, `got ${got}`);
   }
 }
 
@@ -374,34 +396,31 @@ section('11. shovePositions — drag physics (shove ahead, never pull behind)');
   }
 }
 
-section('12. flingTarget — decisive flick overrides normal quantization');
-{
-  const groupSize = 5, threshold = 0.5;
-  check('fling: below threshold leaves count unchanged', E.flingTarget(0.1, 2, groupSize, threshold) === 2);
-  check('fling: below threshold (negative) leaves count unchanged', E.flingTarget(-0.2, 3, groupSize, threshold) === 3);
-  check('fling: fast toward the wall (negative) -> full count', E.flingTarget(-5, 1, groupSize, threshold) === groupSize);
-  check('fling: fast away from the wall (positive) -> zero', E.flingTarget(5, 4, groupSize, threshold) === 0);
-  // spec is strictly "< threshold" stays unchanged, so a velocity
-  // exactly at the threshold already counts as decisive (fires, per the
-  // positive-velocity/away-from-wall rule -> 0), not "unchanged"
-  check('fling: velocity exactly at threshold already fires (boundary is exclusive)',
-    E.flingTarget(threshold, 2, groupSize, threshold) === 0);
-}
-
-section('13. snapPositions — every result is an exact multiple of beadSize (A12)');
+section('12. countFromDrag — what the grabbed bead shows is what you get');
 {
   const beadSize = 20;
-  const inputs = [
-    [0, 20, 40, 60, 80],           // already exact
-    [3.2, 21.9, 38.4, 71.1, 79.9], // fuzzy, independent
-    E.shovePositions(2, 5, 2, 13.7, beadSize), // realistic drag output
-  ];
-  for (const freePositions of inputs) {
-    const snapped = E.snapPositions(freePositions, beadSize);
-    check(`snapPositions: same length as input`, snapped.length === freePositions.length);
-    const allExact = snapped.every(p => Math.abs(p / beadSize - Math.round(p / beadSize)) < 1e-9);
-    check(`snapPositions: every value is an exact multiple of beadSize`, allExact, `got ${snapped}`);
+  // Grabbing bead i can only ever resolve to i or i+1: a drag shoves the
+  // beads ahead of it and cannot pull the ones behind. The decision is
+  // purely which rest slot the grabbed bead ended up nearer.
+  for (let i = 0; i < 5; i++) {
+    check(`countFromDrag: bead ${i} pushed onto the wall -> ${i + 1}`,
+      E.countFromDrag(0, i, beadSize) === i + 1);
+    check(`countFromDrag: bead ${i} left at its active slot -> ${i + 1}`,
+      E.countFromDrag(i * beadSize, i, beadSize) === i + 1);
+    check(`countFromDrag: bead ${i} pushed out to its inactive slot -> ${i}`,
+      E.countFromDrag((i + 1) * beadSize, i, beadSize) === i);
+    check(`countFromDrag: bead ${i} just short of the midpoint -> ${i + 1}`,
+      E.countFromDrag((i + 0.49) * beadSize, i, beadSize) === i + 1);
+    check(`countFromDrag: bead ${i} just past the midpoint -> ${i}`,
+      E.countFromDrag((i + 0.51) * beadSize, i, beadSize) === i);
   }
+  // sweeping: dragging the outermost bead to the wall sets the whole group
+  const groupSize = 4;
+  check('countFromDrag: outermost bead dragged to the wall sets every bead',
+    E.countFromDrag(0, groupSize - 1, beadSize) === groupSize);
+  // clearing: dragging the innermost bead fully away clears the group
+  check('countFromDrag: innermost bead dragged fully away clears the group',
+    E.countFromDrag(groupSize * beadSize, 0, beadSize) === 0);
 }
 
 /* ═══════════════════════════════════════════

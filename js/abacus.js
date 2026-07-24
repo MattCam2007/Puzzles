@@ -300,8 +300,14 @@ function updateRotateHint() {
    physics in js/abacus-engine.js (shovePositions) so already-active
    beads get carried along ("shoved") while beads on the far side stay
    put; pointerup either commits a tap (moved <= TAP_THRESHOLD_PX) with
-   the original prefix-toggle rule, or quantizes/flings the drag to a
-   new count and lets renderBeads() animate the settle.
+   the original prefix-toggle rule, or commits whatever the grabbed bead
+   was showing and lets renderBeads() animate the settle.
+
+   Because a drag shoves beads ahead of it and can't pull the ones
+   behind, grabbing bead i can only resolve to count i or i+1 — so the
+   commit is decided purely by which rest slot the grabbed bead ended
+   nearer (countFromDrag). Sweeping still works: drag the outermost bead
+   to the wall and everything ahead of it is carried along.
 
    Coordinate model: each group is a 1D track, position 0 = touching
    the active wall, increasing away from it (same convention as the
@@ -311,19 +317,25 @@ function updateRotateHint() {
    renderBeads() already uses so there's no seam between live-drag
    painting and the calc(var(--u)*n) rest state.
 ═══════════════════════════════════════════ */
-const TAP_THRESHOLD_PX = 4;
-// px/ms of track-position travel to count as a decisive flick, not just a
-// brisk drag. Real pointermove events land every ~8-16ms; a deliberate
-// drag covering, say, 60px in 150ms is already ~0.4 px/ms, so the
-// threshold has to sit well above ordinary dragging speed — only a real
-// flick (large jump in a couple of frames) should override quantization.
-const FLING_VELOCITY = 1.4;
+// Finger jitter easily covers a few px, so a press has to move a bit
+// further than a mouse click would before it counts as a drag.
+const TAP_THRESHOLD_PX = 8;
 
 let drag = null;
 
 function axisClientPos(e, axis) { return axis === 'top' ? e.clientY : e.clientX; }
-function coordToPosition(coord, originPx, dir) { return dir * (coord - originPx); }
 function positionToCoord(position, originPx, dir) { return originPx + dir * position; }
+
+/* Pointer screen coord -> track position.
+   `originPx`/`dir` are calibrated so positionToCoord() produces a bead
+   element's top/left, i.e. its anchor edge. On a dir:-1 (heaven) track
+   that anchor edge is the one FURTHEST from the wall, so converting a
+   pointer coord the same way lands a whole bead short; pointerOffset
+   corrects for that, letting both track directions share one
+   floor()-based slot rule. */
+function pointerTrack(e, geo) {
+  return geo.dir * (axisClientPos(e, geo.axis) - geo.originPx) + geo.pointerOffset;
+}
 
 /* Geometry + current state for one group, in absolute (viewport) px.
    Captured once at pointerdown and reused for the whole gesture — rods
@@ -332,49 +344,48 @@ function groupGeometry(rodIdx, group, rodBox) {
   const S = E.STYLES[cfg.style];
   if (S.kind === 'vertical') {
     const heavenUnits = (S.heaven + 1) * S.beadH;
+    const beadSize = S.beadH * unitPx;
     if (group === 'h') {
       // heaven track is inverted: position 0 (the wall/beam) is at the
       // BOTTOM of the heaven zone, increasing position moves UP (top decreases)
       return {
-        axis: 'top', dir: -1,
+        axis: 'top', dir: -1, pointerOffset: beadSize,
         originPx: rodBox.top + (heavenUnits - S.beadH) * unitPx,
-        beadSize: S.beadH * unitPx, groupSize: S.heaven, count: rodState[rodIdx].h,
+        beadSize, groupSize: S.heaven, count: rodState[rodIdx].h,
         els: beadRefs[rodIdx].h,
       };
     }
     const earthTopUnits = heavenUnits + S.beamH;
     return {
-      axis: 'top', dir: 1,
+      axis: 'top', dir: 1, pointerOffset: 0,
       originPx: rodBox.top + earthTopUnits * unitPx,
-      beadSize: S.beadH * unitPx, groupSize: S.earth, count: rodState[rodIdx].e,
+      beadSize, groupSize: S.earth, count: rodState[rodIdx].e,
       els: beadRefs[rodIdx].e,
     };
   }
   return {
-    axis: 'left', dir: 1,
+    axis: 'left', dir: 1, pointerOffset: 0,
     originPx: rodBox.left,
     beadSize: S.beadW * unitPx, groupSize: S.beads, count: rodState[rodIdx],
     els: beadRefs[rodIdx],
   };
 }
 
-/* Which group (heaven/earth, or null for a schoty row) and which bead
-   index within it a pointerdown landed nearest to, using the same
-   rest-position geometry as rendering. */
+/* Which group (heaven/earth, or null for a schoty row) and which bead a
+   pointerdown landed on — gap-aware, so the bead you press is the bead
+   you get. */
 function hitTest(e, rodIdx, rodBox) {
   const S = E.STYLES[cfg.style];
+  let group = null;
   if (S.kind === 'vertical') {
     const heavenUnits = (S.heaven + 1) * S.beadH;
     const beamTop = rodBox.top + heavenUnits * unitPx;
     const beamBottom = beamTop + S.beamH * unitPx;
-    const group = e.clientY < (beamTop + beamBottom) / 2 ? 'h' : 'e';
-    const geo = groupGeometry(rodIdx, group, rodBox);
-    const t = coordToPosition(axisClientPos(e, geo.axis), geo.originPx, geo.dir);
-    return { group, index: clamp(Math.round(t / geo.beadSize), 0, geo.groupSize - 1), geo };
+    group = e.clientY < (beamTop + beamBottom) / 2 ? 'h' : 'e';
   }
-  const geo = groupGeometry(rodIdx, null, rodBox);
-  const t = coordToPosition(axisClientPos(e, geo.axis), geo.originPx, geo.dir);
-  return { group: null, index: clamp(Math.round(t / geo.beadSize), 0, geo.groupSize - 1), geo };
+  const geo = groupGeometry(rodIdx, group, rodBox);
+  const t = pointerTrack(e, geo);
+  return { group, index: E.beadIndexAtTrack(t, geo.count, geo.groupSize, geo.beadSize), geo, t };
 }
 
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
@@ -387,11 +398,9 @@ function applyGroupCount(rodIdx, group, newCount) {
   }
 }
 
-function paintFreePositions(d, freePositions) {
+function paintFreePositions(d, freePositions, tentativeCount) {
   const overshoot = d.beadSize * 0.5; // small defensive allowance so a fast drag doesn't visibly clip at the very edge
   const trackMax = d.groupSize * d.beadSize;
-  const tentativeCount = E.beadsFromTrack(
-    coordToPosition(d.lastClientPos, d.originPx, d.dir), d.groupSize, d.beadSize);
   freePositions.forEach((pos, i) => {
     const clamped = clamp(pos, -overshoot, trackMax + overshoot);
     const coord = positionToCoord(clamped, d.originPx, d.dir) - d.rodOriginAbs;
@@ -408,13 +417,19 @@ function wireRodPointerEvents(rodEl, rodIdx) {
     const hit = hitTest(e, rodIdx, rodBox);
     const geo = hit.geo;
     try { rodEl.setPointerCapture(e.pointerId); } catch (err) {}
+    const restPos = (hit.index < geo.count ? hit.index : hit.index + 1) * geo.beadSize;
     drag = {
       pointerId: e.pointerId, rodIdx, group: hit.group, dragIndex: hit.index,
-      axis: geo.axis, originPx: geo.originPx, dir: geo.dir,
+      axis: geo.axis, originPx: geo.originPx, dir: geo.dir, pointerOffset: geo.pointerOffset,
       beadSize: geo.beadSize, groupSize: geo.groupSize, count: geo.count, els: geo.els,
       rodEl, rodOriginAbs: geo.axis === 'top' ? rodBox.top : rodBox.left,
-      startClientPos: axisClientPos(e, geo.axis), lastClientPos: axisClientPos(e, geo.axis),
-      lastT: performance.now(), velocity: 0, moved: 0,
+      // Where the finger sits *within* the grabbed bead. Subtracting this
+      // every frame means the bead moves with the finger from wherever it
+      // was grabbed, instead of teleporting so its edge snaps under the
+      // touch point the moment the drag starts.
+      grabOffset: hit.t - restPos,
+      startClientPos: axisClientPos(e, geo.axis), moved: 0,
+      beadPos: restPos,
     };
     geo.els.forEach(el => el.classList.add('dragging'));
     e.preventDefault();
@@ -423,22 +438,17 @@ function wireRodPointerEvents(rodEl, rodIdx) {
   rodEl.addEventListener('pointermove', e => {
     if (!drag || e.pointerId !== drag.pointerId) return;
     const p = axisClientPos(e, drag.axis);
-    const now = performance.now();
-    const dt = Math.max(1, now - drag.lastT);
-    // velocity in track-position terms (matches flingTarget's sign
-    // convention: negative = moving toward the wall)
-    drag.velocity = (drag.dir * (p - drag.lastClientPos)) / dt;
     drag.moved = Math.max(drag.moved, Math.abs(p - drag.startClientPos));
-    drag.lastClientPos = p;
-    drag.lastT = now;
 
-    const t = coordToPosition(p, drag.originPx, drag.dir);
-    const free = E.shovePositions(drag.count, drag.groupSize, drag.dragIndex, t, drag.beadSize);
-    paintFreePositions(drag, free);
+    const trackMax = drag.groupSize * drag.beadSize;
+    drag.beadPos = clamp(pointerTrack(e, drag) - drag.grabOffset, 0, trackMax);
+    const tentativeCount = E.countFromDrag(drag.beadPos, drag.dragIndex, drag.beadSize);
+    const free = E.shovePositions(drag.count, drag.groupSize, drag.dragIndex, drag.beadPos, drag.beadSize);
+    paintFreePositions(drag, free, tentativeCount);
     // live-update the logical value too (not just the visual position),
     // so the readout — and abacusValue() — track the gesture in real
     // time, not only once the drag is committed on release
-    applyGroupCount(drag.rodIdx, drag.group, E.beadsFromTrack(t, drag.groupSize, drag.beadSize));
+    applyGroupCount(drag.rodIdx, drag.group, tentativeCount);
     updateReadout();
     e.preventDefault();
   });
@@ -458,10 +468,8 @@ function wireRodPointerEvents(rodEl, rodIdx) {
       // tap: original prefix-toggle rule
       applyGroupCount(d.rodIdx, d.group, d.dragIndex < d.count ? d.dragIndex : d.dragIndex + 1);
     } else {
-      const t = coordToPosition(d.lastClientPos, d.originPx, d.dir);
-      const quantized = E.beadsFromTrack(t, d.groupSize, d.beadSize);
-      const flung = E.flingTarget(d.velocity, quantized, d.groupSize, FLING_VELOCITY);
-      applyGroupCount(d.rodIdx, d.group, flung);
+      // commit exactly what the grabbed bead was showing on the last frame
+      applyGroupCount(d.rodIdx, d.group, E.countFromDrag(d.beadPos, d.dragIndex, d.beadSize));
     }
     onBeadMoved(); // renders the settled rest state (CSS transition animates the snap) + saves/checks
   };

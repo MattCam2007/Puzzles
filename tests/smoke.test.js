@@ -458,23 +458,46 @@ async function main() {
         return { x: b3.left + b3.width / 2, y0: b3.top + b3.height / 2, beadH: b3.height };
       });
 
-      // deliberate, paced drag toward the wall (real waits between steps,
-      // since Playwright's `steps` interpolates position but not real
-      // time — without pacing, every synthetic drag reads as a flick)
+      // drag it all the way onto the beam; beads 0-1-2 have to be carried
+      // along in the same gesture for the whole group to end up active
       await page.mouse.move(geom.x, geom.y0);
       await page.mouse.down();
-      const target = geom.y0 - 1.5 * geom.beadH;
+      const target = geom.y0 - 4 * geom.beadH;
       for (let i = 1; i <= 10; i++) {
         await page.mouse.move(geom.x, geom.y0 + (target - geom.y0) * (i / 10));
-        await page.waitForTimeout(20);
+        await page.waitForTimeout(16);
       }
       const midValue = await page.evaluate(() => abacusValue());
       report(`${name}: A8 value updates live during drag (before mouseup)`, midValue > 0, `midValue=${midValue}`);
 
       await page.mouse.up();
       const afterDrag = await page.evaluate(() => ({ e: rodState[8].e, v: abacusValue() }));
-      report(`${name}: A10 dragging the farthest bead toward the wall shoves beads 0-1-2 along with it (one gesture -> count 3)`,
-        afterDrag.e === 3 && afterDrag.v === 3, `e=${afterDrag.e} v=${afterDrag.v}`);
+      report(`${name}: A10/A11 dragging the outermost bead to the wall sweeps the whole group along (-> 4)`,
+        afterDrag.e === 4 && afterDrag.v === 4, `e=${afterDrag.e} v=${afterDrag.v}`);
+
+      // The bead you press is the bead you get: pressing each earth bead
+      // in turn and dragging it just onto the beam must yield exactly
+      // that bead's index + 1, with no off-by-one. (Regression for the
+      // hit-test bug that made pressing bead 0 grab bead 2.)
+      const perBead = [];
+      for (let bead = 0; bead < 4; bead++) {
+        const bx = await page.evaluate((i) => {
+          rodState = freshState(); renderBeads(); updateReadout();
+          const b = document.querySelectorAll('.rod')[8].querySelectorAll('.bead')[i + 1].getBoundingClientRect();
+          return { x: b.left + b.width / 2, y: b.top + b.height / 2, h: b.height };
+        }, bead);
+        await page.waitForTimeout(250); // let the settle transition finish before grabbing
+        await page.mouse.move(bx.x, bx.y);
+        await page.mouse.down();
+        for (let i = 1; i <= 6; i++) {
+          await page.mouse.move(bx.x, bx.y - bx.h * (bead + 1) * (i / 6));
+          await page.waitForTimeout(16);
+        }
+        await page.mouse.up();
+        perBead.push(await page.evaluate(() => rodState[8].e));
+      }
+      report(`${name}: A10 pressing bead i and dragging to the wall gives exactly i+1`,
+        JSON.stringify(perBead) === JSON.stringify([1, 2, 3, 4]), `got ${JSON.stringify(perBead)}`);
 
       // A9: a plain tap (zero-distance press) still toggles a bead using
       // the original prefix rule — grab the same rod's heaven bead
@@ -515,28 +538,44 @@ async function main() {
       report(`${name}: A12 every bead snaps to an exact multiple of the unit within its group`, snapCheck.ok,
         JSON.stringify(snapCheck));
 
-      // A11: a fast flick — small nominal distance, but covered in a
-      // single near-instant jump (high velocity) — sweeps the whole
-      // group toward the wall, further than plain quantization of that
-      // same small distance would reach on its own.
-      const flickGeom = await page.evaluate(() => {
+      // A11 (clear direction): with the group fully set, dragging the
+      // innermost bead away from the beam pushes every bead off it.
+      const clearGeom = await page.evaluate(() => {
         cfg.style = 'soroban'; saveCfg();
-        rodState = freshState(); buildAbacus(); updateReadout();
-        const rod = document.querySelectorAll('.rod')[8];
-        const b0 = rod.querySelectorAll('.bead')[1].getBoundingClientRect(); // earth bead 0
+        rodState = freshState(); rodState[8] = { h: 0, e: 4 };
+        buildAbacus(); updateReadout();
+        const b0 = document.querySelectorAll('.rod')[8].querySelectorAll('.bead')[1].getBoundingClientRect();
         return { x: b0.left + b0.width / 2, y0: b0.top + b0.height / 2, beadH: b0.height };
       });
-      await page.mouse.move(flickGeom.x, flickGeom.y0);
+      await page.waitForTimeout(250); // let the settle transition finish before grabbing
+      await page.mouse.move(clearGeom.x, clearGeom.y0);
       await page.mouse.down();
-      // moving UP (toward the earth wall) by a distance that alone would
-      // still only quantize to 1 (round(1.2)=1), covered in one jump so
-      // the measured velocity is comfortably above the fling threshold
-      // even under CI timing jitter
-      await page.mouse.move(flickGeom.x, flickGeom.y0 - 1.2 * flickGeom.beadH, { steps: 1 });
+      for (let i = 1; i <= 8; i++) {
+        await page.mouse.move(clearGeom.x, clearGeom.y0 + clearGeom.beadH * 4 * (i / 8));
+        await page.waitForTimeout(16);
+      }
       await page.mouse.up();
-      const afterFlick = await page.evaluate(() => rodState[8].e);
-      report(`${name}: A11 fast flick sweeps past what plain quantization of the same distance would reach`,
-        afterFlick > 1, `e=${afterFlick} (plain quantization of this distance alone would give 1)`);
+      const afterClearSweep = await page.evaluate(() => rodState[8].e);
+      report(`${name}: A11 dragging the innermost bead away from the wall clears the whole group`,
+        afterClearSweep === 0, `e=${afterClearSweep}`);
+
+      // A drag must also be speed-independent: the same gesture covered
+      // in 3 instant jumps (no pacing at all) must land on the same
+      // count as a slow paced one. The original build treated any brisk
+      // drag as a "fling" and swept the group to an extreme instead.
+      const fastGeom = await page.evaluate(() => {
+        rodState = freshState(); buildAbacus(); updateReadout();
+        const b2 = document.querySelectorAll('.rod')[8].querySelectorAll('.bead')[3].getBoundingClientRect();
+        return { x: b2.left + b2.width / 2, y0: b2.top + b2.height / 2, beadH: b2.height };
+      });
+      await page.waitForTimeout(250);
+      await page.mouse.move(fastGeom.x, fastGeom.y0);
+      await page.mouse.down();
+      for (let i = 1; i <= 3; i++) await page.mouse.move(fastGeom.x, fastGeom.y0 - fastGeom.beadH * 3 * (i / 3));
+      await page.mouse.up();
+      const afterFast = await page.evaluate(() => rodState[8].e);
+      report(`${name}: A11 a fast drag lands on the same count as a slow one (no runaway fling)`,
+        afterFast === 3, `e=${afterFast} (expected 3, same as the paced drag of bead 2)`);
 
       // A16: in the default mode (practice, requireCheck off), no Check
       // button is visible, and setting the correct value auto-advances
