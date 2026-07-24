@@ -1,6 +1,6 @@
 # Puzzles — Developer Reference
 
-Static HTML/CSS/JS puzzle suite (2048, Sudoku, Kakuro, Minesweeper) served via GitHub Pages.
+Static HTML/CSS/JS puzzle suite (2048, Sudoku, Kakuro, Minesweeper, Abacus) served via GitHub Pages.
 No build step, no bundler, no framework.
 
 ## Project layout
@@ -8,7 +8,7 @@ No build step, no bundler, no framework.
 ```
 Puzzles/
 ├── index.html                ← home / game picker
-├── <game>.html               ← one per game (2048, sudoku, kakuro, minesweeper)
+├── <game>.html               ← one per game (2048, sudoku, kakuro, minesweeper, abacus)
 ├── theme-builder.html        ← custom theme editor
 ├── css/
 │   ├── theme.css             ← ALL design tokens + shared chrome (settings panel, switcher)
@@ -21,6 +21,7 @@ Puzzles/
 │   ├── theme-builder.js      ← custom theme editor UI
 │   ├── logic-engine.js       ← Logic Grid generation/solving (pure, DOM-free, Node-testable)
 │   ├── logic-packs.js        ← Logic Grid story packs (data; templated prose contract)
+│   ├── abacus-engine.js      ← Abacus board state/physics/questions (pure, DOM-free, Node-testable)
 │   └── <game>.js             ← complete game logic / UI layer
 ├── data/                     ← word lists and other data files (add here)
 ├── tests/                    ← Node test suites (no deps; excluded from GitHub Pages)
@@ -28,7 +29,8 @@ Puzzles/
 ```
 
 Every game HTML loads scripts in this order: `common.js` → `theme.js` → `<game>.js`
-(Logic Grid inserts `logic-packs.js` → `logic-engine.js` before `logic.js`).
+(Logic Grid inserts `logic-packs.js` → `logic-engine.js` before `logic.js`; Abacus
+inserts `abacus-engine.js` before `abacus.js`).
 
 ## Local development
 
@@ -389,6 +391,58 @@ onToggle('togMyOption', 'myOption', () => {
 // in syncSettingsUI():
 $('#togMyOption').checked = cfg.myOption;
 ```
+
+---
+
+### Responsive board sizing (the `--u` pattern)
+
+Used by Abacus (`js/abacus-engine.js` + `js/abacus.js` + `css/abacus.css`) to make
+a board genuinely fill whatever screen it's on instead of rendering at a fixed
+pixel size. The pattern, if a future game needs it:
+
+1. Express every board dimension as a multiplier of one abstract unit (`beadW: 2.0`,
+   `rodW: 2.4`, etc.) in a pure, DOM-free geometry table in the game's `-engine.js`.
+2. A pure `computeUnit(availW, availH, style, opts)` finds the largest px-per-unit
+   that fits an available box on both axes, clamped to a sane range — unit-testable
+   with plain numbers, no DOM involved.
+3. The UI layer sets every size/position as a `calc(var(--u) * n)` string (see
+   `js/abacus.js`'s `u(units)` helper) rather than a raw pixel value, and writes
+   the current px-per-unit to a single CSS custom property on the board element.
+   Resizing then means updating **one** CSS variable — every bead/rod/frame
+   dimension re-evaluates instantly, no DOM rebuild needed.
+4. The element that gets measured for available space (`fitAbacus()` measures
+   `#board`, not `.board-wrap`) must be sized purely by flex/grid allocation from
+   its parent, never by its own content — otherwise measuring it creates a
+   circular dependency on the very geometry you're computing.
+5. If a style's "natural" aspect ratio doesn't match common viewports (Abacus's
+   7-rod styles vs 9-rod styles), don't try to fix that by fudging per-style unit
+   constants — let the outer frame fill 100% of its allocated box regardless of
+   content aspect (`.abacus { width: 100%; height: 100%; }`), with `justify-
+   content: center; align-items: center` centering the actual content as a group.
+   The frame is what most acceptance criteria mean by "fills the screen."
+
+### Independent appearance axes
+
+Also demonstrated by Abacus. When a game has more than one visual axis that a
+user might want to mix and match (Abacus: board **mechanics** — soroban vs
+suanpan vs schoty vs roman, which determines rod/bead counts and arithmetic —
+plus bead **shape**, bead **material**, and board **frame**, which are purely
+cosmetic), keep each axis as an independent `cfg` key and an independent CSS
+selector, never a combined one:
+
+```css
+/* shape rules only ever set geometry */
+.board[data-bead-shape="oblate"] .bead { border-radius: 50% / 38%; }
+/* material rules only ever set colour custom properties */
+.board[data-bead-material="jade"] { --bead: #4f9e77; --bead-hi: #9fdcbb; --bead-lo: #235440; }
+/* NEVER: .board[data-bead-shape="oblate"][data-bead-material="jade"] { ... } */
+```
+
+N shapes × M materials then composes into N×M looks from N+M rules, and any
+combination renders correctly by construction — there's nothing to test pairwise.
+An `auto` value on the primary axis (bead shape) resolves to each mechanics
+style's traditional default via a pure `resolveBeadShape(style, shape)` function,
+so defaults stay authentic while every explicit choice still applies everywhere.
 
 ---
 

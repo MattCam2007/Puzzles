@@ -1,0 +1,578 @@
+/* ============================================================
+   Abacus — game-specific styles
+   Shared tokens, reset, body base and .title live in theme.css.
+   Landscape-first, viewport-fit layout: the page never scrolls — the
+   board is sized (via --u, set in js/abacus.js fitAbacus()) to fill
+   whatever space is left after the header/top-bar/question-bar chrome.
+   ============================================================ */
+
+body {
+  padding: 10px 14px 12px;
+  overflow: hidden;
+  height: 100dvh;
+}
+
+.hidden { display: none !important; }
+
+/* ── HEADER ── */
+.header {
+  width: 100%; max-width: 980px;
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px; flex: none;
+}
+.title { font-size: 2.2rem; }
+.header-right { display: flex; gap: 8px; align-items: center; }
+.score-box {
+  background: var(--surface); border-radius: var(--radius-sm);
+  padding: 5px 11px; text-align: center; min-width: 54px;
+}
+.score-box .label {
+  font-size: 0.58rem; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 1px;
+}
+.score-box .value { font-size: 0.95rem; font-weight: 700; }
+
+/* ── TOP BAR ── */
+.board-top-bar {
+  width: 100%; max-width: 980px;
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: 8px; margin-bottom: 8px; flex: none;
+}
+.board-top-left { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.board-top-right { display: flex; gap: 6px; align-items: center; margin-left: auto; }
+.btn {
+  background: var(--surface); border: 1px solid var(--surface3);
+  color: var(--text); font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.8rem; font-weight: 600; padding: 8px 14px;
+  border-radius: var(--radius-sm); cursor: pointer;
+  transition: background 0.15s; white-space: nowrap;
+}
+.btn:active { background: var(--surface3); }
+.btn.accent { background: var(--accent-dim); border-color: var(--accent); color: var(--accent2); }
+.difficulty-select {
+  flex: none; background: var(--surface); border: 1px solid var(--surface3);
+  color: var(--text); font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.85rem; font-weight: 600; padding: 8px 28px 8px 10px;
+  border-radius: var(--radius-sm); outline: none; cursor: pointer;
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b6880' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+}
+.btn-top {
+  background: var(--surface); border: 1px solid var(--surface3);
+  color: var(--text-dim); font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.78rem; font-weight: 600; padding: 7px 12px;
+  border-radius: var(--radius-sm); cursor: pointer;
+  transition: background 0.15s; white-space: nowrap;
+}
+.btn-top:active { background: var(--surface3); }
+.btn-top.danger { color: var(--error); }
+
+/* operation chips: + − × ÷ */
+.op-chips {
+  display: flex; gap: 4px; background: var(--surface2);
+  border-radius: var(--radius-sm); padding: 3px;
+}
+.op-chip {
+  width: 34px; height: 31px; border: none; background: transparent;
+  border-radius: 4px; color: var(--text-muted); cursor: pointer;
+  font-family: 'Space Grotesk', sans-serif; font-size: 1.05rem; font-weight: 700;
+  transition: all 0.15s;
+}
+.op-chip.active { background: var(--accent-dim); color: var(--accent2); }
+
+/* ── QUESTION BAR ── */
+.question-bar {
+  width: 100%; max-width: 980px; flex: none;
+  background: var(--surface); border: 1px solid var(--surface3);
+  border-radius: var(--radius); padding: 10px 18px; margin-bottom: 8px;
+  display: flex; align-items: baseline; gap: 16px; flex-wrap: nowrap;
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.question-text {
+  font-size: 1.7rem; font-weight: 800;
+  font-variant-numeric: tabular-nums; letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.feedback {
+  font-size: 0.8rem; color: var(--text-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.question-bar.correct {
+  border-color: var(--success);
+  box-shadow: 0 0 14px rgba(134, 239, 172, 0.35);
+}
+.question-bar.correct .feedback { color: var(--success); }
+.question-bar.wrong {
+  border-color: var(--error);
+  animation: qshake 0.3s;
+}
+.question-bar.wrong .feedback { color: var(--error); }
+@keyframes qshake {
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+/* ── BOARD ──
+   .board-wrap takes exactly the space left over after the header /
+   top-bar / question-bar / action-row (flex: 1 1 auto on a flex-column
+   body). #board then takes the space left over inside board-wrap after
+   the (optional, content-sized) readout — flex: 1 1 auto + min-height:
+   0 again — so #board's own box is never driven by its own content.
+   fitAbacus() measures #board directly for exactly this reason: its
+   size comes purely from flex allocation, with no circular dependency
+   on the abacus's calc(var(--u)*n) geometry inside it. */
+.board-wrap {
+  width: 100%; flex: 1 1 auto; min-height: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px; overflow: hidden;
+}
+.board {
+  display: flex; justify-content: center; align-items: center;
+  width: 100%; flex: 1 1 auto; min-height: 0; overflow: hidden;
+}
+
+/* frame finishes — colour palette for the board itself (border, back
+   panel, beam, wire). Bead colour is a fully independent axis — see
+   [data-bead-material] below — so any frame x material combination
+   renders correctly; never combine the two into one selector.
+   --frame-grain is an opacity (0-1) driving the wood-grain overlay a
+   few rules down: 0 for non-wood finishes, so it silently no-ops. */
+.board[data-frame="theme"] {
+  --frame: var(--surface3);
+  --abacus-bg: var(--surface);
+  --beam: var(--surface2);
+  --beam-ink: var(--text-muted);
+  --wire: var(--surface2);
+  --frame-grain: 0;
+}
+.board[data-frame="wood"] {
+  --frame: #5b3d20; --abacus-bg: #7c5a34; --beam: #46311a;
+  --beam-ink: #d8c0a0; --wire: #3a2a18; --frame-grain: 0.5;
+}
+.board[data-frame="dark"] {
+  --frame: #0b0b10; --abacus-bg: #191922; --beam: #2a2a3f;
+  --beam-ink: #9b97b8; --wire: #30304a; --frame-grain: 0;
+}
+.board[data-frame="brass"] {
+  --frame: #5a4614; --abacus-bg: #8a7433; --beam: #463610;
+  --beam-ink: #f0e0a8; --wire: #3c2e0c; --frame-grain: 0;
+}
+.board[data-frame="walnut"] {
+  --frame: #3a2418; --abacus-bg: #4f3221; --beam: #2c1c12;
+  --beam-ink: #d0b090; --wire: #22150d; --frame-grain: 0.6;
+}
+.board[data-frame="bamboo"] {
+  --frame: #a08238; --abacus-bg: #cbb06a; --beam: #7c6428;
+  --beam-ink: #3a2e10; --wire: #6a561f; --frame-grain: 0.35;
+}
+.board[data-frame="rosewood"] {
+  --frame: #4a1418; --abacus-bg: #6b2028; --beam: #350e12;
+  --beam-ink: #e8c8ca; --wire: #2a0a0d; --frame-grain: 0.55;
+}
+.board[data-frame="slate"] {
+  --frame: #2e3438; --abacus-bg: #3f484d; --beam: #232a2d;
+  --beam-ink: #b8c4c8; --wire: #1a1f22; --frame-grain: 0;
+}
+
+/* bead materials — colour only, orthogonal to bead shape below.
+   --bead-alt is the schoty "4/5" marker colour, tuned per material to
+   stay legible against --bead. */
+.board[data-bead-material="themed"] {
+  --bead: var(--accent); --bead-hi: var(--accent2);
+  --bead-lo: color-mix(in srgb, var(--accent) 55%, black); --bead-alt: var(--cyan);
+}
+.board[data-bead-material="dark-wood"] {
+  --bead: #b3742f; --bead-hi: #e8b264; --bead-lo: #6e4318; --bead-alt: #8a2626;
+}
+.board[data-bead-material="light-wood"] {
+  --bead: #d9b06a; --bead-hi: #f3dcac; --bead-lo: #9a743c; --bead-alt: #7a9c5e;
+}
+.board[data-bead-material="ivory"] {
+  --bead: #e8dfc8; --bead-hi: #fffaf0; --bead-lo: #a2977c; --bead-alt: #c0607a;
+}
+.board[data-bead-material="jade"] {
+  --bead: #4f9e77; --bead-hi: #9fdcbb; --bead-lo: #235440; --bead-alt: #d4a13a;
+}
+.board[data-bead-material="brass"] {
+  --bead: #c9a227; --bead-hi: #f2d675; --bead-lo: #7a5f14; --bead-alt: #8a3a1a;
+}
+.board[data-bead-material="obsidian"] {
+  --bead: #2c2c38; --bead-hi: #6a6a80; --bead-lo: #101014; --bead-alt: #9c6ad0;
+}
+.board[data-bead-material="amber"] {
+  --bead: #d97a2c; --bead-hi: #f8c878; --bead-lo: #8a4610; --bead-alt: #4a6c8a;
+}
+
+/* border-width and (inner) padding are set inline from js/abacus.js
+   (calc(var(--u) * n)) so they scale with the per-style geometry table
+   in js/abacus-engine.js. The frame itself always fills 100% of #board
+   (its allocated space) rather than shrink-wrapping its rods/rows —
+   narrower styles (roman/schoty, 7 rods) would otherwise leave large
+   unused margins on a wide screen even though their beads are sized
+   correctly by computeUnit. Filling the frame keeps "how much of the
+   screen the board occupies" independent of a style's rod-count aspect
+   ratio: the padding computed above is a *minimum* inset, and any
+   leftover space centers the rods/rows as a group (see
+   .abacus.vertical/.rows below), like a tray the beads sit in. */
+.abacus {
+  box-sizing: border-box;
+  width: 100%; height: 100%;
+  border-style: solid;
+  border-color: var(--frame);
+  border-radius: calc(var(--u) * 0.32);
+  background-color: color-mix(in srgb, var(--abacus-bg) var(--board-alpha), transparent);
+  /* wood-grain overlay: opacity driven entirely by --frame-grain (0 for
+     non-wood finishes, so this silently no-ops), layered as a
+     background-image rather than a pseudo-element so it's guaranteed to
+     paint beneath the rods/beads without any z-index bookkeeping —
+     an element's own background always paints below its children. */
+  background-image: repeating-linear-gradient(
+    87deg,
+    rgba(0, 0, 0, calc(0.22 * var(--frame-grain))) 0px,
+    rgba(0, 0, 0, calc(0.22 * var(--frame-grain))) 1px,
+    transparent 1px, transparent 6px,
+    rgba(255, 255, 255, calc(0.08 * var(--frame-grain))) 6px,
+    rgba(255, 255, 255, calc(0.08 * var(--frame-grain))) 7px,
+    transparent 7px, transparent 13px
+  );
+  /* bevel (bright top-left edge, dark bottom-right edge) layered with
+     the original recessed-panel + drop shadows */
+  box-shadow:
+    inset 0 calc(var(--u) * 0.07) calc(var(--u) * 0.12) rgba(255, 255, 255, 0.10),
+    inset 0 calc(var(--u) * -0.07) calc(var(--u) * 0.12) rgba(0, 0, 0, 0.4),
+    inset 0 2px 10px rgba(0, 0, 0, 0.35),
+    0 4px 16px rgba(0, 0, 0, 0.3);
+}
+.abacus.vertical { display: flex; justify-content: center; align-items: center; }
+.abacus.rows {
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  gap: calc(var(--u) * 0.08);
+}
+
+/* vertical rods (soroban / suanpan / roman) — touch-action: none stops
+   a vertical finger-drag on a bead from being hijacked as a page/touch
+   scroll gesture before it's recognized as a bead drag. */
+.rod { position: relative; touch-action: none; }
+.rod .wire {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  top: calc(var(--u) * -0.2); bottom: calc(var(--u) * -0.2); width: calc(var(--u) * 0.08);
+  border-radius: calc(var(--u) * 0.04);
+  /* dark edge -> light centre -> dark edge so the rod reads cylindrical
+     rather than a flat painted bar */
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--wire) 55%, black) 0%,
+    color-mix(in srgb, var(--wire) 60%, white) 50%,
+    color-mix(in srgb, var(--wire) 55%, black) 100%);
+}
+.beam-seg {
+  position: absolute; left: 0; right: 0; z-index: 1;
+  background: var(--beam);
+  display: flex; align-items: center; justify-content: center;
+  font-size: clamp(0.5rem, calc(var(--u) * 0.22), 0.72rem);
+  font-weight: 700; letter-spacing: 0.5px;
+  color: var(--beam-ink);
+  /* inset shadow top+bottom (recessed into the frame) plus a hairline
+     highlight along the top edge */
+  box-shadow:
+    inset 0 calc(var(--u) * 0.05) 0 rgba(255, 255, 255, 0.08),
+    inset 0 calc(var(--u) * 0.06) calc(var(--u) * 0.08) rgba(0, 0, 0, 0.3),
+    inset 0 calc(var(--u) * -0.06) calc(var(--u) * 0.08) rgba(0, 0, 0, 0.3);
+}
+/* Beads are built from four layers so every shape/material combination
+   reads as an object, not a flat CSS shape:
+     1. body      — 3-stop radial-gradient (base .bead rule)
+     2. ::before  — specular highlight, upper-left, consistent light
+                    source across the whole board
+     3. ::after   — contact shadow where the rod passes through
+     4. filter    — drop-shadow cast onto the tray behind it. Uses
+                    drop-shadow (not box-shadow) specifically because it
+                    follows the bead's actual rendered silhouette —
+                    including clip-path shapes like biconical/faceted —
+                    where box-shadow would just draw a rectangle. */
+.bead {
+  position: absolute; z-index: 2; cursor: pointer;
+  background: radial-gradient(circle at 35% 30%, var(--bead-hi), var(--bead) 55%, var(--bead-lo));
+  border-radius: 50%; /* sphere is the safe default; shape rules below override */
+  filter: drop-shadow(0 calc(var(--u) * 0.06) calc(var(--u) * 0.09) rgba(0, 0, 0, 0.45));
+}
+.bead::before,
+.bead::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+}
+.bead::before {
+  background: radial-gradient(ellipse 55% 40% at 32% 26%, rgba(255, 255, 255, 0.65), transparent 72%);
+  mix-blend-mode: screen;
+}
+.bead::after {
+  background: radial-gradient(ellipse 34% 62% at 50% 50%, rgba(0, 0, 0, 0.4), transparent 75%);
+}
+.rod .bead {
+  left: 50%; transform: translateX(-50%);
+  /* overshoot easing: a bead released mid-drag settles into its rest
+     slot with a small bounce, rather than a flat linear snap */
+  transition: top 0.16s cubic-bezier(.34, 1.56, .64, 1);
+}
+.bead:active { filter: drop-shadow(0 calc(var(--u) * 0.06) calc(var(--u) * 0.09) rgba(0, 0, 0, 0.45)) brightness(1.15); }
+.bead.set { filter: drop-shadow(0 calc(var(--u) * 0.06) calc(var(--u) * 0.09) rgba(0, 0, 0, 0.45)) saturate(1.2) brightness(1.08); }
+/* live-dragged beads track the pointer 1:1 — no transition lag */
+.bead.dragging { transition: none !important; }
+/* keyboard focus (Tab/Enter/Space toggling — see makeBeadAccessible() */
+.bead:focus-visible {
+  outline: calc(var(--u) * 0.06) solid var(--accent2);
+  outline-offset: calc(var(--u) * 0.04);
+}
+/* arrow-key rod cursor (see setKeyCursor() in js/abacus.js) */
+.rod.key-cursor .wire,
+.srow.key-cursor .wire {
+  background: var(--accent2) !important;
+  box-shadow: 0 0 calc(var(--u) * 0.3) var(--accent2);
+}
+
+/* bead silhouettes — geometry only, orthogonal to the material colour
+   variables above. Never combine a shape selector with a material
+   selector: material sets colour custom properties on [data-board],
+   shape sets border-radius/clip-path on .bead, and any combination of
+   the two composes correctly because neither touches the other's
+   properties. */
+.board[data-bead-shape="biconical"] .bead {
+  /* turned wooden bead with flat facets at the tips, not a sharp
+     4-point rhombus — that's what makes it read as biconical rather
+     than a diamond */
+  border-radius: 0;
+  clip-path: polygon(50% 0%, 88% 22%, 100% 50%, 88% 78%, 50% 100%, 12% 78%, 0% 50%, 12% 22%);
+}
+.board[data-bead-shape="soft-biconical"] .bead { border-radius: 50% / 30%; }
+.board[data-bead-shape="oblate"]         .bead { border-radius: 50% / 38%; }
+.board[data-bead-shape="sphere"]         .bead { border-radius: 50%; }
+.board[data-bead-shape="barrel"]         .bead { border-radius: 28% / 42%; }
+.board[data-bead-shape="lentil"]         .bead { border-radius: 50% / 20%; }
+.board[data-bead-shape="faceted"] .bead {
+  border-radius: 0;
+  clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+}
+.board[data-bead-shape="pebble"] .bead { border-radius: 46% 54% 52% 48% / 48% 46% 54% 52%; }
+
+/* roman: a bronze plate with grooves and small round counters */
+.board[data-abacus="roman"] .rod .wire {
+  width: calc(var(--u) * 0.18);
+  background: color-mix(in srgb, black 30%, var(--abacus-bg));
+  box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.65);
+  border-radius: calc(var(--u) * 0.09);
+}
+.board[data-abacus="roman"] .beam-seg { font-size: clamp(0.5rem, calc(var(--u) * 0.24), 0.78rem); }
+
+/* schoty rows */
+.srow { position: relative; touch-action: none; }
+.srow .wire {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  left: calc(var(--u) * -0.1); right: calc(var(--u) * -0.1); height: calc(var(--u) * 0.08);
+  border-radius: calc(var(--u) * 0.04);
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--wire) 55%, black) 0%,
+    color-mix(in srgb, var(--wire) 60%, white) 50%,
+    color-mix(in srgb, var(--wire) 55%, black) 100%);
+  /* slight sag like a real schoty wire */
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
+}
+.srow .bead {
+  top: 50%; transform: translateY(-50%);
+  transition: left 0.16s cubic-bezier(.34, 1.56, .64, 1);
+  /* shape comes from [data-bead-shape] above; .bead's border-radius:50%
+     default already gives a reasonable round fallback here */
+}
+.srow .bead.mid {
+  background: radial-gradient(circle at 35% 30%,
+    color-mix(in srgb, var(--bead-alt) 55%, white),
+    var(--bead-alt) 55%,
+    color-mix(in srgb, var(--bead-alt) 55%, black));
+}
+/* decorative-only quarter-kopek wire (opt-in, cfg.quarterWire) — static,
+   not part of rodState, so it never accepts pointer/keyboard input */
+.srow.quarter-wire { opacity: 0.65; margin-top: calc(var(--u) * 0.15); }
+.srow.quarter-wire .wire { height: calc(var(--u) * 0.05); }
+.bead.decorative { cursor: default; }
+.row-label {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  text-align: right;
+  font-size: clamp(0.5rem, calc(var(--u) * 0.22), 0.7rem);
+  font-weight: 700; letter-spacing: 0.5px;
+  color: var(--beam-ink);
+}
+
+/* place labels off */
+.board.no-labels .beam-seg,
+.board.no-labels .row-label { color: transparent; }
+
+/* ── VALUE READOUT ── */
+.readout-row {
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+  flex: none; margin-top: 6px;
+}
+.readout {
+  font-size: 1.5rem; font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  background: var(--surface); border: 1px solid var(--surface3);
+  border-radius: var(--radius-sm); padding: 6px 22px;
+  color: var(--accent2); min-width: 150px; text-align: center;
+}
+/* absolutely positioned so it never affects layout, shown or hidden */
+.correct-flash {
+  position: absolute; left: 100%; top: 50%; margin-left: 10px;
+  transform: translateY(-50%) scale(0.6);
+  font-size: 1.3rem; font-weight: 800; color: var(--success);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+}
+.correct-flash.show {
+  opacity: 1; transform: translateY(-50%) scale(1);
+}
+/* the frame's "you got it" glow */
+.abacus.correct-glow {
+  transition: box-shadow 0.15s;
+  box-shadow:
+    inset 0 2px 10px rgba(0, 0, 0, 0.35), 0 4px 16px rgba(0, 0, 0, 0.3),
+    0 0 0 3px rgba(134, 239, 172, 0.55), 0 0 28px rgba(134, 239, 172, 0.45);
+}
+
+/* ── ACTION ROW ── */
+.action-row {
+  width: 100%; max-width: 980px; flex: none;
+  display: flex; gap: 8px; margin-top: 8px;
+}
+.action-btn {
+  flex: 1;
+  background: var(--surface); border: 1.5px solid var(--surface3);
+  color: var(--text-dim); font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.82rem; font-weight: 600; padding: 10px;
+  border-radius: var(--radius-sm); cursor: pointer; text-align: center;
+  transition: all 0.12s;
+}
+.action-btn:active { background: var(--surface3); }
+.action-btn.primary { background: var(--accent-dim); border-color: var(--accent); color: var(--accent2); }
+
+/* ── OVERLAY ── */
+.overlay {
+  position: fixed; inset: 0; background: rgba(15, 15, 19, 0.9);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100; backdrop-filter: blur(4px);
+  opacity: 0; pointer-events: none; transition: opacity 0.3s;
+}
+.overlay.show { opacity: 1; pointer-events: all; }
+.overlay-card {
+  background: var(--surface); border: 1px solid #3d3a5a;
+  border-radius: 16px; padding: 32px 28px; text-align: center;
+  max-width: 300px; width: 90%;
+}
+.overlay-card h2 {
+  font-size: 1.8rem; font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text; margin-bottom: 8px;
+}
+.overlay-card p { color: var(--text-dim); font-size: 0.88rem; margin-bottom: 24px; line-height: 1.55; }
+.overlay-card .btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border: none; color: white; font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.95rem; font-weight: 700; padding: 12px 28px;
+  border-radius: var(--radius-sm); cursor: pointer; width: 100%;
+}
+
+/* ── GUIDE ── */
+.guide-card {
+  max-width: 580px; text-align: left;
+  max-height: 84dvh; overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.guide-card h2 { text-align: center; font-size: 1.4rem; }
+.guide-body { margin-bottom: 20px; }
+.guide-body h3 {
+  font-size: 0.95rem; font-weight: 700; color: var(--accent2);
+  margin: 16px 0 5px;
+}
+.guide-body p {
+  font-size: 0.82rem; color: var(--text-dim);
+  line-height: 1.55; margin-bottom: 6px;
+}
+
+/* ── SMALL-SCREEN GAME CONTROLS MIRROR ──
+   #gameSection duplicates the top bar's mode/difficulty/op controls
+   inside the settings sheet, kept in sync by js/abacus.js syncTopBar().
+   Hidden by default; the max-width:560px query below is what actually
+   removes the top-bar originals and needs this mirror to exist. */
+#gameSection { display: none; }
+
+/* ── NARROW-SCREEN COMPACTION (portrait phones) ──
+   The top bar's mode/difficulty select + op chips don't fit next to
+   New Game on a narrow screen. Move them into the settings sheet
+   (#gameSection, always kept in sync) and leave only the essentials
+   in the bar itself. */
+@media (max-width: 560px) {
+  #modeSelect, #difficultySelect, .board-top-left .op-chips { display: none; }
+  #gameSection { display: block; }
+}
+
+/* ── SHORT-SCREEN COMPACTION (landscape phones) ──
+   On a short viewport the header/top-bar/question-bar/action-row chrome
+   can easily eat most of the available height, leaving nothing for the
+   board. Shrink every fixed-height chrome piece and drop the value
+   readout (redundant with just looking at the beads) so the board gets
+   the space it needs to stay legible and touchable. */
+@media (max-height: 480px) {
+  body { padding: 0 8px 0; }
+  .header { margin-bottom: 0; }
+  .board-top-bar { margin-bottom: 0; gap: 5px; }
+  .question-bar { margin-bottom: 0; padding: 1px 12px; gap: 10px; }
+  .action-row { margin-top: 0; gap: 5px; }
+  .board-wrap { gap: 0; }
+
+  .title { font-size: 1.05rem; }
+  .header-right { gap: 4px; }
+  .score-box { padding: 1px 5px; min-width: 28px; }
+  .score-box .label { display: none; }
+  .score-box .value { font-size: 0.7rem; }
+  .icon-btn { width: 21px; height: 21px; font-size: 0.7rem; }
+
+  .btn { padding: 2px 8px; font-size: 0.7rem; }
+  .btn-top { padding: 2px 6px; font-size: 0.68rem; }
+  .difficulty-select { padding: 2px 18px 2px 6px; font-size: 0.7rem; }
+  .op-chips { padding: 1px; }
+  .op-chip { width: 20px; height: 17px; font-size: 0.78rem; }
+
+  .question-text { font-size: 0.88rem; }
+  .feedback { display: none; }
+
+  .action-btn { padding: 2px; font-size: 0.64rem; }
+
+  .readout { display: none; }
+}
+.guide-body .tip {
+  background: var(--surface2); border-left: 3px solid var(--accent);
+  padding: 8px 10px; border-radius: 6px;
+  font-size: 0.78rem; color: var(--text-dim); line-height: 1.45;
+  margin: 6px 0 4px;
+}
+
+/* ── ROTATE HINT ── */
+.rotate-hint {
+  /* top, not bottom: the action row / Skip button already live at the
+     bottom, and this must never sit on top of a tappable game control */
+  position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 8px); z-index: 60;
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface); border: 1px solid var(--surface3);
+  border-radius: var(--radius); padding: 8px 8px 8px 14px;
+  font-size: 0.78rem; color: var(--text-dim);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  opacity: 0; pointer-events: none;
+  transform: translate(-50%, -12px);
+  transition: opacity 0.25s, transform 0.25s;
+  max-width: calc(100vw - 24px);
+}
+.rotate-hint.show { opacity: 1; pointer-events: all; transform: translate(-50%, 0); }
+.rotate-hint button {
+  background: none; border: none; color: var(--text-muted); cursor: pointer;
+  font-size: 0.85rem; padding: 4px 6px; line-height: 1;
+}
+.rotate-hint button:active { color: var(--text); }

@@ -182,7 +182,7 @@ async function main() {
     await runPageSuite(browser, baseUrl, 'index', async (page) => {
       await page.goto(`${baseUrl}/index.html`, { waitUntil: 'domcontentloaded' });
       const cardCount = await page.evaluate(() => document.querySelectorAll('.game-card').length);
-      report('index: 5 game-cards present', cardCount === 5, `got ${cardCount}`);
+      report('index: 6 game-cards present', cardCount === 6, `got ${cardCount}`);
       const tbLink = await page.evaluate(() => !!document.querySelector('a[href="theme-builder.html"]'));
       report('index: theme-builder link present', tbLink);
     });
@@ -358,6 +358,491 @@ async function main() {
           if (covered >= 0) cursor = [Math.floor(covered / cols), covered % cols];
         },
       });
+    });
+
+    await runPageSuite(browser, baseUrl, 'abacus', async (page) => {
+      const name = 'abacus';
+      await page.goto(`${baseUrl}/abacus.html`, { waitUntil: 'domcontentloaded' });
+      // default style is soroban: 9 rods × (1 heaven + 4 earth) beads
+      const beads = await page.evaluate(() => document.querySelectorAll('#board .bead').length);
+      report(`${name}: board renders`, beads === 45, `beads=${beads}`);
+
+      await checkOverlaySanity(page, name, '#overlay');
+      await checkSettingsAndTheme(page, name);
+
+      const serializeAbacus = () =>
+        JSON.stringify(rodState) + '|' +
+        document.getElementById('questionText').textContent + '|' +
+        document.getElementById('readout').textContent;
+
+      await checkStateSurvivesReload(page, name, {
+        historyKey: 'abacus-history',
+        interact: async (p) => {
+          await p.evaluate(() => document.querySelector('#board .bead').click());
+        },
+        serialize: serializeAbacus,
+      });
+
+      await page.click('#settingsBtn');
+      await page.evaluate(() => document.querySelector('[data-abacus-pick="schoty"]').click());
+      const schotyBeads = await page.evaluate(() => document.querySelectorAll('#board .srow .bead').length);
+      report(`${name}: abacus style applies`, schotyBeads === 70, `got ${schotyBeads}`);
+      await page.evaluate(() => document.getElementById('settingsBackdrop').click());
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      const cfgStyle = await page.evaluate(() => JSON.parse(localStorage.getItem('abacus-cfg')).style);
+      const schotyAfter = await page.evaluate(() => document.querySelectorAll('#board .srow .bead').length);
+      report(`${name}: abacus style persists after reload`, cfgStyle === 'schoty' && schotyAfter === 70,
+        `style=${cfgStyle} beads=${schotyAfter}`);
+
+      // D3 regression: switching abacus style must preserve the board's
+      // value (clamped to the new style's capacity) instead of silently
+      // wiping it to zero.
+      const d3 = await page.evaluate(() => {
+        cfg.style = 'soroban'; saveCfg();
+        rodState = freshState(); buildAbacus();
+        rodState[8] = { h: 1, e: 3 }; renderBeads(); updateReadout(); // = 8
+        const before = abacusValue();
+        document.querySelector('[data-abacus-pick="suanpan"]').click();
+        return { before, after: abacusValue() };
+      });
+      report(`${name}: D3 style switch preserves the board's value`,
+        d3.before === 8 && d3.after === 8, JSON.stringify(d3));
+
+      // D3, capacity-clamped case: switching to a smaller-capacity style
+      // (9-rod soroban -> 7-rod roman) must clamp rather than crash/wrap.
+      const d3clamp = await page.evaluate(() => {
+        cfg.style = 'soroban'; saveCfg();
+        rodState = freshState(); buildAbacus();
+        rodState = E.setValue(E.maxBoardValue('soroban'), 'soroban'); renderBeads(); updateReadout();
+        const before = abacusValue();
+        document.querySelector('[data-abacus-pick="roman"]').click();
+        return { before, after: abacusValue(), romanMax: E.maxBoardValue('roman') };
+      });
+      report(`${name}: D3 style switch clamps to the new style's capacity`,
+        d3clamp.after === d3clamp.romanMax, JSON.stringify(d3clamp));
+
+      // D1 regression: an orphaned checkAnswer() advance timer must not
+      // fire after New Game and silently swap the question the user is
+      // now looking at.
+      const d1 = await page.evaluate(async () => {
+        cfg.style = 'soroban'; cfg.mode = 'practice'; cfg.requireCheck = true; saveCfg();
+        startGame();
+        const S = E.STYLES[cfg.style];
+        String(question.answer).padStart(S.rods, '0').split('').forEach((d, i) => {
+          d = +d; rodState[i] = { h: d >= 5 ? 1 : 0, e: d % 5 };
+        });
+        renderBeads();
+        checkAnswer(); // starts the 800ms advance timer
+        startGame();   // simulates hitting New Game immediately
+        const qAfterNewGame = question.text;
+        await new Promise(r => setTimeout(r, 1000)); // let the old timer's window pass
+        return { qAfterNewGame, qNow: question.text };
+      });
+      report(`${name}: D1 new-game survives pending advance timer`,
+        d1.qAfterNewGame === d1.qNow, `${d1.qAfterNewGame} -> ${d1.qNow}`);
+
+      // Kinetic beads (A8-A12): freestyle soroban, ones-place rod (last
+      // rod). Earth beads' wall is at the TOP of the earth zone (nearest
+      // the beam), so moving the pointer UP (decreasing y) activates them.
+      // Grab the farthest earth bead (index 3, resting at 4*beadH since
+      // inactive) and drag it up by 1.5*beadH, landing at track position
+      // 2.5*beadH -> quantizes to count 3. Beads 0-1-2 all have to be
+      // carried along in the same gesture for that to happen.
+      await page.setViewportSize({ width: 1280, height: 800 });
+      const geom = await page.evaluate(() => {
+        cfg.mode = 'freestyle'; cfg.style = 'soroban'; saveCfg();
+        rodState = freshState(); buildAbacus(); updateReadout();
+        const rod = document.querySelectorAll('.rod')[8]; // ones place
+        const beads = rod.querySelectorAll('.bead'); // [heaven0, earth0..earth3]
+        const b3 = beads[4].getBoundingClientRect(); // earth bead index 3 (farthest)
+        return { x: b3.left + b3.width / 2, y0: b3.top + b3.height / 2, beadH: b3.height };
+      });
+
+      // drag it all the way onto the beam; beads 0-1-2 have to be carried
+      // along in the same gesture for the whole group to end up active
+      await page.mouse.move(geom.x, geom.y0);
+      await page.mouse.down();
+      const target = geom.y0 - 4 * geom.beadH;
+      for (let i = 1; i <= 10; i++) {
+        await page.mouse.move(geom.x, geom.y0 + (target - geom.y0) * (i / 10));
+        await page.waitForTimeout(16);
+      }
+      const midValue = await page.evaluate(() => abacusValue());
+      report(`${name}: A8 value updates live during drag (before mouseup)`, midValue > 0, `midValue=${midValue}`);
+
+      await page.mouse.up();
+      const afterDrag = await page.evaluate(() => ({ e: rodState[8].e, v: abacusValue() }));
+      report(`${name}: A10/A11 dragging the outermost bead to the wall sweeps the whole group along (-> 4)`,
+        afterDrag.e === 4 && afterDrag.v === 4, `e=${afterDrag.e} v=${afterDrag.v}`);
+
+      // The bead you press is the bead you get: pressing each earth bead
+      // in turn and dragging it just onto the beam must yield exactly
+      // that bead's index + 1, with no off-by-one. (Regression for the
+      // hit-test bug that made pressing bead 0 grab bead 2.)
+      const perBead = [];
+      for (let bead = 0; bead < 4; bead++) {
+        const bx = await page.evaluate((i) => {
+          rodState = freshState(); renderBeads(); updateReadout();
+          const b = document.querySelectorAll('.rod')[8].querySelectorAll('.bead')[i + 1].getBoundingClientRect();
+          return { x: b.left + b.width / 2, y: b.top + b.height / 2, h: b.height };
+        }, bead);
+        await page.waitForTimeout(250); // let the settle transition finish before grabbing
+        await page.mouse.move(bx.x, bx.y);
+        await page.mouse.down();
+        for (let i = 1; i <= 6; i++) {
+          await page.mouse.move(bx.x, bx.y - bx.h * (bead + 1) * (i / 6));
+          await page.waitForTimeout(16);
+        }
+        await page.mouse.up();
+        perBead.push(await page.evaluate(() => rodState[8].e));
+      }
+      report(`${name}: A10 pressing bead i and dragging to the wall gives exactly i+1`,
+        JSON.stringify(perBead) === JSON.stringify([1, 2, 3, 4]), `got ${JSON.stringify(perBead)}`);
+
+      // A9: a plain tap (zero-distance press) still toggles a bead using
+      // the original prefix rule — grab the same rod's heaven bead
+      const heavenGeom = await page.evaluate(() => {
+        cfg.style = 'soroban'; saveCfg();
+        rodState = freshState(); buildAbacus(); updateReadout();
+        const rod = document.querySelectorAll('.rod')[8];
+        const b = rod.querySelectorAll('.bead')[0].getBoundingClientRect(); // heaven bead
+        return { x: b.left + b.width / 2, y: b.top + b.height / 2 };
+      });
+      await page.mouse.move(heavenGeom.x, heavenGeom.y);
+      await page.mouse.down();
+      await page.mouse.up(); // zero-distance press = tap
+      const afterTap = await page.evaluate(() => ({ h: rodState[8].h, v: abacusValue() }));
+      report(`${name}: A9 a plain tap still toggles the bead`, afterTap.h === 1 && afterTap.v === 5,
+        `h=${afterTap.h} v=${afterTap.v}`);
+
+      // A12: after release, adjacent beads within the same group (heaven,
+      // earth) must be spaced an exact multiple of the unit apart — no
+      // bead left visually between slots. (Spacing *across* the
+      // heaven/earth boundary isn't a clean multiple by design: there's a
+      // fixed beam-height gap between the two zones.)
+      const snapCheck = await page.evaluate(() => {
+        const rod = document.querySelectorAll('.rod')[8];
+        const uPx = parseFloat(getComputedStyle(document.getElementById('board')).getPropertyValue('--u'));
+        const beads = [...rod.querySelectorAll('.bead')];
+        const heavenTops = beads.slice(0, 1).map(b => parseFloat(getComputedStyle(b).top));
+        const earthTops = beads.slice(1).map(b => parseFloat(getComputedStyle(b).top));
+        const spacingOk = (tops) => {
+          for (let i = 0; i < tops.length - 1; i++) {
+            const diff = Math.abs(tops[i + 1] - tops[i]);
+            if (Math.abs(diff / uPx - Math.round(diff / uPx)) > 0.02) return false;
+          }
+          return true;
+        };
+        return { ok: spacingOk(heavenTops) && spacingOk(earthTops), heavenTops, earthTops, uPx };
+      });
+      report(`${name}: A12 every bead snaps to an exact multiple of the unit within its group`, snapCheck.ok,
+        JSON.stringify(snapCheck));
+
+      // A11 (clear direction): with the group fully set, dragging the
+      // innermost bead away from the beam pushes every bead off it.
+      const clearGeom = await page.evaluate(() => {
+        cfg.style = 'soroban'; saveCfg();
+        rodState = freshState(); rodState[8] = { h: 0, e: 4 };
+        buildAbacus(); updateReadout();
+        const b0 = document.querySelectorAll('.rod')[8].querySelectorAll('.bead')[1].getBoundingClientRect();
+        return { x: b0.left + b0.width / 2, y0: b0.top + b0.height / 2, beadH: b0.height };
+      });
+      await page.waitForTimeout(250); // let the settle transition finish before grabbing
+      await page.mouse.move(clearGeom.x, clearGeom.y0);
+      await page.mouse.down();
+      for (let i = 1; i <= 8; i++) {
+        await page.mouse.move(clearGeom.x, clearGeom.y0 + clearGeom.beadH * 4 * (i / 8));
+        await page.waitForTimeout(16);
+      }
+      await page.mouse.up();
+      const afterClearSweep = await page.evaluate(() => rodState[8].e);
+      report(`${name}: A11 dragging the innermost bead away from the wall clears the whole group`,
+        afterClearSweep === 0, `e=${afterClearSweep}`);
+
+      // A drag must also be speed-independent: the same gesture covered
+      // in 3 instant jumps (no pacing at all) must land on the same
+      // count as a slow paced one. The original build treated any brisk
+      // drag as a "fling" and swept the group to an extreme instead.
+      const fastGeom = await page.evaluate(() => {
+        rodState = freshState(); buildAbacus(); updateReadout();
+        const b2 = document.querySelectorAll('.rod')[8].querySelectorAll('.bead')[3].getBoundingClientRect();
+        return { x: b2.left + b2.width / 2, y0: b2.top + b2.height / 2, beadH: b2.height };
+      });
+      await page.waitForTimeout(250);
+      await page.mouse.move(fastGeom.x, fastGeom.y0);
+      await page.mouse.down();
+      for (let i = 1; i <= 3; i++) await page.mouse.move(fastGeom.x, fastGeom.y0 - fastGeom.beadH * 3 * (i / 3));
+      await page.mouse.up();
+      const afterFast = await page.evaluate(() => rodState[8].e);
+      report(`${name}: A11 a fast drag lands on the same count as a slow one (no runaway fling)`,
+        afterFast === 3, `e=${afterFast} (expected 3, same as the paced drag of bead 2)`);
+
+      // A16: in the default mode (practice, requireCheck off), no Check
+      // button is visible, and setting the correct value auto-advances
+      // with no click at all.
+      const a16 = await page.evaluate(async () => {
+        cfg.mode = 'practice'; cfg.requireCheck = false; saveCfg();
+        startGame();
+        const checkHidden = document.getElementById('checkBtn').classList.contains('hidden');
+        const before = question.text;
+        const S = E.STYLES[cfg.style];
+        String(question.answer).padStart(S.rods, '0').split('').forEach((d, i) => {
+          d = +d; rodState[i] = { h: d >= 5 ? 1 : 0, e: d % 5 };
+        });
+        onBeadMoved(); // simulates the last bead release of a drag/tap, no click on any button
+        await new Promise(r => setTimeout(r, 600)); // past the 450ms auto-check debounce
+        return { checkHidden, advanced: question.text !== before };
+      });
+      report(`${name}: A16 Check button hidden by default`, a16.checkHidden);
+      report(`${name}: A16 correct value auto-advances with no click`, a16.advanced);
+
+      // A17: an existing v1 config (saved before requireCheck/migrateCfg
+      // existed) must migrate on load without ever showing a Check button.
+      await page.evaluate(() => {
+        localStorage.setItem('abacus-cfg', JSON.stringify({ difficulty: 'easy', mode: 'flow', style: 'soroban' }));
+      });
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      const a17 = await page.evaluate(() => ({
+        checkHidden: document.getElementById('checkBtn').classList.contains('hidden'),
+        mode: cfg.mode, requireCheck: cfg.requireCheck,
+      }));
+      report(`${name}: A17 v1 cfg migrates without showing a Check button`,
+        a17.checkHidden && a17.mode === 'practice' && a17.requireCheck === false, JSON.stringify(a17));
+
+      // A13/A14: every shape x material combination renders a nonzero,
+      // correctly-tagged bead for every style, including 'auto' shape
+      // resolving to each style's traditional default.
+      const combos = await page.evaluate(() => {
+        const out = [];
+        for (const style of ['soroban', 'suanpan', 'roman', 'schoty']) {
+          for (const shape of E.SHAPES.map(s => s.id)) {
+            for (const material of E.MATERIALS.map(m => m.id)) {
+              cfg.style = style; cfg.beadShape = shape; cfg.beadMaterial = material; saveCfg();
+              rodState = freshState(); buildAbacus(); updateReadout();
+              const board = document.getElementById('board');
+              const bead = document.querySelector('.bead');
+              const rect = bead ? bead.getBoundingClientRect() : { width: 0, height: 0 };
+              const resolved = E.resolveBeadShape(style, shape);
+              if (board.dataset.beadShape !== resolved || rect.width <= 0 || rect.height <= 0) {
+                out.push(`${style}/${shape}/${material}: tag=${board.dataset.beadShape} expected=${resolved} w=${rect.width} h=${rect.height}`);
+              }
+            }
+          }
+        }
+        return out;
+      });
+      report(`${name}: A13/A14 every style x shape x material renders correctly-tagged, nonzero beads`,
+        combos.length === 0, combos.slice(0, 5).join(' | '));
+
+      // A15: bead shape, bead material and frame all persist across reload
+      await page.evaluate(() => {
+        cfg.style = 'suanpan'; cfg.beadShape = 'faceted'; cfg.beadMaterial = 'jade'; cfg.frame = 'rosewood';
+        saveCfg(); rodState = freshState(); buildAbacus(); updateReadout();
+      });
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      const a15 = await page.evaluate(() => {
+        const board = document.getElementById('board');
+        return {
+          cfgShape: cfg.beadShape, cfgMaterial: cfg.beadMaterial, cfgFrame: cfg.frame,
+          domShape: board.dataset.beadShape, domMaterial: board.dataset.beadMaterial, domFrame: board.dataset.frame,
+        };
+      });
+      report(`${name}: A15 bead shape/material/frame persist across reload`,
+        a15.cfgShape === 'faceted' && a15.cfgMaterial === 'jade' && a15.cfgFrame === 'rosewood' &&
+        a15.domShape === 'faceted' && a15.domMaterial === 'jade' && a15.domFrame === 'rosewood',
+        JSON.stringify(a15));
+
+      // D4/D10: beads are real focusable toggle buttons, and Enter/Space
+      // trigger the same prefix toggle as a tap.
+      const a11y = await page.evaluate(() => {
+        cfg.style = 'soroban'; saveCfg();
+        rodState = freshState(); buildAbacus(); updateReadout();
+        const bead = document.querySelector('#board .bead');
+        return {
+          tabIndex: bead.tabIndex, role: bead.getAttribute('role'),
+          ariaLabel: bead.getAttribute('aria-label'), ariaPressed: bead.getAttribute('aria-pressed'),
+        };
+      });
+      report(`${name}: D4 beads are focusable (tabindex 0)`, a11y.tabIndex === 0, `got ${a11y.tabIndex}`);
+      report(`${name}: D4 beads have role=button`, a11y.role === 'button', `got ${a11y.role}`);
+      report(`${name}: D4 beads have a descriptive aria-label`,
+        !!a11y.ariaLabel && a11y.ariaLabel.length > 5, `got "${a11y.ariaLabel}"`);
+      report(`${name}: D4 beads expose aria-pressed`, a11y.ariaPressed === 'false', `got ${a11y.ariaPressed}`);
+
+      const enterToggle = await page.evaluate(() => {
+        const bead = document.querySelector('#board .bead');
+        bead.focus();
+        bead.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+        return { pressed: bead.getAttribute('aria-pressed'), value: abacusValue() };
+      });
+      report(`${name}: D4 Enter on a focused bead toggles it`,
+        enterToggle.pressed === 'true' && enterToggle.value > 0, JSON.stringify(enterToggle));
+
+      // D10: arrow keys move a rod cursor, digit keys set that rod
+      // directly, C clears the whole board.
+      const kb = await page.evaluate(() => {
+        cfg.style = 'soroban'; saveCfg();
+        rodState = freshState(); buildAbacus(); updateReadout();
+      });
+      await page.keyboard.press('ArrowRight'); // cursor -> rod 0 (leftmost, 100M place)
+      for (let i = 0; i < 8; i++) await page.keyboard.press('ArrowRight'); // -> rod 8 (ones place)
+      await page.keyboard.press('7');
+      const afterDigit = await page.evaluate(() => ({ rod8: rodState[8], value: abacusValue() }));
+      report(`${name}: D10 arrow keys + digit set the cursored rod`,
+        afterDigit.value === 7 && afterDigit.rod8.h === 1 && afterDigit.rod8.e === 2, JSON.stringify(afterDigit));
+
+      await page.keyboard.press('c');
+      const afterClear = await page.evaluate(() => abacusValue());
+      report(`${name}: D10 'C' clears the board`, afterClear === 0, `got ${afterClear}`);
+
+      await checkKeyboardGuardOnSettings(page, name, {
+        serialize: () => abacusValue(),
+        keys: '5',
+        beforeType: () => { cfg.style = 'soroban'; saveCfg(); rodState = freshState(); buildAbacus(); updateReadout(); },
+      });
+
+      // D12 regression: a throttled/backgrounded tab can cause a
+      // setInterval tick to fire much later than 1000ms after the
+      // previous one. Faking a 10s jump and firing a single tick must
+      // drop the trial countdown by the full elapsed amount, not by 1 —
+      // proving the timer derives from a wall-clock timestamp rather
+      // than counting ticks.
+      const d12 = await page.evaluate(() => {
+        cfg.mode = 'trial'; cfg.trialSecs = 60; saveCfg();
+        startGame();
+        startTrialCountdown();
+        const before = trialLeft;
+        const realNow = Date.now;
+        Date.now = () => realNow() + 10000; // simulate a 10s-late tick
+        tickTrial();
+        Date.now = realNow;
+        return { before, after: trialLeft };
+      });
+      report(`${name}: D12 a single late tick drops the full elapsed time, not just 1s`,
+        d12.before - d12.after === 10, JSON.stringify(d12));
+
+      // Rotate hint: shown only when the unit is clamped to the minimum
+      // AND the viewport is portrait; dismissal persists.
+      await page.setViewportSize({ width: 390, height: 844 }); // portrait
+      const hintShown = await page.evaluate(() => {
+        localStorage.removeItem('abacus-rotate-hint-dismissed');
+        unitPx = 9; // simulate a fully-clamped fit
+        updateRotateHint();
+        return document.getElementById('rotateHint').classList.contains('show');
+      });
+      report(`${name}: rotate hint shows when clamped + portrait`, hintShown);
+
+      const hintHiddenLandscape = await page.evaluate(() => {
+        unitPx = 9;
+        // landscape: width > height, so rotating would not help
+        Object.defineProperty(window, 'innerWidth', { value: 800, configurable: true });
+        Object.defineProperty(window, 'innerHeight', { value: 400, configurable: true });
+        updateRotateHint();
+        const shown = document.getElementById('rotateHint').classList.contains('show');
+        // restore real dimensions for subsequent checks
+        Object.defineProperty(window, 'innerWidth', { value: 390, configurable: true });
+        Object.defineProperty(window, 'innerHeight', { value: 844, configurable: true });
+        return shown;
+      });
+      report(`${name}: rotate hint stays hidden when already landscape`, !hintHiddenLandscape);
+
+      const hintHiddenUnclamped = await page.evaluate(() => {
+        unitPx = 30; // not clamped
+        updateRotateHint();
+        return document.getElementById('rotateHint').classList.contains('show');
+      });
+      report(`${name}: rotate hint stays hidden when the unit isn't clamped`, !hintHiddenUnclamped);
+
+      const dismissPersists = await page.evaluate(() => {
+        unitPx = 9;
+        updateRotateHint();
+        document.getElementById('rotateHintClose').click();
+        const hiddenAfterClick = !document.getElementById('rotateHint').classList.contains('show');
+        updateRotateHint(); // a later fit pass must not re-show it
+        return { hiddenAfterClick, staysHidden: !document.getElementById('rotateHint').classList.contains('show'),
+          flag: localStorage.getItem('abacus-rotate-hint-dismissed') };
+      });
+      report(`${name}: dismissing the rotate hint persists`,
+        dismissPersists.hiddenAfterClick && dismissPersists.staysHidden && dismissPersists.flag === '1',
+        JSON.stringify(dismissPersists));
+
+      // decorative-only schoty quarter-wire: opt-in, off by default,
+      // never affects abacusValue, and disappears when turned back off.
+      const qw = await page.evaluate(() => {
+        cfg.style = 'schoty'; cfg.quarterWire = false; saveCfg();
+        rodState = freshState(); buildAbacus(); updateReadout();
+        const offRows = document.querySelectorAll('.srow.quarter-wire').length;
+
+        cfg.quarterWire = true; saveCfg(); buildAbacus();
+        const onRows = document.querySelectorAll('.srow.quarter-wire').length;
+        const decorativeBeads = document.querySelectorAll('.srow.quarter-wire .bead').length;
+        const value1 = abacusValue();
+        // clicking a decorative bead's would-be position must do nothing —
+        // it has no pointer handlers wired at all
+        const rodStateLength = rodState.length;
+
+        cfg.quarterWire = false; saveCfg(); buildAbacus();
+        const offAgainRows = document.querySelectorAll('.srow.quarter-wire').length;
+
+        return { offRows, onRows, decorativeBeads, value1, rodStateLength, offAgainRows, styleRods: E.STYLES.schoty.rods };
+      });
+      report(`${name}: quarter-wire hidden by default`, qw.offRows === 0, `got ${qw.offRows}`);
+      report(`${name}: quarter-wire renders one row of 4 static beads when enabled`,
+        qw.onRows === 1 && qw.decorativeBeads === 4, JSON.stringify(qw));
+      report(`${name}: quarter-wire never affects rodState or abacusValue`,
+        qw.rodStateLength === qw.styleRods && qw.value1 === 0, JSON.stringify(qw));
+      report(`${name}: quarter-wire disappears when turned back off`, qw.offAgainRows === 0, `got ${qw.offAgainRows}`);
+    });
+
+    await runPageSuite(browser, baseUrl, 'abacus-layout', async (page) => {
+      const name = 'abacus-layout';
+      await page.goto(`${baseUrl}/abacus.html`, { waitUntil: 'domcontentloaded' });
+
+      const viewports = [[844, 390], [390, 844], [1280, 800]];
+      const styles = ['soroban', 'suanpan', 'roman', 'schoty'];
+
+      for (const style of styles) {
+        for (const [w, h] of viewports) {
+          await page.setViewportSize({ width: w, height: h });
+          await page.evaluate((s) => {
+            cfg.style = s; saveCfg();
+            rodState = freshState();
+            buildAbacus();
+            updateReadout();
+          }, style);
+          await page.waitForTimeout(80);
+
+          const m = await page.evaluate(() => {
+            const ab = document.querySelector('.abacus').getBoundingClientRect();
+            const wrap = document.querySelector('.board-wrap');
+            const beads = [...document.querySelectorAll('.bead')];
+            const minBead = beads.length
+              ? Math.min(...beads.map(b => { const r = b.getBoundingClientRect(); return Math.min(r.width, r.height); }))
+              : 0;
+            return {
+              pct: (ab.width * ab.height) / (innerWidth * innerHeight) * 100,
+              pageScroll: document.documentElement.scrollHeight - innerHeight,
+              hScrollWrap: wrap.scrollWidth - wrap.clientWidth,
+              minBead,
+            };
+          });
+          const label = `${style}@${w}x${h}`;
+
+          // A1/A3: zero scroll in either axis
+          report(`${name}: ${label} no page scroll`, m.pageScroll <= 1, `pageScroll=${m.pageScroll}`);
+          report(`${name}: ${label} no horiz scroll in board-wrap`, m.hScrollWrap <= 0, `hScroll=${m.hScrollWrap}`);
+
+          // A2/A4/A5: 844x390 and 1280x800 need >=55%; 390x844 (portrait phone) needs >=40%
+          const isPortraitPhone = (w === 390 && h === 844);
+          const threshold = isPortraitPhone ? 40 : 55;
+          report(`${name}: ${label} area >= ${threshold}%`, m.pct >= threshold, `pct=${m.pct.toFixed(1)}`);
+
+          // A7: smallest interactive bead dimension >= 28px, at 844x390 only
+          if (w === 844 && h === 390) {
+            report(`${name}: ${label} bead >= 28px`, m.minBead >= 28, `minBead=${m.minBead.toFixed(1)}`);
+          }
+        }
+      }
     });
 
     await runPageSuite(browser, baseUrl, 'logic', async (page) => {

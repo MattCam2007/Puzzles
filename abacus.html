@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Abacus</title>
+<link rel="stylesheet" href="css/theme.css">
+<link rel="stylesheet" href="css/abacus.css">
+<link rel="stylesheet" href="css/theme-builder.css">
+</head>
+<body>
+
+<div class="header">
+  <div class="title">Abacus</div>
+  <div class="header-right">
+    <div class="score-box" id="solvedBox">
+      <div class="label">Solved</div>
+      <div class="value" id="solved">0</div>
+    </div>
+    <div class="score-box" id="timerBox">
+      <div class="label">Time</div>
+      <div class="value" id="timer" style="font-variant-numeric:tabular-nums">0:00</div>
+    </div>
+    <div class="score-box" id="bestBox">
+      <div class="label">Best</div>
+      <div class="value" id="best">–</div>
+    </div>
+    <div class="puzzle-switcher-wrap">
+      <button class="icon-btn puzzle-switcher-btn" id="puzzleSwitcherBtn" title="Switch puzzle">☰</button>
+      <div class="puzzle-dropdown" id="puzzleDropdown">
+        <a href="2048.html" class="puzzle-option">🔢 2048</a>
+        <a href="sudoku.html" class="puzzle-option">✏️ Sudoku</a>
+        <a href="kakuro.html" class="puzzle-option">➕ Kakuro</a>
+        <a href="minesweeper.html" class="puzzle-option">💣 Minesweeper</a>
+        <a href="logic.html" class="puzzle-option">🕵️ Logic Grid</a>
+        <a href="abacus.html" class="puzzle-option">🧮 Abacus</a>
+      </div>
+    </div>
+    <div class="icon-btn" id="settingsBtn" title="Settings">⚙️</div>
+  </div>
+</div>
+
+<div class="board-top-bar">
+  <div class="board-top-left">
+    <button class="btn accent" id="newGameBtn">New Game</button>
+    <select class="difficulty-select" id="modeSelect" title="Game mode">
+      <option value="freestyle">Freestyle</option>
+      <option value="practice" selected>Practice</option>
+      <option value="trial">Time Trial</option>
+    </select>
+    <select class="difficulty-select" id="difficultySelect">
+      <option value="easy" selected>Easy</option>
+      <option value="medium">Medium</option>
+      <option value="hard">Hard</option>
+      <option value="expert">Expert</option>
+    </select>
+    <div class="op-chips" title="Operations in the question mix">
+      <button class="op-chip" data-op="add" title="Addition">+</button>
+      <button class="op-chip" data-op="sub" title="Subtraction">−</button>
+      <button class="op-chip" data-op="mul" title="Multiplication">×</button>
+      <button class="op-chip" data-op="div" title="Division">÷</button>
+    </div>
+  </div>
+  <div class="board-top-right">
+    <button class="btn-top" id="guideBtn">📖 Guide</button>
+    <button class="btn-top danger" id="clearBtn">🗑 Clear</button>
+  </div>
+</div>
+
+<div class="question-bar" id="questionBar">
+  <div class="question-text" id="questionText"></div>
+  <div class="feedback" id="feedback"></div>
+</div>
+
+<div class="board-wrap">
+  <div class="board" id="board" data-frame="theme"></div>
+  <div class="readout-row">
+    <div class="readout" id="readout">0</div>
+    <div class="correct-flash" id="correctFlash">✓</div>
+  </div>
+</div>
+
+<div class="action-row" id="actionRow">
+  <button class="action-btn primary" id="checkBtn">✓ Check</button>
+  <button class="action-btn" id="revealBtn">👁 Reveal</button>
+  <button class="action-btn" id="skipBtn">⏭ Skip</button>
+</div>
+
+<!-- SETTINGS PANEL -->
+<div class="settings-backdrop" id="settingsBackdrop"></div>
+<div class="settings-panel" id="settingsPanel">
+  <div class="settings-handle"></div>
+  <div class="settings-title">Settings</div>
+
+  <div class="settings-section">
+    <div class="settings-section-label">Appearance</div>
+    <div class="pick-row" data-theme-pick="galaxy">
+      <span class="pick-icon">🌌</span>Galaxy<span class="pick-check">✓</span>
+    </div>
+    <div class="pick-row" data-theme-pick="midnight">
+      <span class="pick-icon">🌊</span>Midnight<span class="pick-check">✓</span>
+    </div>
+    <div class="pick-row" data-theme-pick="sakura">
+      <span class="pick-icon">🌸</span>Sakura<span class="pick-check">✓</span>
+    </div>
+    <div class="pick-row" data-theme-pick="terminal">
+      <span class="pick-icon">💻</span>Terminal<span class="pick-check">✓</span>
+    </div>
+    <div id="customThemesList"></div>
+    <a href="theme-builder.html" class="pick-row-link">
+      <span class="pick-icon">🎨</span>Build a theme<span class="pick-arrow">›</span>
+    </a>
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-name">Board opacity</div>
+      </div>
+      <input type="range" id="boardAlphaSlider" min="0" max="100" value="100" class="settings-slider">
+    </div>
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-name">Outdoor mode</div>
+        <div class="setting-desc">Boost contrast for bright sunlight — crisper cell borders and stronger highlighting.</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="togOutdoor">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-label">Background Image</div>
+    <div class="pick-row" id="bgUploadRow">
+      <span class="pick-icon">📁</span>Upload from device<span class="pick-check">✓</span>
+      <input type="file" accept="image/*" id="bgImageFile" style="display:none">
+    </div>
+    <div class="bg-url-row">
+      <input type="text" id="bgImageUrl" class="settings-text-input" placeholder="Paste image URL…">
+    </div>
+    <div class="pick-row" id="clearBgBtn">
+      <span class="pick-icon">✕</span>No background<span class="pick-check">✓</span>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-label">Abacus Style</div>
+    <div class="pick-row" data-abacus-pick="soroban">
+      <span class="pick-icon">🇯🇵</span>Soroban — Japanese, 1×5 + 4×1<span class="pick-check">✓</span>
+    </div>
+    <div class="pick-row" data-abacus-pick="suanpan">
+      <span class="pick-icon">🇨🇳</span>Suanpan — Chinese, 2×5 + 5×1<span class="pick-check">✓</span>
+    </div>
+    <div class="pick-row" data-abacus-pick="schoty">
+      <span class="pick-icon">🇷🇺</span>Schoty — Russian, 10 beads a wire<span class="pick-check">✓</span>
+    </div>
+    <div class="pick-row" data-abacus-pick="roman">
+      <span class="pick-icon">🏛️</span>Roman hand abacus<span class="pick-check">✓</span>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-label">Frame Finish</div>
+    <div class="pick-row" data-frame-pick="theme">
+      <span class="pick-icon">🎨</span>Match app theme<span class="pick-check">✓</span>
+    </div>
+    <div class="pick-row" data-frame-pick="wood">
+      <span class="pick-icon">🪵</span>Classic wood<span class="pick-check">✓</span>
+    </div>
+    <div class="pick-row" data-frame-pick="dark">
+      <span class="pick-icon">🖤</span>Dark lacquer<span class="pick-check">✓</span>
+    </div>
+    <div class="pick-row" data-frame-pick="brass">
+      <span class="pick-icon">🥇</span>Antique brass<span class="pick-check">✓</span>
+    </div>
+    <div class="pick-row" data-frame-pick="walnut">
+      <span class="pick-icon">🌰</span>Walnut<span class="pick-check">✓</span>
+    </div>
+    <div class="pick-row" data-frame-pick="bamboo">
+      <span class="pick-icon">🎍</span>Bamboo<span class="pick-check">✓</span>
+    </div>
+    <div class="pick-row" data-frame-pick="rosewood">
+      <span class="pick-icon">🌹</span>Rosewood<span class="pick-check">✓</span>
+    </div>
+    <div class="pick-row" data-frame-pick="slate">
+      <span class="pick-icon">🪨</span>Slate<span class="pick-check">✓</span>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-label">Bead Shape</div>
+    <div class="pick-row" data-bead-shape-pick="auto">
+      <span class="pick-icon">✨</span>Style default<span class="pick-check">✓</span>
+    </div>
+    <div class="pick-row" data-bead-shape-pick="biconical">
+      <span class="pick-icon">💠</span>Biconical<span class="pick-check">✓</span>
+    </div>
+    <div class="pick-row" data-bead-shape-pick="soft-biconical">
+      <span class="pick-icon">🔷</span>Soft biconical<span class="pick-check">✓</span>
+    </div>
+    <div class="pick-row" data-bead-shape-pick="oblate">
+      <span class="pick-icon">⬭</span>Oblate<span class="pick-check">✓</span>
+    </div>
+    <div class="pick-row" data-bead-shape-pick="sphere">
+      <span class="pick-icon">⚪</span>Sphere<span class="pick-check">✓</span>
+    </div>
+    <div class="pick-row" data-bead-shape-pick="barrel">
+      <span class="pick-icon">🛢️</span>Barrel<span class="pick-check">✓</span>
+    </div>
+    <div class="pick-row" data-bead-shape-pick="lentil">
+      <span class="pick-icon">🫘</span>Lentil<span class="pick-check">✓</span>
+    </div>
+    <div class="pick-row" data-bead-shape-pick="faceted">
+      <span class="pick-icon">💎</span>Faceted<span class="pick-check">✓</span>
+    </div>
+    <div class="pick-row" data-bead-shape-pick="pebble">
+      <span class="pick-icon">🪨</span>Pebble<span class="pick-check">✓</span>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-label">Bead Material</div>
+    <div class="pick-row" data-bead-material-pick="themed">
+      <span class="pick-icon">🎨</span>Match app theme<span class="pick-check">✓</span>
+    </div>
+    <div class="pick-row" data-bead-material-pick="dark-wood">
+      <span class="pick-icon">🟤</span>Dark wood<span class="pick-check">✓</span>
+    </div>
+    <div class="pick-row" data-bead-material-pick="light-wood">
+      <span class="pick-icon">🟠</span>Light wood<span class="pick-check">✓</span>
+    </div>
+    <div class="pick-row" data-bead-material-pick="ivory">
+      <span class="pick-icon">🤍</span>Ivory<span class="pick-check">✓</span>
+    </div>
+    <div class="pick-row" data-bead-material-pick="jade">
+      <span class="pick-icon">🟢</span>Jade<span class="pick-check">✓</span>
+    </div>
+    <div class="pick-row" data-bead-material-pick="brass">
+      <span class="pick-icon">🟡</span>Brass<span class="pick-check">✓</span>
+    </div>
+    <div class="pick-row" data-bead-material-pick="obsidian">
+      <span class="pick-icon">⚫</span>Obsidian<span class="pick-check">✓</span>
+    </div>
+    <div class="pick-row" data-bead-material-pick="amber">
+      <span class="pick-icon">🔶</span>Amber<span class="pick-check">✓</span>
+    </div>
+  </div>
+
+  <div class="settings-section" id="gameSection">
+    <div class="settings-section-label">Game (small screens)</div>
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-name">Mode &amp; difficulty</div>
+        <div class="setting-desc">Mirrors the top-bar controls — shown here when the screen is too narrow for them.</div>
+      </div>
+    </div>
+    <div class="strike-picker" id="modePicker">
+      <div class="strike-opt" data-val="freestyle">Freestyle</div>
+      <div class="strike-opt active" data-val="practice">Practice</div>
+      <div class="strike-opt" data-val="trial">Time Trial</div>
+    </div>
+    <div class="strike-picker" id="difficultyPicker">
+      <div class="strike-opt active" data-val="easy">Easy</div>
+      <div class="strike-opt" data-val="medium">Medium</div>
+      <div class="strike-opt" data-val="hard">Hard</div>
+      <div class="strike-opt" data-val="expert">Expert</div>
+    </div>
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-name">Operations</div>
+      </div>
+    </div>
+    <div class="op-chips" id="opChipsSettings" title="Operations in the question mix">
+      <button class="op-chip" data-op="add" title="Addition">+</button>
+      <button class="op-chip" data-op="sub" title="Subtraction">−</button>
+      <button class="op-chip" data-op="mul" title="Multiplication">×</button>
+      <button class="op-chip" data-op="div" title="Division">÷</button>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-label">Questions</div>
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-name">Numbers in a chain</div>
+        <div class="setting-desc">How many numbers each question strings together (2 = a + b, 4 = a + b + c + d).</div>
+      </div>
+    </div>
+    <div class="strike-picker" id="chainPicker">
+      <div class="strike-opt active" data-val="2">2</div>
+      <div class="strike-opt" data-val="3">3</div>
+      <div class="strike-opt" data-val="4">4</div>
+      <div class="strike-opt" data-val="5">5</div>
+      <div class="strike-opt" data-val="6">6</div>
+    </div>
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-name">Time trial length</div>
+        <div class="setting-desc">The countdown starts on your first bead move.</div>
+      </div>
+    </div>
+    <div class="strike-picker" id="trialPicker">
+      <div class="strike-opt" data-val="30">0:30</div>
+      <div class="strike-opt active" data-val="60">1:00</div>
+      <div class="strike-opt" data-val="120">2:00</div>
+      <div class="strike-opt" data-val="180">3:00</div>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-label">Options</div>
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-name">Confirm with a Check button</div>
+        <div class="setting-desc">Off by default: the next question appears automatically the moment the abacus reads the right answer. Turn on to confirm each answer yourself with Check.</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="togRequireCheck">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-name">Show value readout</div>
+        <div class="setting-desc">Display the number the abacus currently reads below the board. Freestyle always shows it.</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="togReadout" checked>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-name">Place-value labels</div>
+        <div class="setting-desc">Mark each rod with its place (1, 10, 100… or Roman column letters).</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="togLabels" checked>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-name">Auto-clear between questions</div>
+        <div class="setting-desc">Reset the beads to zero when a new question appears. Turn off to practise running totals.</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="togAutoClear" checked>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="setting-row" id="quarterWireRow">
+      <div class="setting-info">
+        <div class="setting-name">Quarter-kopek wire (Schoty)</div>
+        <div class="setting-desc">A decorative fifth wire some real schoty carried, for quarter-kopeks. Cosmetic only — not part of the value.</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="togQuarterWire">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+  </div>
+
+</div>
+
+<!-- TRIAL-END OVERLAY -->
+<div class="overlay" id="overlay">
+  <div class="overlay-card">
+    <h2 id="overlayTitle">⏱ Time!</h2>
+    <p id="overlayMsg"></p>
+    <button class="btn-primary" id="overlayBtn">Play Again</button>
+  </div>
+</div>
+
+<!-- GUIDE OVERLAY -->
+<div class="overlay" id="guideOverlay">
+  <div class="overlay-card guide-card">
+    <h2 id="guideTitle">Guide</h2>
+    <div class="guide-body" id="guideBody"></div>
+    <button class="btn-primary" id="guideCloseBtn">Got it</button>
+  </div>
+</div>
+
+<!-- ROTATE HINT (shown only when the board is squeezed down to its
+     minimum legible size AND the viewport is portrait — dismissible) -->
+<div class="rotate-hint" id="rotateHint">
+  <span>📱 Rotate your device for more room</span>
+  <button id="rotateHintClose" aria-label="Dismiss">✕</button>
+</div>
+
+<script src="js/common.js"></script>
+<script src="js/theme.js"></script>
+<script src="js/abacus-engine.js"></script>
+<script src="js/abacus.js"></script>
+</body>
+</html>
