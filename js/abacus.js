@@ -21,6 +21,7 @@ const DEFAULTS = {
   showReadout:  true,
   showLabels:   true,
   autoClear:    true,
+  quarterWire:  false,         // decorative-only schoty quarter-kopek wire; opt-in
 };
 
 let cfg = Object.assign({}, DEFAULTS, E.migrateCfg(loadJSON('abacus-cfg', {})));
@@ -76,6 +77,36 @@ function makeBeadAccessible(b, onActivate) {
     e.preventDefault();
     onActivate();
   });
+}
+
+/* Decorative-only schoty detail: real Russian schoty often carried a
+   short partial wire with 4 beads for quarter-kopeks, alongside the
+   full 10-bead decimal wires. Purely cosmetic — these beads are static
+   (not wired to rodState/abacusValue, no pointer/keyboard handlers) and
+   opt-in via cfg.quarterWire (default off) so it can never affect the
+   board's fitted size in the default experience. Rendered at a reduced
+   height so it's unlikely to visibly clip even when added on top of an
+   already-tight fit. */
+function buildQuarterWire(S, wUnits) {
+  const row = el('srow quarter-wire');
+  row.style.width = u(wUnits);
+  row.style.height = u(S.rowH * 0.55);
+  row.appendChild(el('wire'));
+
+  const lab = el('row-label');
+  lab.textContent = '¼';
+  lab.style.left = u(-S.labelW);
+  lab.style.width = u(S.labelW - 0.2);
+  row.appendChild(lab);
+
+  for (let i = 0; i < 4; i++) {
+    const b = el('bead decorative');
+    b.style.width = u(S.beadW * 0.6);
+    b.style.height = u(S.beadH * 0.6);
+    b.style.left = u(i * S.beadW * 0.7);
+    row.appendChild(b);
+  }
+  return row;
 }
 
 function buildAbacus() {
@@ -175,6 +206,7 @@ function buildAbacus() {
       wireRodPointerEvents(row, r);
       ab.appendChild(row);
     }
+    if (cfg.style === 'schoty' && cfg.quarterWire) ab.appendChild(buildQuarterWire(S, wUnits));
   }
   board.appendChild(ab);
   renderBeads();
@@ -232,13 +264,31 @@ function renderBeads() {
    variable changes on resize — every bead/rod/frame size is already a
    calc(var(--u) * n) expression, so no DOM rebuild is needed.
 ═══════════════════════════════════════════ */
+const FIT_OPTS = { min: 9, max: 46 };
+
 function fitAbacus() {
   const board = $('#board');
   if (!board) return;
   const box = board.getBoundingClientRect();
   if (box.width < 4 || box.height < 4) return;
-  unitPx = E.computeUnit(Math.max(0, box.width - 2), Math.max(0, box.height - 2), cfg.style, { min: 9, max: 46 });
+  unitPx = E.computeUnit(Math.max(0, box.width - 2), Math.max(0, box.height - 2), cfg.style, FIT_OPTS);
   board.style.setProperty('--u', unitPx + 'px');
+  updateRotateHint();
+}
+
+/* Portrait follow-up: rather than blocking portrait outright, show a
+   small dismissible hint suggesting landscape when the board has been
+   squeezed all the way down to the minimum legible unit — meaning
+   there's real room to gain by rotating. Only makes sense to suggest
+   when the viewport actually IS narrower than it is tall. Dismissal
+   is remembered (once you know, you know). */
+function updateRotateHint() {
+  const hint = $('#rotateHint');
+  if (!hint) return;
+  const clamped = unitPx <= FIT_OPTS.min + 0.5;
+  const isPortrait = window.innerHeight > window.innerWidth;
+  const dismissed = localStorage.getItem('abacus-rotate-hint-dismissed') === '1';
+  hint.classList.toggle('show', clamped && isPortrait && !dismissed);
 }
 
 /* ═══════════════════════════════════════════
@@ -858,6 +908,8 @@ function syncSettingsUI() {
   $('#togLabels').checked = cfg.showLabels;
   $('#togAutoClear').checked = cfg.autoClear;
   $('#togRequireCheck').checked = cfg.requireCheck;
+  $('#togQuarterWire').checked = cfg.quarterWire;
+  $('#quarterWireRow').classList.toggle('hidden', cfg.style !== 'schoty');
   $$('#chainPicker .strike-opt').forEach(o => o.classList.toggle('active', +o.dataset.val === cfg.chainLen));
   $$('#trialPicker .strike-opt').forEach(o => o.classList.toggle('active', +o.dataset.val === cfg.trialSecs));
   $$('[data-abacus-pick]').forEach(r => r.classList.toggle('selected', r.dataset.abacusPick === cfg.style));
@@ -913,6 +965,11 @@ $('#guideBtn').addEventListener('click', openGuide);
 $('#guideCloseBtn').addEventListener('click', () => $('#guideOverlay').classList.remove('show'));
 $('#guideOverlay').addEventListener('click', e => {
   if (e.target.id === 'guideOverlay') e.currentTarget.classList.remove('show');
+});
+
+$('#rotateHintClose').addEventListener('click', () => {
+  localStorage.setItem('abacus-rotate-hint-dismissed', '1');
+  $('#rotateHint').classList.remove('show');
 });
 
 $('#modeSelect').addEventListener('change', e => setMode(e.target.value));
@@ -993,6 +1050,7 @@ $$('#trialPicker .strike-opt').forEach(o => o.addEventListener('click', () => {
 onToggle('togReadout', 'showReadout', updateModeUI);
 onToggle('togLabels', 'showLabels', () => $('#board').classList.toggle('no-labels', !cfg.showLabels));
 onToggle('togAutoClear', 'autoClear');
+onToggle('togQuarterWire', 'quarterWire', buildAbacus);
 onToggle('togRequireCheck', 'requireCheck', () => { updateModeUI(); updateQuestionUI(); });
 
 /* ═══════════════════════════════════════════

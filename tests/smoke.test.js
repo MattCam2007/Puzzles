@@ -681,6 +681,78 @@ async function main() {
       });
       report(`${name}: D12 a single late tick drops the full elapsed time, not just 1s`,
         d12.before - d12.after === 10, JSON.stringify(d12));
+
+      // Rotate hint: shown only when the unit is clamped to the minimum
+      // AND the viewport is portrait; dismissal persists.
+      await page.setViewportSize({ width: 390, height: 844 }); // portrait
+      const hintShown = await page.evaluate(() => {
+        localStorage.removeItem('abacus-rotate-hint-dismissed');
+        unitPx = 9; // simulate a fully-clamped fit
+        updateRotateHint();
+        return document.getElementById('rotateHint').classList.contains('show');
+      });
+      report(`${name}: rotate hint shows when clamped + portrait`, hintShown);
+
+      const hintHiddenLandscape = await page.evaluate(() => {
+        unitPx = 9;
+        // landscape: width > height, so rotating would not help
+        Object.defineProperty(window, 'innerWidth', { value: 800, configurable: true });
+        Object.defineProperty(window, 'innerHeight', { value: 400, configurable: true });
+        updateRotateHint();
+        const shown = document.getElementById('rotateHint').classList.contains('show');
+        // restore real dimensions for subsequent checks
+        Object.defineProperty(window, 'innerWidth', { value: 390, configurable: true });
+        Object.defineProperty(window, 'innerHeight', { value: 844, configurable: true });
+        return shown;
+      });
+      report(`${name}: rotate hint stays hidden when already landscape`, !hintHiddenLandscape);
+
+      const hintHiddenUnclamped = await page.evaluate(() => {
+        unitPx = 30; // not clamped
+        updateRotateHint();
+        return document.getElementById('rotateHint').classList.contains('show');
+      });
+      report(`${name}: rotate hint stays hidden when the unit isn't clamped`, !hintHiddenUnclamped);
+
+      const dismissPersists = await page.evaluate(() => {
+        unitPx = 9;
+        updateRotateHint();
+        document.getElementById('rotateHintClose').click();
+        const hiddenAfterClick = !document.getElementById('rotateHint').classList.contains('show');
+        updateRotateHint(); // a later fit pass must not re-show it
+        return { hiddenAfterClick, staysHidden: !document.getElementById('rotateHint').classList.contains('show'),
+          flag: localStorage.getItem('abacus-rotate-hint-dismissed') };
+      });
+      report(`${name}: dismissing the rotate hint persists`,
+        dismissPersists.hiddenAfterClick && dismissPersists.staysHidden && dismissPersists.flag === '1',
+        JSON.stringify(dismissPersists));
+
+      // decorative-only schoty quarter-wire: opt-in, off by default,
+      // never affects abacusValue, and disappears when turned back off.
+      const qw = await page.evaluate(() => {
+        cfg.style = 'schoty'; cfg.quarterWire = false; saveCfg();
+        rodState = freshState(); buildAbacus(); updateReadout();
+        const offRows = document.querySelectorAll('.srow.quarter-wire').length;
+
+        cfg.quarterWire = true; saveCfg(); buildAbacus();
+        const onRows = document.querySelectorAll('.srow.quarter-wire').length;
+        const decorativeBeads = document.querySelectorAll('.srow.quarter-wire .bead').length;
+        const value1 = abacusValue();
+        // clicking a decorative bead's would-be position must do nothing —
+        // it has no pointer handlers wired at all
+        const rodStateLength = rodState.length;
+
+        cfg.quarterWire = false; saveCfg(); buildAbacus();
+        const offAgainRows = document.querySelectorAll('.srow.quarter-wire').length;
+
+        return { offRows, onRows, decorativeBeads, value1, rodStateLength, offAgainRows, styleRods: E.STYLES.schoty.rods };
+      });
+      report(`${name}: quarter-wire hidden by default`, qw.offRows === 0, `got ${qw.offRows}`);
+      report(`${name}: quarter-wire renders one row of 4 static beads when enabled`,
+        qw.onRows === 1 && qw.decorativeBeads === 4, JSON.stringify(qw));
+      report(`${name}: quarter-wire never affects rodState or abacusValue`,
+        qw.rodStateLength === qw.styleRods && qw.value1 === 0, JSON.stringify(qw));
+      report(`${name}: quarter-wire disappears when turned back off`, qw.offAgainRows === 0, `got ${qw.offAgainRows}`);
     });
 
     await runPageSuite(browser, baseUrl, 'abacus-layout', async (page) => {

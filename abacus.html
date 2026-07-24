@@ -348,6 +348,16 @@
         <span class="toggle-slider"></span>
       </label>
     </div>
+    <div class="setting-row" id="quarterWireRow">
+      <div class="setting-info">
+        <div class="setting-name">Quarter-kopek wire (Schoty)</div>
+        <div class="setting-desc">A decorative fifth wire some real schoty carried, for quarter-kopeks. Cosmetic only — not part of the value.</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="togQuarterWire">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
   </div>
 
 </div>
@@ -368,6 +378,13 @@
     <div class="guide-body" id="guideBody"></div>
     <button class="btn-primary" id="guideCloseBtn">Got it</button>
   </div>
+</div>
+
+<!-- ROTATE HINT (shown only when the board is squeezed down to its
+     minimum legible size AND the viewport is portrait — dismissible) -->
+<div class="rotate-hint" id="rotateHint">
+  <span>📱 Rotate your device for more room</span>
+  <button id="rotateHintClose" aria-label="Dismiss">✕</button>
 </div>
 
 <script src="js/common.js"></script>

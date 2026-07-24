@@ -388,6 +388,11 @@ body {
     var(--bead-alt) 55%,
     color-mix(in srgb, var(--bead-alt) 55%, black));
 }
+/* decorative-only quarter-kopek wire (opt-in, cfg.quarterWire) — static,
+   not part of rodState, so it never accepts pointer/keyboard input */
+.srow.quarter-wire { opacity: 0.65; margin-top: calc(var(--u) * 0.15); }
+.srow.quarter-wire .wire { height: calc(var(--u) * 0.05); }
+.bead.decorative { cursor: default; }
 .row-label {
   position: absolute; top: 50%; transform: translateY(-50%);
   text-align: right;
@@ -549,3 +554,25 @@ body {
   font-size: 0.78rem; color: var(--text-dim); line-height: 1.45;
   margin: 6px 0 4px;
 }
+
+/* ── ROTATE HINT ── */
+.rotate-hint {
+  /* top, not bottom: the action row / Skip button already live at the
+     bottom, and this must never sit on top of a tappable game control */
+  position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 8px); z-index: 60;
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface); border: 1px solid var(--surface3);
+  border-radius: var(--radius); padding: 8px 8px 8px 14px;
+  font-size: 0.78rem; color: var(--text-dim);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  opacity: 0; pointer-events: none;
+  transform: translate(-50%, -12px);
+  transition: opacity 0.25s, transform 0.25s;
+  max-width: calc(100vw - 24px);
+}
+.rotate-hint.show { opacity: 1; pointer-events: all; transform: translate(-50%, 0); }
+.rotate-hint button {
+  background: none; border: none; color: var(--text-muted); cursor: pointer;
+  font-size: 0.85rem; padding: 4px 6px; line-height: 1;
+}
+.rotate-hint button:active { color: var(--text); }
