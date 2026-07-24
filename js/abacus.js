@@ -8,19 +8,22 @@ const E = AbacusEngine;
    SETTINGS STATE  (persisted to localStorage)
 ═══════════════════════════════════════════ */
 const DEFAULTS = {
-  difficulty:  'easy',
-  mode:        'practice',   // freestyle | practice | flow | trial
-  style:       'soroban',    // soroban | suanpan | roman | schoty
-  frame:       'theme',      // theme | wood | dark | brass
-  ops:         { add: true, sub: true, mul: false, div: false },
-  chainLen:    2,            // operands per question: 2 = a+b, 4 = a+b+c+d
-  trialSecs:   60,
-  showReadout: true,
-  showLabels:  true,
-  autoClear:   true,
+  difficulty:   'easy',
+  mode:         'practice',   // freestyle | practice | trial
+  requireCheck: false,        // false = auto-advance the moment the abacus is right
+  style:        'soroban',    // soroban | suanpan | roman | schoty
+  frame:        'theme',      // theme | wood | dark | brass
+  beadShape:    'auto',       // Phase 5 appearance axis
+  beadMaterial: 'themed',     // Phase 5 appearance axis
+  ops:          { add: true, sub: true, mul: false, div: false },
+  chainLen:     2,            // operands per question: 2 = a+b, 4 = a+b+c+d
+  trialSecs:    60,
+  showReadout:  true,
+  showLabels:   true,
+  autoClear:    true,
 };
 
-let cfg = Object.assign({}, DEFAULTS, loadJSON('abacus-cfg', {}));
+let cfg = Object.assign({}, DEFAULTS, E.migrateCfg(loadJSON('abacus-cfg', {})));
 cfg.ops = Object.assign({}, DEFAULTS.ops, cfg.ops || {});
 function saveCfg() { saveJSON('abacus-cfg', cfg); }
 
@@ -33,7 +36,7 @@ let rodEls = [];         // DOM refs to each rod/row container (for pointer geom
 let unitPx = 30;         // px per abstract unit; kept in sync with --u by fitAbacus()
 let question = null;    // { op, answer, text }
 let solved = 0;
-let seconds = 0;        // count-up timer (practice / flow)
+let seconds = 0;        // count-up timer (practice mode)
 let trialLeft = 0;      // countdown remaining (trial)
 let trialRunning = false;
 let timerInterval = null;
@@ -414,8 +417,11 @@ function genQuestion() {
    MODES / SESSION FLOW
 ═══════════════════════════════════════════ */
 function defaultFeedback() {
-  if (cfg.mode === 'practice') return 'Set the answer on the abacus, then hit Check.';
-  if (cfg.mode === 'flow') return 'It advances by itself the moment the abacus is right.';
+  if (cfg.mode === 'practice') {
+    return cfg.requireCheck
+      ? 'Set the answer on the abacus, then hit Check.'
+      : 'It advances by itself the moment the abacus is right.';
+  }
   if (cfg.mode === 'trial') {
     if (gameOver) return '';
     return trialRunning ? 'Go!' : 'Timer starts on your first bead move.';
@@ -430,12 +436,15 @@ function updateQuestionUI() {
 
 function updateModeUI() {
   const m = cfg.mode;
-  $('#questionBar').classList.toggle('hidden', m === 'freestyle');
-  $('#actionRow').classList.toggle('hidden', m === 'freestyle');
-  $('#checkBtn').classList.toggle('hidden', m !== 'practice');
-  $('#revealBtn').classList.toggle('hidden', m !== 'practice');
-  $('#solvedBox').classList.toggle('hidden', m === 'freestyle');
-  $('#timerBox').classList.toggle('hidden', m === 'freestyle');
+  const showQuestion = m !== 'freestyle';
+  $('#questionBar').classList.toggle('hidden', !showQuestion);
+  $('#actionRow').classList.toggle('hidden', !showQuestion);
+  // Check/Reveal visibility follows requireCheck, not the mode — Skip
+  // stays available in #actionRow regardless.
+  $('#checkBtn').classList.toggle('hidden', !cfg.requireCheck);
+  $('#revealBtn').classList.toggle('hidden', !cfg.requireCheck);
+  $('#solvedBox').classList.toggle('hidden', !showQuestion);
+  $('#timerBox').classList.toggle('hidden', !showQuestion);
   $('#bestBox').classList.toggle('hidden', m !== 'trial');
   $('#readout').classList.toggle('hidden', !(cfg.showReadout || m === 'freestyle'));
 }
@@ -530,7 +539,7 @@ function startGame() {
   updateStats();
   updateTimerDisplay();
   updateBestBox();
-  if (cfg.mode === 'practice' || cfg.mode === 'flow') startTimer();
+  if (cfg.mode === 'practice') startTimer();
   saveGameState();
 }
 
@@ -545,10 +554,16 @@ function nextQuestion() {
   genQuestion();
   updateQuestionUI();
   saveGameState();
+  // D11: with autoClear off, the board can already show the new
+  // question's answer by coincidence (left over from the previous
+  // one). Check immediately so that carryover is recognised right
+  // away, instead of silently sitting there until some unrelated bead
+  // move happens to invoke flowCheck().
+  if (!cfg.autoClear) flowCheck();
 }
 
 function checkAnswer() {
-  if (!question || gameOver || checking) return;
+  if (!cfg.requireCheck || !question || gameOver || checking) return;
   const v = abacusValue();
   const bar = $('#questionBar');
   if (v === question.answer) {
@@ -558,6 +573,7 @@ function checkAnswer() {
     bar.classList.remove('wrong');
     bar.classList.add('correct');
     $('#feedback').textContent = '✓ Correct!';
+    flashCorrect();
     clearAdvance();
     advanceTimer = setTimeout(() => { advanceTimer = null; bar.classList.remove('correct'); nextQuestion(); }, 800);
   } else {
@@ -570,15 +586,33 @@ function checkAnswer() {
   saveGameState();
 }
 
+/* Deliberate "you got it" feedback shared by both the manual-Check
+   path and the auto-advance path: the frame glows green briefly and a
+   small checkmark flashes near the readout, then the next question
+   already appears. */
+function flashCorrect() {
+  const abacusEl = $('.abacus');
+  if (abacusEl) {
+    abacusEl.classList.add('correct-glow');
+    setTimeout(() => abacusEl.classList.remove('correct-glow'), 350);
+  }
+  const flash = $('#correctFlash');
+  if (flash) {
+    flash.classList.add('show');
+    setTimeout(() => flash.classList.remove('show'), 600);
+  }
+}
+
 function reveal() {
   if (!question || gameOver) return;
   $('#feedback').textContent = `Answer: ${fmt(question.answer)} — set it on the abacus, then Check or Skip.`;
 }
 
-/* auto-check (flow + trial): the value must hold for 450ms so passing
-   through the answer mid-move doesn't trigger an advance */
+/* auto-check (practice + trial, whenever requireCheck is off — the
+   default): the value must hold for 450ms so passing through the
+   answer mid-move doesn't trigger an advance */
 function flowCheck() {
-  if (!(cfg.mode === 'flow' || cfg.mode === 'trial') || !question || gameOver) return;
+  if (cfg.requireCheck || cfg.mode === 'freestyle' || !question || gameOver) return;
   if (flowTimer) { clearTimeout(flowTimer); flowTimer = null; }
   if (abacusValue() === question.answer) {
     flowTimer = setTimeout(() => {
@@ -588,6 +622,7 @@ function flowCheck() {
       updateStats();
       const bar = $('#questionBar');
       bar.classList.add('correct');
+      flashCorrect();
       setTimeout(() => bar.classList.remove('correct'), 450);
       nextQuestion();
     }, 450);
@@ -643,7 +678,7 @@ function restoreGameState() {
   updateTimerDisplay();
   updateBestBox();
 
-  if (!gameOver && (cfg.mode === 'practice' || cfg.mode === 'flow')) startTimer();
+  if (!gameOver && cfg.mode === 'practice') startTimer();
   if (cfg.mode === 'trial') {
     if (gameOver) showTrialOverlay(false);
     else if (trialLeft <= 0) endTrial();
@@ -753,6 +788,7 @@ function syncSettingsUI() {
   $('#togReadout').checked = cfg.showReadout;
   $('#togLabels').checked = cfg.showLabels;
   $('#togAutoClear').checked = cfg.autoClear;
+  $('#togRequireCheck').checked = cfg.requireCheck;
   $$('#chainPicker .strike-opt').forEach(o => o.classList.toggle('active', +o.dataset.val === cfg.chainLen));
   $$('#trialPicker .strike-opt').forEach(o => o.classList.toggle('active', +o.dataset.val === cfg.trialSecs));
   $$('[data-abacus-pick]').forEach(r => r.classList.toggle('selected', r.dataset.abacusPick === cfg.style));
@@ -868,6 +904,7 @@ $$('#trialPicker .strike-opt').forEach(o => o.addEventListener('click', () => {
 onToggle('togReadout', 'showReadout', updateModeUI);
 onToggle('togLabels', 'showLabels', () => $('#board').classList.toggle('no-labels', !cfg.showLabels));
 onToggle('togAutoClear', 'autoClear');
+onToggle('togRequireCheck', 'requireCheck', () => { updateModeUI(); updateQuestionUI(); });
 
 /* ═══ BOOT ═══ */
 syncTopBar();

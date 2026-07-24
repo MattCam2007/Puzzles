@@ -404,6 +404,43 @@ section('13. snapPositions — every result is an exact multiple of beadSize (A1
   }
 }
 
+/* ═══════════════════════════════════════════
+   PHASE 4 — migrateCfg (auto-advance by default, collapse modes)
+═══════════════════════════════════════════ */
+section('14. migrateCfg — v1 configs migrate to the v2 shape');
+{
+  const cases = [
+    [{ mode: 'flow' }, { mode: 'practice', requireCheck: false }],
+    [{ mode: 'practice' }, { mode: 'practice', requireCheck: false }],
+    [{ mode: 'trial' }, { mode: 'trial', requireCheck: false }],
+    [{ mode: 'freestyle' }, { mode: 'freestyle', requireCheck: false }],
+    [{}, { mode: 'practice', requireCheck: false }],
+    [{ mode: 'nonsense' }, { mode: 'practice', requireCheck: false }],
+  ];
+  for (const [input, expected] of cases) {
+    const got = E.migrateCfg(input);
+    check(`migrateCfg(${JSON.stringify(input)}): mode -> ${expected.mode}`, got.mode === expected.mode, `got ${got.mode}`);
+    check(`migrateCfg(${JSON.stringify(input)}): requireCheck -> ${expected.requireCheck}`,
+      got.requireCheck === expected.requireCheck, `got ${got.requireCheck}`);
+  }
+
+  // appearance keys absent in a v1 cfg get filled with sane defaults
+  const migrated = E.migrateCfg({ mode: 'practice' });
+  check('migrateCfg: beadShape defaults to "auto"', migrated.beadShape === 'auto', `got ${migrated.beadShape}`);
+  check('migrateCfg: beadMaterial defaults to "themed"', migrated.beadMaterial === 'themed', `got ${migrated.beadMaterial}`);
+
+  // idempotent: an already-migrated cfg passes through unchanged
+  const once = E.migrateCfg({ mode: 'trial' });
+  const twice = E.migrateCfg(once);
+  check('migrateCfg: idempotent', JSON.stringify(once) === JSON.stringify(twice),
+    `${JSON.stringify(once)} vs ${JSON.stringify(twice)}`);
+
+  // does not mutate the input
+  const input = { mode: 'flow' };
+  E.migrateCfg(input);
+  check('migrateCfg: does not mutate its input', input.mode === 'flow', `got ${input.mode}`);
+}
+
 /* ── summary ── */
 process.stdout.write(`\n${passed} passed, ${failed} failed\n`);
 if (failed) {

@@ -316,11 +316,33 @@
     return freePositions.map(p => Math.round(p / beadSize) * beadSize);
   }
 
+  /* ═══════════════════════════════════════════
+     CONFIG MIGRATION — collapses the v1 four-mode shape (freestyle /
+     practice / flow / trial, with practice always Check-button-gated)
+     down to three modes (freestyle / practice / trial) plus a single
+     requireCheck toggle: v1's "flow" becomes practice with
+     requireCheck: false (auto-advance), and v1's button-based practice
+     becomes practice with requireCheck: false too, since auto-advance
+     is now the default behaviour rather than a separate mode. Also
+     back-fills the Phase 5 appearance keys for a config saved before
+     they existed. Idempotent and does not mutate its input.
+  ═══════════════════════════════════════════ */
+  function migrateCfg(oldCfg) {
+    const c = Object.assign({}, oldCfg);
+    if (c.mode === 'flow') c.mode = 'practice';
+    if (c.mode !== 'freestyle' && c.mode !== 'practice' && c.mode !== 'trial') c.mode = 'practice';
+    if (typeof c.requireCheck !== 'boolean') c.requireCheck = false;
+    if (typeof c.beadShape !== 'string') c.beadShape = 'auto';
+    if (typeof c.beadMaterial !== 'string') c.beadMaterial = 'themed';
+    return c;
+  }
+
   return {
     STYLES, LEVELS, PLACE_NAMES, placeLabel,
     freshState, abacusValue, maxBoardValue, setValue, toggleBead,
     genQuestion, bestKey,
     styleUnits, computeUnit,
     beadsFromTrack, shovePositions, flingTarget, snapPositions,
+    migrateCfg,
   };
 });

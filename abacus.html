@@ -46,7 +46,6 @@
     <select class="difficulty-select" id="modeSelect" title="Game mode">
       <option value="freestyle">Freestyle</option>
       <option value="practice" selected>Practice</option>
-      <option value="flow">Auto-Check</option>
       <option value="trial">Time Trial</option>
     </select>
     <select class="difficulty-select" id="difficultySelect">
@@ -75,7 +74,10 @@
 
 <div class="board-wrap">
   <div class="board" id="board" data-frame="theme"></div>
-  <div class="readout" id="readout">0</div>
+  <div class="readout-row">
+    <div class="readout" id="readout">0</div>
+    <div class="correct-flash" id="correctFlash">✓</div>
+  </div>
 </div>
 
 <div class="action-row" id="actionRow">
@@ -183,7 +185,6 @@
     <div class="strike-picker" id="modePicker">
       <div class="strike-opt" data-val="freestyle">Freestyle</div>
       <div class="strike-opt active" data-val="practice">Practice</div>
-      <div class="strike-opt" data-val="flow">Auto-Check</div>
       <div class="strike-opt" data-val="trial">Time Trial</div>
     </div>
     <div class="strike-picker" id="difficultyPicker">
@@ -236,6 +237,16 @@
 
   <div class="settings-section">
     <div class="settings-section-label">Options</div>
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-name">Confirm with a Check button</div>
+        <div class="setting-desc">Off by default: the next question appears automatically the moment the abacus reads the right answer. Turn on to confirm each answer yourself with Check.</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="togRequireCheck">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
     <div class="setting-row">
       <div class="setting-info">
         <div class="setting-name">Show value readout</div>

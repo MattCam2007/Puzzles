@@ -510,6 +510,38 @@ async function main() {
       const afterFlick = await page.evaluate(() => rodState[8].e);
       report(`${name}: A11 fast flick sweeps past what plain quantization of the same distance would reach`,
         afterFlick > 1, `e=${afterFlick} (plain quantization of this distance alone would give 1)`);
+
+      // A16: in the default mode (practice, requireCheck off), no Check
+      // button is visible, and setting the correct value auto-advances
+      // with no click at all.
+      const a16 = await page.evaluate(async () => {
+        cfg.mode = 'practice'; cfg.requireCheck = false; saveCfg();
+        startGame();
+        const checkHidden = document.getElementById('checkBtn').classList.contains('hidden');
+        const before = question.text;
+        const S = E.STYLES[cfg.style];
+        String(question.answer).padStart(S.rods, '0').split('').forEach((d, i) => {
+          d = +d; rodState[i] = { h: d >= 5 ? 1 : 0, e: d % 5 };
+        });
+        onBeadMoved(); // simulates the last bead release of a drag/tap, no click on any button
+        await new Promise(r => setTimeout(r, 600)); // past the 450ms auto-check debounce
+        return { checkHidden, advanced: question.text !== before };
+      });
+      report(`${name}: A16 Check button hidden by default`, a16.checkHidden);
+      report(`${name}: A16 correct value auto-advances with no click`, a16.advanced);
+
+      // A17: an existing v1 config (saved before requireCheck/migrateCfg
+      // existed) must migrate on load without ever showing a Check button.
+      await page.evaluate(() => {
+        localStorage.setItem('abacus-cfg', JSON.stringify({ difficulty: 'easy', mode: 'flow', style: 'soroban' }));
+      });
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      const a17 = await page.evaluate(() => ({
+        checkHidden: document.getElementById('checkBtn').classList.contains('hidden'),
+        mode: cfg.mode, requireCheck: cfg.requireCheck,
+      }));
+      report(`${name}: A17 v1 cfg migrates without showing a Check button`,
+        a17.checkHidden && a17.mode === 'practice' && a17.requireCheck === false, JSON.stringify(a17));
     });
 
     await runPageSuite(browser, baseUrl, 'abacus-layout', async (page) => {

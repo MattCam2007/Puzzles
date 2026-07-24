@@ -288,13 +288,35 @@ body {
 .board.no-labels .row-label { color: transparent; }
 
 /* ── VALUE READOUT ── */
+.readout-row {
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+  flex: none; margin-top: 6px;
+}
 .readout {
   font-size: 1.5rem; font-weight: 800;
   font-variant-numeric: tabular-nums;
   background: var(--surface); border: 1px solid var(--surface3);
   border-radius: var(--radius-sm); padding: 6px 22px;
   color: var(--accent2); min-width: 150px; text-align: center;
-  flex: none; margin-top: 6px;
+}
+/* absolutely positioned so it never affects layout, shown or hidden */
+.correct-flash {
+  position: absolute; left: 100%; top: 50%; margin-left: 10px;
+  transform: translateY(-50%) scale(0.6);
+  font-size: 1.3rem; font-weight: 800; color: var(--success);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+}
+.correct-flash.show {
+  opacity: 1; transform: translateY(-50%) scale(1);
+}
+/* the frame's "you got it" glow */
+.abacus.correct-glow {
+  transition: box-shadow 0.15s;
+  box-shadow:
+    inset 0 2px 10px rgba(0, 0, 0, 0.35), 0 4px 16px rgba(0, 0, 0, 0.3),
+    0 0 0 3px rgba(134, 239, 172, 0.55), 0 0 28px rgba(134, 239, 172, 0.45);
 }
 
 /* ── ACTION ROW ── */
