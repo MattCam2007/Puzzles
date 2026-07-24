@@ -413,6 +413,103 @@ async function main() {
       });
       report(`${name}: D1 new-game survives pending advance timer`,
         d1.qAfterNewGame === d1.qNow, `${d1.qAfterNewGame} -> ${d1.qNow}`);
+
+      // Kinetic beads (A8-A12): freestyle soroban, ones-place rod (last
+      // rod). Earth beads' wall is at the TOP of the earth zone (nearest
+      // the beam), so moving the pointer UP (decreasing y) activates them.
+      // Grab the farthest earth bead (index 3, resting at 4*beadH since
+      // inactive) and drag it up by 1.5*beadH, landing at track position
+      // 2.5*beadH -> quantizes to count 3. Beads 0-1-2 all have to be
+      // carried along in the same gesture for that to happen.
+      await page.setViewportSize({ width: 1280, height: 800 });
+      const geom = await page.evaluate(() => {
+        cfg.mode = 'freestyle'; cfg.style = 'soroban'; saveCfg();
+        rodState = freshState(); buildAbacus(); updateReadout();
+        const rod = document.querySelectorAll('.rod')[8]; // ones place
+        const beads = rod.querySelectorAll('.bead'); // [heaven0, earth0..earth3]
+        const b3 = beads[4].getBoundingClientRect(); // earth bead index 3 (farthest)
+        return { x: b3.left + b3.width / 2, y0: b3.top + b3.height / 2, beadH: b3.height };
+      });
+
+      // deliberate, paced drag toward the wall (real waits between steps,
+      // since Playwright's `steps` interpolates position but not real
+      // time — without pacing, every synthetic drag reads as a flick)
+      await page.mouse.move(geom.x, geom.y0);
+      await page.mouse.down();
+      const target = geom.y0 - 1.5 * geom.beadH;
+      for (let i = 1; i <= 10; i++) {
+        await page.mouse.move(geom.x, geom.y0 + (target - geom.y0) * (i / 10));
+        await page.waitForTimeout(20);
+      }
+      const midValue = await page.evaluate(() => abacusValue());
+      report(`${name}: A8 value updates live during drag (before mouseup)`, midValue > 0, `midValue=${midValue}`);
+
+      await page.mouse.up();
+      const afterDrag = await page.evaluate(() => ({ e: rodState[8].e, v: abacusValue() }));
+      report(`${name}: A10 dragging the farthest bead toward the wall shoves beads 0-1-2 along with it (one gesture -> count 3)`,
+        afterDrag.e === 3 && afterDrag.v === 3, `e=${afterDrag.e} v=${afterDrag.v}`);
+
+      // A9: a plain tap (zero-distance press) still toggles a bead using
+      // the original prefix rule — grab the same rod's heaven bead
+      const heavenGeom = await page.evaluate(() => {
+        cfg.style = 'soroban'; saveCfg();
+        rodState = freshState(); buildAbacus(); updateReadout();
+        const rod = document.querySelectorAll('.rod')[8];
+        const b = rod.querySelectorAll('.bead')[0].getBoundingClientRect(); // heaven bead
+        return { x: b.left + b.width / 2, y: b.top + b.height / 2 };
+      });
+      await page.mouse.move(heavenGeom.x, heavenGeom.y);
+      await page.mouse.down();
+      await page.mouse.up(); // zero-distance press = tap
+      const afterTap = await page.evaluate(() => ({ h: rodState[8].h, v: abacusValue() }));
+      report(`${name}: A9 a plain tap still toggles the bead`, afterTap.h === 1 && afterTap.v === 5,
+        `h=${afterTap.h} v=${afterTap.v}`);
+
+      // A12: after release, adjacent beads within the same group (heaven,
+      // earth) must be spaced an exact multiple of the unit apart — no
+      // bead left visually between slots. (Spacing *across* the
+      // heaven/earth boundary isn't a clean multiple by design: there's a
+      // fixed beam-height gap between the two zones.)
+      const snapCheck = await page.evaluate(() => {
+        const rod = document.querySelectorAll('.rod')[8];
+        const uPx = parseFloat(getComputedStyle(document.getElementById('board')).getPropertyValue('--u'));
+        const beads = [...rod.querySelectorAll('.bead')];
+        const heavenTops = beads.slice(0, 1).map(b => parseFloat(getComputedStyle(b).top));
+        const earthTops = beads.slice(1).map(b => parseFloat(getComputedStyle(b).top));
+        const spacingOk = (tops) => {
+          for (let i = 0; i < tops.length - 1; i++) {
+            const diff = Math.abs(tops[i + 1] - tops[i]);
+            if (Math.abs(diff / uPx - Math.round(diff / uPx)) > 0.02) return false;
+          }
+          return true;
+        };
+        return { ok: spacingOk(heavenTops) && spacingOk(earthTops), heavenTops, earthTops, uPx };
+      });
+      report(`${name}: A12 every bead snaps to an exact multiple of the unit within its group`, snapCheck.ok,
+        JSON.stringify(snapCheck));
+
+      // A11: a fast flick — small nominal distance, but covered in a
+      // single near-instant jump (high velocity) — sweeps the whole
+      // group toward the wall, further than plain quantization of that
+      // same small distance would reach on its own.
+      const flickGeom = await page.evaluate(() => {
+        cfg.style = 'soroban'; saveCfg();
+        rodState = freshState(); buildAbacus(); updateReadout();
+        const rod = document.querySelectorAll('.rod')[8];
+        const b0 = rod.querySelectorAll('.bead')[1].getBoundingClientRect(); // earth bead 0
+        return { x: b0.left + b0.width / 2, y0: b0.top + b0.height / 2, beadH: b0.height };
+      });
+      await page.mouse.move(flickGeom.x, flickGeom.y0);
+      await page.mouse.down();
+      // moving UP (toward the earth wall) by a distance that alone would
+      // still only quantize to 1 (round(1.2)=1), covered in one jump so
+      // the measured velocity is comfortably above the fling threshold
+      // even under CI timing jitter
+      await page.mouse.move(flickGeom.x, flickGeom.y0 - 1.2 * flickGeom.beadH, { steps: 1 });
+      await page.mouse.up();
+      const afterFlick = await page.evaluate(() => rodState[8].e);
+      report(`${name}: A11 fast flick sweeps past what plain quantization of the same distance would reach`,
+        afterFlick > 1, `e=${afterFlick} (plain quantization of this distance alone would give 1)`);
     });
 
     await runPageSuite(browser, baseUrl, 'abacus-layout', async (page) => {

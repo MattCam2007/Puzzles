@@ -74,7 +74,7 @@
       };
     }
     return {
-      w: (S.beads + 4) * S.beadW + S.labelW + 2 * S.padX + 2 * S.frame,
+      w: (S.beads + 1) * S.beadW + S.labelW + 2 * S.padX + 2 * S.frame,
       h: S.rods * S.rowH + 2 * S.padY + 2 * S.frame,
     };
   }
@@ -249,10 +249,78 @@
     return `trial-${cfg.difficulty}-${cfg.trialSecs}-c${cfg.chainLen}-${opsOn}`;
   }
 
+  /* ═══════════════════════════════════════════
+     KINETIC BEADS — pure 1D track physics for one group (the heaven
+     beads on a rod, the earth beads on a rod, or one schoty row).
+     Position 0 = touching the active wall; position increases moving
+     away from it. A bead's rest position (not being dragged) is
+     index * beadSize if it's active (index < count), or
+     (index + 1) * beadSize if it's inactive — the same one-slot gap
+     js/abacus.js's renderBeads() already draws between the active and
+     inactive clusters (without it, toggling a bead would never actually
+     move it, which defeats the point of a kinetic abacus). The mapping
+     from this abstract "distance from wall" back to actual screen
+     top/left per group type is a rendering concern in js/abacus.js, not
+     here.
+  ═══════════════════════════════════════════ */
+
+  /* Continuous track position -> discrete active count. */
+  function beadsFromTrack(t, groupSize, beadSize) {
+    return clamp(Math.round(t / beadSize), 0, groupSize);
+  }
+
+  function _restPos(i, count, beadSize) {
+    return (i < count ? i : i + 1) * beadSize;
+  }
+
+  /* Free (unquantised) positions of every bead in a group — currently
+     at `count` active — while bead dragIndex is being dragged to
+     dragPos. The dragged bead follows the pointer exactly (clamped to
+     the track); beads between it and whichever wall it's moving toward
+     get shoved along so no two beads ever sit closer than beadSize
+     apart; beads on the other side (which a real abacus can't pull
+     along) stay put at their own rest position. Passing `count` (rather
+     than assuming a gapless track) means the very first frame of a drag
+     — before the pointer has moved at all — reproduces renderBeads()'s
+     rest positions exactly, so there's no phantom jump when a drag
+     begins. All arguments are primitives, so there is no shared mutable
+     state to worry about — each call returns a fresh array. */
+  function shovePositions(count, groupSize, dragIndex, dragPos, beadSize) {
+    const trackMax = groupSize * beadSize;
+    const positions = new Array(groupSize);
+    positions[dragIndex] = clamp(dragPos, 0, trackMax);
+    for (let i = dragIndex - 1; i >= 0; i--) {
+      positions[i] = Math.min(_restPos(i, count, beadSize), positions[i + 1] - beadSize);
+    }
+    for (let i = dragIndex + 1; i < groupSize; i++) {
+      positions[i] = Math.max(_restPos(i, count, beadSize), positions[i - 1] + beadSize);
+    }
+    return positions;
+  }
+
+  /* A release velocity whose magnitude clears `threshold` is a decisive
+     flick that overrides normal quantization and sweeps the whole group
+     to one end of the track: negative velocity (moving toward the wall)
+     -> fully active (groupSize); positive (moving away) -> fully
+     inactive (0). Below threshold, the count is left for the caller's
+     normal quantizer (beadsFromTrack) to decide. */
+  function flingTarget(velocity, count, groupSize, threshold) {
+    if (Math.abs(velocity) < threshold) return count;
+    return velocity < 0 ? groupSize : 0;
+  }
+
+  /* Rounds every free position to the nearest exact multiple of
+     beadSize — the rest-position grid every bead must land on after a
+     drag ends, so no bead is ever left visually between slots (A12). */
+  function snapPositions(freePositions, beadSize) {
+    return freePositions.map(p => Math.round(p / beadSize) * beadSize);
+  }
+
   return {
     STYLES, LEVELS, PLACE_NAMES, placeLabel,
     freshState, abacusValue, maxBoardValue, setValue, toggleBead,
     genQuestion, bestKey,
     styleUnits, computeUnit,
+    beadsFromTrack, shovePositions, flingTarget, snapPositions,
   };
 });

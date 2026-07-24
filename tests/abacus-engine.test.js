@@ -253,6 +253,157 @@ section('9. computeUnit — fits, clamps, maximises');
   }
 }
 
+/* ═══════════════════════════════════════════
+   PHASE 3 — kinetic beads (pure track physics)
+   A "group" (the heaven beads on a rod, the earth beads on a rod, or
+   one schoty row) is modelled as a 1D track: position 0 = touching the
+   "active" wall, position increases moving away from it. A bead's rest
+   position (when not being dragged) is index * beadSize if it's active
+   (i < count) or (index + 1) * beadSize if it's inactive — the same
+   one-slot gap js/abacus.js's renderBeads() already draws between the
+   active and inactive clusters (a real abacus's beads visibly separate
+   into two touching groups, not one continuous line — removing the gap
+   would mean toggling a bead's state never actually moves it, which
+   defeats the point of a "kinetic" abacus). shovePositions() takes the
+   group's count so its live-drag positions start out exactly equal to
+   renderBeads()'s rest positions — no phantom jump the instant a drag
+   begins, before the pointer has even moved.
+═══════════════════════════════════════════ */
+section('10. beadsFromTrack — continuous position to discrete count');
+{
+  const groupSize = 5, beadSize = 20;
+  const cases = [
+    [0, 0], [0.4 * beadSize, 0], [0.6 * beadSize, 1],
+    [2.5 * beadSize, 3], [99 * beadSize, groupSize], [-10, 0],
+  ];
+  for (const [t, expected] of cases) {
+    const got = E.beadsFromTrack(t, groupSize, beadSize);
+    check(`beadsFromTrack(${t}, ${groupSize}, ${beadSize}) === ${expected}`, got === expected, `got ${got}`);
+  }
+}
+
+section('11. shovePositions — drag physics (shove ahead, never pull behind)');
+{
+  const beadSize = 20, groupSize = 5;
+  const restPos = (i, count) => (i < count ? i : i + 1) * beadSize;
+  const trackMax = groupSize * beadSize;
+
+  // no movement yet: every bead (including the dragged one) must sit
+  // exactly at its rest position — no phantom jump the instant a drag
+  // starts, before the pointer has moved
+  {
+    for (let count = 0; count <= groupSize; count++) {
+      for (let dragIndex = 0; dragIndex < groupSize; dragIndex++) {
+        const pos = E.shovePositions(count, groupSize, dragIndex, restPos(dragIndex, count), beadSize);
+        let allAtRest = true;
+        for (let i = 0; i < groupSize; i++) {
+          if (Math.abs(pos[i] - restPos(i, count)) > 1e-9) allAtRest = false;
+        }
+        check(`shove: zero-movement matches rest exactly (count=${count}, dragIndex=${dragIndex})`, allAtRest,
+          `got ${pos} expected ${Array.from({length: groupSize}, (_, i) => restPos(i, count))}`);
+      }
+    }
+  }
+
+  // count=2 (beads 0,1 active; bead 2 rests at (2+1)*20=60): dragging
+  // bead 2 toward the wall shoves the already-active beads 0-1 inward
+  // (they get carried along), but beads 3-4 (on the far side) are
+  // untouched — you can't pull beads that are "behind" the drag
+  {
+    const pos = E.shovePositions(2, groupSize, 2, 10, beadSize);
+    check('shove-toward-wall: dragged bead sits at dragPos', pos[2] === 10, `got ${pos[2]}`);
+    check('shove-toward-wall: bead 1 shoved to dragPos - beadSize', pos[1] === -10, `got ${pos[1]}`);
+    check('shove-toward-wall: bead 0 shoved to dragPos - 2*beadSize', pos[0] === -30, `got ${pos[0]}`);
+    check('shove-toward-wall: bead 3 untouched at rest (behind, not pulled)', pos[3] === restPos(3, 2), `got ${pos[3]}`);
+    check('shove-toward-wall: bead 4 untouched at rest (behind, not pulled)', pos[4] === restPos(4, 2), `got ${pos[4]}`);
+  }
+
+  // count=3 (beads 0,1,2 active; bead 2 rests at 2*20=40): dragging bead
+  // 2 away from the wall shoves the inactive beads 3-4 outward, but
+  // beads 0-1 (already active, on the wall side) are untouched
+  {
+    const pos = E.shovePositions(3, groupSize, 2, 70, beadSize);
+    check('shove-away-from-wall: dragged bead sits at dragPos', pos[2] === 70, `got ${pos[2]}`);
+    check('shove-away-from-wall: bead 3 shoved to dragPos + beadSize', pos[3] === 90, `got ${pos[3]}`);
+    check('shove-away-from-wall: bead 4 shoved to dragPos + 2*beadSize', pos[4] === 110, `got ${pos[4]}`);
+    check('shove-away-from-wall: bead 0 untouched at rest', pos[0] === restPos(0, 3), `got ${pos[0]}`);
+    check('shove-away-from-wall: bead 1 untouched at rest', pos[1] === restPos(1, 3), `got ${pos[1]}`);
+  }
+
+  // dragPos is clamped to the track: [0, groupSize*beadSize]
+  {
+    const posLow = E.shovePositions(0, groupSize, 0, -500, beadSize);
+    check('shove: dragPos clamped below track start', posLow[0] === 0, `got ${posLow[0]}`);
+    const posHigh = E.shovePositions(0, groupSize, 4, 5000, beadSize);
+    check('shove: dragPos clamped above track end', posHigh[4] === trackMax, `got ${posHigh[4]}`);
+  }
+
+  // general properties, fuzzed across many count/groupSize/dragIndex/dragPos combos
+  {
+    let monotonicOk = true, minSpacingOk = true, exactDragOk = true;
+    for (let groupSize2 = 2; groupSize2 <= 7; groupSize2++) {
+      for (let count = 0; count <= groupSize2; count++) {
+        for (let dragIndex = 0; dragIndex < groupSize2; dragIndex++) {
+          for (let t = 0; t < 12; t++) {
+            const dragPos = -50 + t * 17.3; // sweep across and beyond the track
+            const pos = E.shovePositions(count, groupSize2, dragIndex, dragPos, beadSize);
+            for (let i = 0; i < groupSize2 - 1; i++) {
+              if (pos[i + 1] - pos[i] < beadSize - 1e-9) minSpacingOk = false;
+              if (pos[i + 1] < pos[i]) monotonicOk = false;
+            }
+            const clampedExpected = Math.max(0, Math.min(groupSize2 * beadSize, dragPos));
+            if (Math.abs(pos[dragIndex] - clampedExpected) > 1e-9) exactDragOk = false;
+          }
+        }
+      }
+    }
+    check('shove: positions always monotonic (fuzzed)', monotonicOk);
+    check('shove: adjacent spacing always >= beadSize (fuzzed)', minSpacingOk);
+    check('shove: dragged bead always at clamped dragPos (fuzzed)', exactDragOk);
+  }
+
+  // does not mutate any input (there is no mutable input object in this
+  // design — count/groupSize/dragIndex/dragPos/beadSize are all
+  // primitives — but two calls with identical primitive args must be
+  // independent arrays)
+  {
+    const a = E.shovePositions(2, groupSize, 2, 10, beadSize);
+    const b = E.shovePositions(2, groupSize, 2, 10, beadSize);
+    a[0] = 99999;
+    check('shove: returned arrays are independent (no shared mutable state)', b[0] !== 99999, `got ${b[0]}`);
+  }
+}
+
+section('12. flingTarget — decisive flick overrides normal quantization');
+{
+  const groupSize = 5, threshold = 0.5;
+  check('fling: below threshold leaves count unchanged', E.flingTarget(0.1, 2, groupSize, threshold) === 2);
+  check('fling: below threshold (negative) leaves count unchanged', E.flingTarget(-0.2, 3, groupSize, threshold) === 3);
+  check('fling: fast toward the wall (negative) -> full count', E.flingTarget(-5, 1, groupSize, threshold) === groupSize);
+  check('fling: fast away from the wall (positive) -> zero', E.flingTarget(5, 4, groupSize, threshold) === 0);
+  // spec is strictly "< threshold" stays unchanged, so a velocity
+  // exactly at the threshold already counts as decisive (fires, per the
+  // positive-velocity/away-from-wall rule -> 0), not "unchanged"
+  check('fling: velocity exactly at threshold already fires (boundary is exclusive)',
+    E.flingTarget(threshold, 2, groupSize, threshold) === 0);
+}
+
+section('13. snapPositions — every result is an exact multiple of beadSize (A12)');
+{
+  const beadSize = 20;
+  const inputs = [
+    [0, 20, 40, 60, 80],           // already exact
+    [3.2, 21.9, 38.4, 71.1, 79.9], // fuzzy, independent
+    E.shovePositions(2, 5, 2, 13.7, beadSize), // realistic drag output
+  ];
+  for (const freePositions of inputs) {
+    const snapped = E.snapPositions(freePositions, beadSize);
+    check(`snapPositions: same length as input`, snapped.length === freePositions.length);
+    const allExact = snapped.every(p => Math.abs(p / beadSize - Math.round(p / beadSize)) < 1e-9);
+    check(`snapPositions: every value is an exact multiple of beadSize`, allExact, `got ${snapped}`);
+  }
+}
+
 /* ── summary ── */
 process.stdout.write(`\n${passed} passed, ${failed} failed\n`);
 if (failed) {

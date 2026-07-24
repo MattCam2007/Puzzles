@@ -205,8 +205,10 @@ body {
   gap: calc(var(--u) * 0.08);
 }
 
-/* vertical rods (soroban / suanpan / roman) */
-.rod { position: relative; }
+/* vertical rods (soroban / suanpan / roman) — touch-action: none stops
+   a vertical finger-drag on a bead from being hijacked as a page/touch
+   scroll gesture before it's recognized as a bead drag. */
+.rod { position: relative; touch-action: none; }
 .rod .wire {
   position: absolute; left: 50%; transform: translateX(-50%);
   top: calc(var(--u) * -0.2); bottom: calc(var(--u) * -0.2); width: calc(var(--u) * 0.08);
@@ -228,10 +230,14 @@ body {
 }
 .rod .bead {
   left: 50%; transform: translateX(-50%);
-  transition: top 0.13s ease;
+  /* overshoot easing: a bead released mid-drag settles into its rest
+     slot with a small bounce, rather than a flat linear snap */
+  transition: top 0.16s cubic-bezier(.34, 1.56, .64, 1);
 }
 .bead:active { filter: brightness(1.15); }
 .bead.set { filter: saturate(1.2) brightness(1.08); }
+/* live-dragged beads track the pointer 1:1 — no transition lag */
+.bead.dragging { transition: none !important; }
 
 /* soroban beads are sharp double-cones — render as diamonds */
 .board[data-abacus="soroban"] .bead {
@@ -250,7 +256,7 @@ body {
 .board[data-abacus="roman"] .beam-seg { font-size: clamp(0.5rem, calc(var(--u) * 0.24), 0.78rem); }
 
 /* schoty rows */
-.srow { position: relative; }
+.srow { position: relative; touch-action: none; }
 .srow .wire {
   position: absolute; top: 50%; transform: translateY(-50%);
   left: calc(var(--u) * -0.1); right: calc(var(--u) * -0.1); height: calc(var(--u) * 0.08);
@@ -260,7 +266,7 @@ body {
 }
 .srow .bead {
   top: 50%; transform: translateY(-50%);
-  transition: left 0.13s ease;
+  transition: left 0.16s cubic-bezier(.34, 1.56, .64, 1);
   border-radius: 45%;
 }
 .srow .bead.mid {
@@ -375,11 +381,11 @@ body {
    readout (redundant with just looking at the beads) so the board gets
    the space it needs to stay legible and touchable. */
 @media (max-height: 480px) {
-  body { padding: 1px 8px 1px; }
-  .header { margin-bottom: 1px; }
-  .board-top-bar { margin-bottom: 1px; gap: 5px; }
-  .question-bar { margin-bottom: 1px; padding: 2px 12px; gap: 10px; }
-  .action-row { margin-top: 1px; gap: 5px; }
+  body { padding: 0 8px 0; }
+  .header { margin-bottom: 0; }
+  .board-top-bar { margin-bottom: 0; gap: 5px; }
+  .question-bar { margin-bottom: 0; padding: 1px 12px; gap: 10px; }
+  .action-row { margin-top: 0; gap: 5px; }
   .board-wrap { gap: 0; }
 
   .title { font-size: 1.05rem; }
