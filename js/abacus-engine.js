@@ -20,14 +20,33 @@
      vertical kinds: heaven beads (×5) above the beam, earth beads (×1)
      below; a bead counts when pushed toward the beam. rows kind
      (schoty): N beads per wire, a bead counts when slid to the left.
-     bw/bh/rodW/beamH/rowH are pixel geometry (legacy, fixed-size).
+
+     Geometry fields are in abstract units (1 unit = 1 bead height, see
+     styleUnits/computeUnit below), not pixels — the board is scaled to
+     fit the viewport at render time via a single CSS variable (--u).
+       beadH/beadW : bead footprint (vertical: stacking pitch × width;
+                     rows: bead diameter × horizontal pitch)
+       rodW        : per-rod horizontal pitch (vertical kind only)
+       beamH       : crossbar thickness (vertical kind only)
+       rowH        : per-row vertical pitch (rows kind only)
+       labelW      : place-label gutter width (rows kind only)
+       padX/padY   : inner padding between the frame and the beads
+       frame       : frame border thickness
   ═══════════════════════════════════════════ */
   const STYLES = {
-    soroban: { kind: 'vertical', rods: 9, heaven: 1, earth: 4, bw: 52, bh: 26, rodW: 62, beamH: 16, name: 'Soroban' },
-    suanpan: { kind: 'vertical', rods: 9, heaven: 2, earth: 5, bw: 46, bh: 24, rodW: 58, beamH: 16, name: 'Suanpan' },
-    roman:   { kind: 'vertical', rods: 7, heaven: 1, earth: 4, bw: 24, bh: 24, rodW: 46, beamH: 18, name: 'Roman',
+    soroban: { kind: 'vertical', rods: 9, heaven: 1, earth: 4,
+               beadH: 1, beadW: 2.0, rodW: 2.4, beamH: 0.62,
+               padX: 0.3, padY: 0.22, frame: 0.26, name: 'Soroban' },
+    suanpan: { kind: 'vertical', rods: 9, heaven: 2, earth: 5,
+               beadH: 1, beadW: 1.8, rodW: 2.2, beamH: 0.62,
+               padX: 0.3, padY: 0.22, frame: 0.26, name: 'Suanpan' },
+    roman:   { kind: 'vertical', rods: 7, heaven: 1, earth: 4,
+               beadH: 1, beadW: 1.0, rodW: 1.8, beamH: 0.7,
+               padX: 0.3, padY: 0.22, frame: 0.3, name: 'Roman',
                labels: ['M̅', 'C̅', 'X̅', 'M', 'C', 'X', 'I'] },
-    schoty:  { kind: 'rows', rods: 7, beads: 10, bw: 32, bh: 24, rowH: 34, name: 'Schoty' },
+    schoty:  { kind: 'rows', rods: 7, beads: 10,
+               beadH: 1, beadW: 1.25, rowH: 1.35, labelW: 1.6,
+               padX: 0.4, padY: 0.2, frame: 0.26, name: 'Schoty' },
   };
 
   const PLACE_NAMES = ['1', '10', '100', '1K', '10K', '100K', '1M', '10M', '100M'];
@@ -35,6 +54,38 @@
   function placeLabel(rodIdx, S) {
     if (S.labels) return S.labels[rodIdx];
     return PLACE_NAMES[S.rods - 1 - rodIdx] || '';
+  }
+
+  /* ═══════════════════════════════════════════
+     RESPONSIVE SCALING
+     styleUnits() reports a style's board footprint in abstract units.
+     computeUnit() finds the largest px-per-unit that fits an available
+     box without exceeding it on either axis, clamped to [min, max].
+  ═══════════════════════════════════════════ */
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+  function styleUnits(style, styles) {
+    const S = (styles || STYLES)[style];
+    if (S.kind === 'vertical') {
+      const stackH = (S.heaven + 1) * S.beadH + S.beamH + (S.earth + 1) * S.beadH;
+      return {
+        w: S.rods * S.rodW + 2 * S.padX + 2 * S.frame,
+        h: stackH + 2 * S.padY + 2 * S.frame,
+      };
+    }
+    return {
+      w: (S.beads + 4) * S.beadW + S.labelW + 2 * S.padX + 2 * S.frame,
+      h: S.rods * S.rowH + 2 * S.padY + 2 * S.frame,
+    };
+  }
+
+  function computeUnit(availW, availH, style, opts, styles) {
+    opts = opts || {};
+    const min = opts.min !== undefined ? opts.min : 9;
+    const max = opts.max !== undefined ? opts.max : 46;
+    const u = styleUnits(style, styles);
+    const raw = Math.min(availW / u.w, availH / u.h);
+    return clamp(raw, min, max);
   }
 
   /* ═══════════════════════════════════════════
@@ -202,5 +253,6 @@
     STYLES, LEVELS, PLACE_NAMES, placeLabel,
     freshState, abacusValue, maxBoardValue, setValue, toggleBead,
     genQuestion, bestKey,
+    styleUnits, computeUnit,
   };
 });

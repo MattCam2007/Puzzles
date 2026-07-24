@@ -49,10 +49,17 @@ function placeLabel(rodIdx, S) { return E.placeLabel(rodIdx, S); }
 
 /* ═══════════════════════════════════════════
    BOARD BUILD + RENDER
+   All geometry is expressed as calc(var(--u) * n) strings, where n is
+   an abstract-unit multiplier from E.STYLES and --u (px per unit) is
+   the single value fitAbacus() updates on resize. Because every size
+   and position is a live calc() expression, resizing never requires
+   rebuilding the DOM — only the --u custom property changes.
 ═══════════════════════════════════════════ */
 function el(cls) { const d = document.createElement('div'); d.className = cls; return d; }
+function u(units) { return `calc(var(--u) * ${units})`; }
 
 function buildAbacus() {
+  fitAbacus();
   const S = E.STYLES[cfg.style];
   const board = $('#board');
   board.dataset.abacus = cfg.style;
@@ -62,28 +69,30 @@ function buildAbacus() {
   beadRefs = [];
 
   const ab = el('abacus ' + (S.kind === 'vertical' ? 'vertical' : 'rows'));
+  ab.style.borderWidth = u(S.frame);
+  ab.style.padding = `${u(S.padY)} ${u(S.padX)}`;
 
   if (S.kind === 'vertical') {
-    const heavenH = (S.heaven + 1) * S.bh;
-    const earthH = (S.earth + 1) * S.bh;
-    const rodH = heavenH + S.beamH + earthH;
+    const heavenUnits = (S.heaven + 1) * S.beadH;
+    const earthUnits = (S.earth + 1) * S.beadH;
+    const rodUnits = heavenUnits + S.beamH + earthUnits;
     for (let r = 0; r < S.rods; r++) {
       const rod = el('rod');
-      rod.style.width = S.rodW + 'px';
-      rod.style.height = rodH + 'px';
+      rod.style.width = u(S.rodW);
+      rod.style.height = u(rodUnits);
       rod.appendChild(el('wire'));
 
       const beam = el('beam-seg');
-      beam.style.top = heavenH + 'px';
-      beam.style.height = S.beamH + 'px';
+      beam.style.top = u(heavenUnits);
+      beam.style.height = u(S.beamH);
       beam.textContent = placeLabel(r, S);
       rod.appendChild(beam);
 
       const refs = { h: [], e: [] };
       for (let i = 0; i < S.heaven; i++) {
         const b = el('bead');
-        b.style.width = S.bw + 'px';
-        b.style.height = S.bh + 'px';
+        b.style.width = u(S.beadW);
+        b.style.height = u(S.beadH);
         b.addEventListener('click', () => {
           const st = rodState[r];
           st.h = (i < st.h) ? i : i + 1;
@@ -94,8 +103,8 @@ function buildAbacus() {
       }
       for (let i = 0; i < S.earth; i++) {
         const b = el('bead');
-        b.style.width = S.bw + 'px';
-        b.style.height = S.bh + 'px';
+        b.style.width = u(S.beadW);
+        b.style.height = u(S.beadH);
         b.addEventListener('click', () => {
           const st = rodState[r];
           st.e = (i < st.e) ? i : i + 1;
@@ -108,23 +117,26 @@ function buildAbacus() {
       ab.appendChild(rod);
     }
   } else {
-    const W = (S.beads + 4) * S.bw;
+    const wUnits = (S.beads + 4) * S.beadW;
+    ab.style.paddingLeft = u(S.padX + S.labelW);
     for (let r = 0; r < S.rods; r++) {
       const row = el('srow');
-      row.style.width = W + 'px';
-      row.style.height = S.rowH + 'px';
+      row.style.width = u(wUnits);
+      row.style.height = u(S.rowH);
       row.appendChild(el('wire'));
 
       const lab = el('row-label');
       lab.textContent = placeLabel(r, S);
+      lab.style.left = u(-S.labelW);
+      lab.style.width = u(S.labelW - 0.2);
       row.appendChild(lab);
 
       const refs = [];
       for (let i = 0; i < S.beads; i++) {
         // the two middle beads are traditionally coloured to spot 4|5 at a glance
         const b = el('bead' + ((i === 4 || i === 5) ? ' mid' : ''));
-        b.style.width = (S.bw - 5) + 'px';
-        b.style.height = S.bh + 'px';
+        b.style.width = u(S.beadW * 0.86);
+        b.style.height = u(S.beadH);
         b.addEventListener('click', () => {
           rodState[r] = (i < rodState[r]) ? i : i + 1;
           onBeadMoved();
@@ -143,29 +155,62 @@ function buildAbacus() {
 function renderBeads() {
   const S = E.STYLES[cfg.style];
   if (S.kind === 'vertical') {
-    const heavenH = (S.heaven + 1) * S.bh;
-    const earthTop = heavenH + S.beamH;
+    const heavenUnits = (S.heaven + 1) * S.beadH;
+    const earthTopUnits = heavenUnits + S.beamH;
     for (let r = 0; r < S.rods; r++) {
       const st = rodState[r], refs = beadRefs[r];
       refs.h.forEach((b, i) => {
         // heaven bead i (0 = nearest beam): active rests on the beam
-        b.style.top = (i < st.h ? heavenH - (i + 1) * S.bh : heavenH - (i + 2) * S.bh) + 'px';
+        const topUnits = i < st.h ? heavenUnits - (i + 1) * S.beadH : heavenUnits - (i + 2) * S.beadH;
+        b.style.top = u(topUnits);
         b.classList.toggle('set', i < st.h);
       });
       refs.e.forEach((b, i) => {
-        b.style.top = (i < st.e ? earthTop + i * S.bh : earthTop + (i + 1) * S.bh) + 'px';
+        const topUnits = i < st.e ? earthTopUnits + i * S.beadH : earthTopUnits + (i + 1) * S.beadH;
+        b.style.top = u(topUnits);
         b.classList.toggle('set', i < st.e);
       });
     }
   } else {
-    const W = (S.beads + 4) * S.bw;
+    const wUnits = (S.beads + 4) * S.beadW;
     for (let r = 0; r < S.rods; r++) {
       beadRefs[r].forEach((b, i) => {
-        b.style.left = (i < rodState[r] ? i * S.bw : W - (S.beads - i) * S.bw) + 'px';
+        const leftUnits = i < rodState[r] ? i * S.beadW : wUnits - (S.beads - i) * S.beadW;
+        b.style.left = u(leftUnits);
         b.classList.toggle('set', i < rodState[r]);
       });
     }
   }
+}
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE FIT
+   Measures #board's own box (sized purely by flex allocation — see
+   css/abacus.css — never by its own content) and sets --u (px per
+   abstract unit) so the abacus fills it without overflowing on either
+   axis. A 2px safety margin absorbs sub-pixel rounding. Only the CSS
+   variable changes on resize — every bead/rod/frame size is already a
+   calc(var(--u) * n) expression, so no DOM rebuild is needed.
+═══════════════════════════════════════════ */
+function fitAbacus() {
+  const board = $('#board');
+  if (!board) return;
+  const box = board.getBoundingClientRect();
+  if (box.width < 4 || box.height < 4) return;
+  const unit = E.computeUnit(Math.max(0, box.width - 2), Math.max(0, box.height - 2), cfg.style, { min: 9, max: 46 });
+  board.style.setProperty('--u', unit + 'px');
+}
+
+let fitRaf = null;
+function scheduleFit() {
+  if (fitRaf) cancelAnimationFrame(fitRaf);
+  fitRaf = requestAnimationFrame(() => { fitRaf = null; fitAbacus(); });
+}
+window.addEventListener('resize', scheduleFit);
+window.addEventListener('orientationchange', scheduleFit);
+if (typeof ResizeObserver !== 'undefined') {
+  const boardWrapEl = document.querySelector('.board-wrap');
+  if (boardWrapEl) new ResizeObserver(scheduleFit).observe(boardWrapEl);
 }
 
 function clearAbacus() {
@@ -551,10 +596,30 @@ function onToggle(id, key, extra) {
   });
 }
 
+/* Keeps the top-bar controls (mode/difficulty select, op chips) and their
+   settings-sheet mirrors (#modePicker/#difficultyPicker/#opChipsSettings —
+   shown on narrow screens where the top bar hides them, see
+   css/abacus.css's max-width:560px query) in sync with cfg. */
 function syncTopBar() {
   $('#modeSelect').value = cfg.mode;
   $('#difficultySelect').value = cfg.difficulty;
   $$('.op-chip').forEach(c => c.classList.toggle('active', !!cfg.ops[c.dataset.op]));
+  $$('#modePicker .strike-opt').forEach(o => o.classList.toggle('active', o.dataset.val === cfg.mode));
+  $$('#difficultyPicker .strike-opt').forEach(o => o.classList.toggle('active', o.dataset.val === cfg.difficulty));
+}
+
+function setMode(mode) {
+  cfg.mode = mode;
+  saveCfg();
+  syncTopBar();
+  startGame();
+}
+
+function setDifficulty(difficulty) {
+  cfg.difficulty = difficulty;
+  saveCfg();
+  syncTopBar();
+  startGame();
 }
 
 /* ═══════════════════════════════════════════
@@ -572,16 +637,10 @@ $('#guideOverlay').addEventListener('click', e => {
   if (e.target.id === 'guideOverlay') e.currentTarget.classList.remove('show');
 });
 
-$('#modeSelect').addEventListener('change', e => {
-  cfg.mode = e.target.value;
-  saveCfg();
-  startGame();
-});
-$('#difficultySelect').addEventListener('change', e => {
-  cfg.difficulty = e.target.value;
-  saveCfg();
-  startGame();
-});
+$('#modeSelect').addEventListener('change', e => setMode(e.target.value));
+$('#difficultySelect').addEventListener('change', e => setDifficulty(e.target.value));
+$$('#modePicker .strike-opt').forEach(o => o.addEventListener('click', () => setMode(o.dataset.val)));
+$$('#difficultyPicker .strike-opt').forEach(o => o.addEventListener('click', () => setDifficulty(o.dataset.val)));
 
 $$('.op-chip').forEach(chip => chip.addEventListener('click', () => {
   const op = chip.dataset.op;

@@ -415,6 +415,57 @@ async function main() {
         d1.qAfterNewGame === d1.qNow, `${d1.qAfterNewGame} -> ${d1.qNow}`);
     });
 
+    await runPageSuite(browser, baseUrl, 'abacus-layout', async (page) => {
+      const name = 'abacus-layout';
+      await page.goto(`${baseUrl}/abacus.html`, { waitUntil: 'domcontentloaded' });
+
+      const viewports = [[844, 390], [390, 844], [1280, 800]];
+      const styles = ['soroban', 'suanpan', 'roman', 'schoty'];
+
+      for (const style of styles) {
+        for (const [w, h] of viewports) {
+          await page.setViewportSize({ width: w, height: h });
+          await page.evaluate((s) => {
+            cfg.style = s; saveCfg();
+            rodState = freshState();
+            buildAbacus();
+            updateReadout();
+          }, style);
+          await page.waitForTimeout(80);
+
+          const m = await page.evaluate(() => {
+            const ab = document.querySelector('.abacus').getBoundingClientRect();
+            const wrap = document.querySelector('.board-wrap');
+            const beads = [...document.querySelectorAll('.bead')];
+            const minBead = beads.length
+              ? Math.min(...beads.map(b => { const r = b.getBoundingClientRect(); return Math.min(r.width, r.height); }))
+              : 0;
+            return {
+              pct: (ab.width * ab.height) / (innerWidth * innerHeight) * 100,
+              pageScroll: document.documentElement.scrollHeight - innerHeight,
+              hScrollWrap: wrap.scrollWidth - wrap.clientWidth,
+              minBead,
+            };
+          });
+          const label = `${style}@${w}x${h}`;
+
+          // A1/A3: zero scroll in either axis
+          report(`${name}: ${label} no page scroll`, m.pageScroll <= 1, `pageScroll=${m.pageScroll}`);
+          report(`${name}: ${label} no horiz scroll in board-wrap`, m.hScrollWrap <= 0, `hScroll=${m.hScrollWrap}`);
+
+          // A2/A4/A5: 844x390 and 1280x800 need >=55%; 390x844 (portrait phone) needs >=40%
+          const isPortraitPhone = (w === 390 && h === 844);
+          const threshold = isPortraitPhone ? 40 : 55;
+          report(`${name}: ${label} area >= ${threshold}%`, m.pct >= threshold, `pct=${m.pct.toFixed(1)}`);
+
+          // A7: smallest interactive bead dimension >= 28px, at 844x390 only
+          if (w === 844 && h === 390) {
+            report(`${name}: ${label} bead >= 28px`, m.minBead >= 28, `minBead=${m.minBead.toFixed(1)}`);
+          }
+        }
+      }
+    });
+
     await runPageSuite(browser, baseUrl, 'logic', async (page) => {
       const name = 'logic';
       await page.goto(`${baseUrl}/logic.html`, { waitUntil: 'domcontentloaded' });

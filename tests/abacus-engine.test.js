@@ -182,6 +182,77 @@ section('7. bestKey — D2 regression: keys must not collide across chainLen/ops
     E.bestKey(base) === E.bestKey(Object.assign({}, base)));
 }
 
+/* ═══════════════════════════════════════════
+   PHASE 2 — responsive scaling (styleUnits / computeUnit)
+═══════════════════════════════════════════ */
+section('8. styleUnits — board size in abstract units');
+{
+  const soroU = E.styleUnits('soroban');
+  const suanU = E.styleUnits('suanpan');
+  check('styleUnits: suanpan is taller than soroban (more heaven+earth beads)',
+    suanU.h > soroU.h, `soroban.h=${soroU.h} suanpan.h=${suanU.h}`);
+
+  const schotyU = E.styleUnits('schoty');
+  const romanU = E.styleUnits('roman');
+  check('styleUnits: soroban (9 rods) is wider than roman (7 rods)',
+    soroU.w > romanU.w, `soroban.w=${soroU.w} roman.w=${romanU.w}`);
+  check('styleUnits: schoty has finite positive dimensions', schotyU.w > 0 && schotyU.h > 0);
+
+  for (const style of STYLE_NAMES) {
+    const u = E.styleUnits(style);
+    check(`styleUnits(${style}): positive w/h`, u.w > 0 && u.h > 0, `w=${u.w} h=${u.h}`);
+  }
+}
+
+section('9. computeUnit — fits, clamps, maximises');
+{
+  const opts = { min: 9, max: 46 };
+  for (const style of STYLE_NAMES) {
+    const u = E.styleUnits(style);
+
+    // fits: unit * dimension never exceeds the available box (+ float slop)
+    for (const [w, h] of [[800, 400], [390, 844], [1280, 800], [1024, 768]]) {
+      const unit = E.computeUnit(w, h, style, opts);
+      check(`computeUnit(${style}, ${w}x${h}): fits width`, unit * u.w <= w + 0.01,
+        `unit=${unit} w=${unit * u.w} avail=${w}`);
+      check(`computeUnit(${style}, ${w}x${h}): fits height`, unit * u.h <= h + 0.01,
+        `unit=${unit} h=${unit * u.h} avail=${h}`);
+    }
+
+    // monotonic: a strictly larger box never yields a smaller unit
+    const small = E.computeUnit(400, 300, style, opts);
+    const big = E.computeUnit(1200, 900, style, opts);
+    check(`computeUnit(${style}): monotonic in box size`, big >= small, `small=${small} big=${big}`);
+
+    // clamped
+    const tiny = E.computeUnit(10, 10, style, opts);
+    const huge = E.computeUnit(100000, 100000, style, opts);
+    check(`computeUnit(${style}): clamped to min`, tiny >= opts.min - 0.01, `got ${tiny}`);
+    check(`computeUnit(${style}): clamped to max`, huge <= opts.max + 0.01, `got ${huge}`);
+
+    // width-bound vs height-bound
+    const wideShort = E.computeUnit(4000, 300, style, opts);
+    const tallNarrow = E.computeUnit(300, 4000, style, opts);
+    check(`computeUnit(${style}): wide-short box is height-bound`,
+      Math.abs(wideShort * u.h - 300) < 0.5 || wideShort === opts.max,
+      `unit=${wideShort} h*unit=${wideShort * u.h}`);
+    check(`computeUnit(${style}): tall-narrow box is width-bound`,
+      Math.abs(tallNarrow * u.w - 300) < 0.5 || tallNarrow === opts.max,
+      `unit=${tallNarrow} w*unit=${tallNarrow * u.w}`);
+
+    // maximises: at least one axis is within 1% of exact fit for an
+    // unclamped box (avoid min/max clamp cases which needn't fill either axis)
+    const box = { w: 500, h: 350 };
+    const unit = E.computeUnit(box.w, box.h, style, opts);
+    if (unit > opts.min && unit < opts.max) {
+      const wErr = Math.abs(unit * u.w - box.w) / box.w;
+      const hErr = Math.abs(unit * u.h - box.h) / box.h;
+      check(`computeUnit(${style}): maximises at least one axis`,
+        wErr < 0.01 || hErr < 0.01, `wErr=${wErr} hErr=${hErr}`);
+    }
+  }
+}
+
 /* ── summary ── */
 process.stdout.write(`\n${passed} passed, ${failed} failed\n`);
 if (failed) {
