@@ -21,6 +21,7 @@ Puzzles/
 │   ├── theme-builder.js      ← custom theme editor UI
 │   ├── logic-engine.js       ← Logic Grid generation/solving (pure, DOM-free, Node-testable)
 │   ├── logic-packs.js        ← Logic Grid story packs (data; templated prose contract)
+│   ├── freeflow-engine.js    ← Free Flow generation + solver (pure, DOM-free, Node-testable)
 │   └── <game>.js             ← complete game logic / UI layer
 ├── data/                     ← word lists and other data files (add here)
 ├── tests/                    ← Node test suites (no deps; excluded from GitHub Pages)
@@ -28,7 +29,8 @@ Puzzles/
 ```
 
 Every game HTML loads scripts in this order: `common.js` → `theme.js` → `<game>.js`
-(Logic Grid inserts `logic-packs.js` → `logic-engine.js` before `logic.js`).
+(Logic Grid inserts `logic-packs.js` → `logic-engine.js` before `logic.js`;
+Free Flow inserts `freeflow-engine.js` before `freeflow.js`).
 
 ## Local development
 
@@ -43,6 +45,7 @@ Tests (plain Node, no dependencies):
 
 ```bash
 node tests/logic-engine.test.js   # Logic Grid engine: validity, no-guessing, packs
+node tests/freeflow-engine.test.js # Free Flow engine: partition validity, solver, unique solutions
 node tests/smoke.test.js          # headless-browser smoke suite: boots every game, checks settings/theme/reload
 ```
 

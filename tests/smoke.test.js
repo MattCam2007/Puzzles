@@ -182,7 +182,7 @@ async function main() {
     await runPageSuite(browser, baseUrl, 'index', async (page) => {
       await page.goto(`${baseUrl}/index.html`, { waitUntil: 'domcontentloaded' });
       const cardCount = await page.evaluate(() => document.querySelectorAll('.game-card').length);
-      report('index: 5 game-cards present', cardCount === 5, `got ${cardCount}`);
+      report('index: 6 game-cards present', cardCount === 6, `got ${cardCount}`);
       const tbLink = await page.evaluate(() => !!document.querySelector('a[href="theme-builder.html"]'));
       report('index: theme-builder link present', tbLink);
     });
@@ -377,6 +377,58 @@ async function main() {
         },
         serialize: () => document.getElementById('board').innerText,
       });
+    });
+
+    await runPageSuite(browser, baseUrl, 'freeflow', async (page) => {
+      const name = 'freeflow';
+      await page.goto(`${baseUrl}/freeflow.html`, { waitUntil: 'domcontentloaded' });
+      const boot = await page.evaluate(() => ({
+        canvas: !!document.querySelector('#board canvas'),
+        flows: flows.length,
+        paths: paths.length,
+        valid: FlowEngine.validate({ size, flows }).length === 0,
+      }));
+      report(`${name}: board renders`, boot.canvas && boot.flows >= 3 && boot.paths === boot.flows,
+        JSON.stringify(boot));
+      report(`${name}: live board passes engine validation`, boot.valid);
+      // the property that makes it play like Flow: exactly one way to fill it
+      const forced = await page.evaluate(
+        () => FlowEngine.countSolutions(size, FlowEngine.dotsOf(flows), 2) === 1);
+      report(`${name}: live board is uniquely solvable`, forced);
+
+      await checkOverlaySanity(page, name, '#overlay');
+      await checkSettingsAndTheme(page, name);
+
+      const serializeFlow = () => JSON.stringify({ paths, moves });
+
+      await checkStateSurvivesReload(page, name, {
+        historyKey: 'freeflow-history',
+        interact: async (p) => {
+          await p.evaluate(() => applyHint());
+        },
+        serialize: serializeFlow,
+      });
+
+      // board-size setting: pick 5 in settings, board regenerates at 5×5
+      await page.click('#settingsBtn');
+      await page.click('#sizePicker .strike-opt[data-val="5"]');
+      const sizeApplied = await page.evaluate(() => size === 5 && flows.every(f => f.cells.every(c => c < 25)));
+      report(`${name}: board size setting applies`, sizeApplied);
+      await page.evaluate(() => document.getElementById('settingsBackdrop').click());
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      const sizePersisted = await page.evaluate(() => size === 5 && JSON.parse(localStorage.getItem('freeflow-cfg')).boardSize === 5);
+      report(`${name}: board size persists after reload`, sizePersisted);
+
+      // ends the game — keep last. Hints route every flow along the
+      // generated solution, which also fills the board, so this must win.
+      await page.evaluate(() => { for (let i = 0; i < flows.length; i++) applyHint(); });
+      await page.waitForTimeout(600); // win overlay appears after a short delay
+      const won = await page.evaluate(() => gameOver && document.getElementById('overlay').classList.contains('show'));
+      report(`${name}: hints solve to a win`, won);
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await page.waitForTimeout(300);
+      const wonAfter = await page.evaluate(() => gameOver && document.getElementById('overlay').classList.contains('show'));
+      report(`${name}: win state survives reload`, wonAfter);
     });
   } finally {
     await browser.close();
