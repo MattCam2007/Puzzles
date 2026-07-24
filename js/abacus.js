@@ -1,4 +1,10 @@
 /* ═══════════════════════════════════════════
+   ENGINE — pure logic lives in js/abacus-engine.js (loaded before this
+   file). This module is the DOM/UI layer only.
+═══════════════════════════════════════════ */
+const E = AbacusEngine;
+
+/* ═══════════════════════════════════════════
    SETTINGS STATE  (persisted to localStorage)
 ═══════════════════════════════════════════ */
 const DEFAULTS = {
@@ -19,79 +25,27 @@ cfg.ops = Object.assign({}, DEFAULTS.ops, cfg.ops || {});
 function saveCfg() { saveJSON('abacus-cfg', cfg); }
 
 /* ═══════════════════════════════════════════
-   ABACUS STYLES
-   vertical kinds: heaven beads (×5) above the beam, earth beads (×1)
-   below; a bead counts when pushed toward the beam. rows kind (schoty):
-   10 beads per wire, a bead counts when slid to the left.
-   Bead geometry lives here (px) because positions are computed in JS.
-═══════════════════════════════════════════ */
-const STYLES = {
-  soroban: { kind: 'vertical', rods: 9, heaven: 1, earth: 4, bw: 52, bh: 26, rodW: 62, beamH: 16, name: 'Soroban' },
-  suanpan: { kind: 'vertical', rods: 9, heaven: 2, earth: 5, bw: 46, bh: 24, rodW: 58, beamH: 16, name: 'Suanpan' },
-  roman:   { kind: 'vertical', rods: 7, heaven: 1, earth: 4, bw: 24, bh: 24, rodW: 46, beamH: 18, name: 'Roman',
-             labels: ['M̅', 'C̅', 'X̅', 'M', 'C', 'X', 'I'] },
-  schoty:  { kind: 'rows', rods: 7, beads: 10, bw: 32, bh: 24, rowH: 34, name: 'Schoty' },
-};
-
-const PLACE_NAMES = ['1', '10', '100', '1K', '10K', '100K', '1M', '10M', '100M'];
-
-function placeLabel(rodIdx, S) {
-  if (S.labels) return S.labels[rodIdx];
-  return PLACE_NAMES[S.rods - 1 - rodIdx] || '';
-}
-
-/* ═══════════════════════════════════════════
-   DIFFICULTY LEVELS
-   add: operand range for +/− chains. mul: range of the first two
-   factors; mulChain: range of extra chain factors (kept small so long
-   chains stay on the board). div: divisor range; divAns: quotient range
-   (division is built backwards so it always divides evenly).
-═══════════════════════════════════════════ */
-const LEVELS = {
-  easy:   { add: [1, 9],      mul: [2, 5],  mulChain: [2, 3], div: [2, 5],  divAns: [1, 9]   },
-  medium: { add: [1, 99],     mul: [2, 9],  mulChain: [2, 4], div: [2, 9],  divAns: [2, 12]  },
-  hard:   { add: [10, 999],   mul: [3, 12], mulChain: [2, 5], div: [3, 12], divAns: [3, 25]  },
-  expert: { add: [100, 9999], mul: [6, 25], mulChain: [2, 6], div: [4, 20], divAns: [10, 99] },
-};
-
-/* ═══════════════════════════════════════════
    GAME STATE
 ═══════════════════════════════════════════ */
 let rodState = [];      // vertical: [{h, e}] active-bead counts; rows: [count]
 let beadRefs = [];      // DOM refs, same shape as rodState
 let question = null;    // { op, answer, text }
-let solved = 0, attempts = 0;
+let solved = 0;
 let seconds = 0;        // count-up timer (practice / flow)
 let trialLeft = 0;      // countdown remaining (trial)
 let trialRunning = false;
 let timerInterval = null;
 let flowTimer = null;   // debounce for auto-check confirmation
+let advanceTimer = null; // debounce for practice-mode correct-answer advance (D1 fix)
 let gameOver = false;   // trial ended
 let checking = false;   // practice: correct-flash in progress
 
-function randInt(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
-function rr(range) { return randInt(range[0], range[1]); }
 function fmt(n) { return n.toLocaleString('en-US'); }
 
-function freshState() {
-  const S = STYLES[cfg.style];
-  return S.kind === 'vertical'
-    ? Array.from({ length: S.rods }, () => ({ h: 0, e: 0 }))
-    : Array.from({ length: S.rods }, () => 0);
-}
-
-function abacusValue() {
-  const S = STYLES[cfg.style];
-  let v = 0;
-  for (let r = 0; r < S.rods; r++) {
-    const place = S.rods - 1 - r;
-    const digit = S.kind === 'vertical' ? rodState[r].h * 5 + rodState[r].e : rodState[r];
-    v += digit * Math.pow(10, place);
-  }
-  return v;
-}
-
-function maxBoardValue() { return Math.pow(10, STYLES[cfg.style].rods) - 1; }
+function freshState() { return E.freshState(cfg.style); }
+function abacusValue() { return E.abacusValue(rodState, cfg.style); }
+function maxBoardValue() { return E.maxBoardValue(cfg.style); }
+function placeLabel(rodIdx, S) { return E.placeLabel(rodIdx, S); }
 
 /* ═══════════════════════════════════════════
    BOARD BUILD + RENDER
@@ -99,7 +53,7 @@ function maxBoardValue() { return Math.pow(10, STYLES[cfg.style].rods) - 1; }
 function el(cls) { const d = document.createElement('div'); d.className = cls; return d; }
 
 function buildAbacus() {
-  const S = STYLES[cfg.style];
+  const S = E.STYLES[cfg.style];
   const board = $('#board');
   board.dataset.abacus = cfg.style;
   board.dataset.frame = cfg.frame;
@@ -187,7 +141,7 @@ function buildAbacus() {
 }
 
 function renderBeads() {
-  const S = STYLES[cfg.style];
+  const S = E.STYLES[cfg.style];
   if (S.kind === 'vertical') {
     const heavenH = (S.heaven + 1) * S.bh;
     const earthTop = heavenH + S.beamH;
@@ -234,50 +188,10 @@ function updateReadout() {
 }
 
 /* ═══════════════════════════════════════════
-   QUESTION GENERATION
+   QUESTION GENERATION — delegates to the pure engine (js/abacus-engine.js)
 ═══════════════════════════════════════════ */
 function genQuestion() {
-  const enabled = ['add', 'sub', 'mul', 'div'].filter(o => cfg.ops[o]);
-  const op = enabled.length ? enabled[randInt(0, enabled.length - 1)] : 'add';
-  const L = LEVELS[cfg.difficulty] || LEVELS.easy;
-  const n = Math.max(2, cfg.chainLen);
-  const cap = maxBoardValue();
-  let nums = [], answer = 0, sym = '';
-
-  if (op === 'add') {
-    for (let i = 0; i < n; i++) nums.push(rr(L.add));
-    answer = nums.reduce((a, b) => a + b, 0);
-    sym = ' + ';
-  } else if (op === 'sub') {
-    // start is padded above the sum of the terms so the answer stays ≥ 1
-    const terms = [];
-    for (let i = 0; i < n - 1; i++) terms.push(rr(L.add));
-    const tsum = terms.reduce((a, b) => a + b, 0);
-    const start = tsum + rr(L.add);
-    nums = [start, ...terms];
-    answer = start - tsum;
-    sym = ' − ';
-  } else if (op === 'mul') {
-    for (let t = 0; t < 40; t++) {
-      nums = [rr(L.mul), rr(L.mul)];
-      for (let i = 2; i < n; i++) nums.push(rr(L.mulChain));
-      answer = nums.reduce((a, b) => a * b, 1);
-      if (answer <= cap) break;
-    }
-    sym = ' × ';
-  } else {
-    // built backwards: quotient × divisors = dividend, so it always divides evenly
-    for (let t = 0; t < 40; t++) {
-      answer = rr(L.divAns);
-      const divs = [rr(L.div)];
-      for (let i = 2; i < n; i++) divs.push(rr(L.mulChain));
-      const start = answer * divs.reduce((a, b) => a * b, 1);
-      if (start <= cap) { nums = [start, ...divs]; break; }
-    }
-    sym = ' ÷ ';
-  }
-
-  question = { op, answer, text: nums.map(fmt).join(sym) + ' =' };
+  question = E.genQuestion(cfg, Math.random);
 }
 
 /* ═══════════════════════════════════════════
@@ -316,7 +230,7 @@ function updateTimerDisplay() {
   $('#timer').textContent = formatTime(cfg.mode === 'trial' ? Math.max(0, trialLeft) : seconds);
 }
 
-function bestKey() { return `trial-${cfg.difficulty}-${cfg.trialSecs}`; }
+function bestKey() { return E.bestKey(cfg); }
 
 function updateBestBox() {
   const b = loadJSON('abacus-best', {})[bestKey()];
@@ -325,6 +239,14 @@ function updateBestBox() {
 
 function stopTimer() {
   if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+}
+
+/* D1 fix: checkAnswer()'s correct-answer advance is debounced by 800ms.
+   Without this, leaving that window open (e.g. hitting New Game right
+   after answering correctly) lets the orphaned timeout fire nextQuestion()
+   later and silently swap out the question the user is now looking at. */
+function clearAdvance() {
+  if (advanceTimer) { clearTimeout(advanceTimer); advanceTimer = null; }
 }
 
 function startTimer() {
@@ -375,10 +297,11 @@ function hideOverlay() { $('#overlay').classList.remove('show'); }
 function startGame() {
   gameOver = false;
   checking = false;
-  solved = 0; attempts = 0; seconds = 0;
+  solved = 0; seconds = 0;
   trialLeft = cfg.trialSecs;
   trialRunning = false;
   if (flowTimer) { clearTimeout(flowTimer); flowTimer = null; }
+  clearAdvance();
   stopTimer();
   hideOverlay();
   rodState = freshState();
@@ -397,6 +320,7 @@ function startGame() {
 
 function nextQuestion() {
   checking = false;
+  clearAdvance();
   if (cfg.autoClear) {
     rodState = freshState();
     renderBeads();
@@ -409,7 +333,6 @@ function nextQuestion() {
 
 function checkAnswer() {
   if (!question || gameOver || checking) return;
-  attempts++;
   const v = abacusValue();
   const bar = $('#questionBar');
   if (v === question.answer) {
@@ -419,7 +342,8 @@ function checkAnswer() {
     bar.classList.remove('wrong');
     bar.classList.add('correct');
     $('#feedback').textContent = '✓ Correct!';
-    setTimeout(() => { bar.classList.remove('correct'); nextQuestion(); }, 800);
+    clearAdvance();
+    advanceTimer = setTimeout(() => { advanceTimer = null; bar.classList.remove('correct'); nextQuestion(); }, 800);
   } else {
     bar.classList.remove('wrong');
     void bar.offsetWidth; /* restart the shake animation */
@@ -445,7 +369,6 @@ function flowCheck() {
       flowTimer = null;
       if (gameOver) return;
       solved++;
-      attempts++;
       updateStats();
       const bar = $('#questionBar');
       bar.classList.add('correct');
@@ -457,14 +380,17 @@ function flowCheck() {
 
 /* ═══════════════════════════════════════════
    PERSIST + RESTORE
+   D7 fix: saveGameState() runs on every bead move, so it writes a
+   single-entry array directly instead of pushHistory()'s 20-entry ring
+   buffer (only the latest snapshot is ever read back).
 ═══════════════════════════════════════════ */
 function saveGameState() {
-  pushHistory('abacus-history', {
+  saveJSON('abacus-history', [{
     style: cfg.style, mode: cfg.mode,
     rodState, question,
-    solved, attempts, seconds, trialLeft,
+    solved, seconds, trialLeft,
     trialStarted: trialRunning, gameOver,
-  });
+  }]);
 }
 
 function validState(s, S) {
@@ -480,14 +406,13 @@ function restoreGameState() {
   const h = loadJSON('abacus-history', []);
   if (!h.length) return false;
   const s = h[h.length - 1];
-  const S = STYLES[cfg.style];
+  const S = E.STYLES[cfg.style];
   if (!s || s.style !== cfg.style || s.mode !== cfg.mode) return false;
   if (!validState(s.rodState, S)) return false;
 
   rodState = s.rodState;
   question = (s.question && typeof s.question.answer === 'number') ? s.question : null;
   solved = s.solved | 0;
-  attempts = s.attempts | 0;
   seconds = s.seconds | 0;
   trialLeft = typeof s.trialLeft === 'number' ? s.trialLeft : cfg.trialSecs;
   gameOver = !!s.gameOver;

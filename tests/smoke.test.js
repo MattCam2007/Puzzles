@@ -393,6 +393,26 @@ async function main() {
       const schotyAfter = await page.evaluate(() => document.querySelectorAll('#board .srow .bead').length);
       report(`${name}: abacus style persists after reload`, cfgStyle === 'schoty' && schotyAfter === 70,
         `style=${cfgStyle} beads=${schotyAfter}`);
+
+      // D1 regression: an orphaned checkAnswer() advance timer must not
+      // fire after New Game and silently swap the question the user is
+      // now looking at.
+      const d1 = await page.evaluate(async () => {
+        cfg.style = 'soroban'; cfg.mode = 'practice'; cfg.requireCheck = true; saveCfg();
+        startGame();
+        const S = E.STYLES[cfg.style];
+        String(question.answer).padStart(S.rods, '0').split('').forEach((d, i) => {
+          d = +d; rodState[i] = { h: d >= 5 ? 1 : 0, e: d % 5 };
+        });
+        renderBeads();
+        checkAnswer(); // starts the 800ms advance timer
+        startGame();   // simulates hitting New Game immediately
+        const qAfterNewGame = question.text;
+        await new Promise(r => setTimeout(r, 1000)); // let the old timer's window pass
+        return { qAfterNewGame, qNow: question.text };
+      });
+      report(`${name}: D1 new-game survives pending advance timer`,
+        d1.qAfterNewGame === d1.qNow, `${d1.qAfterNewGame} -> ${d1.qNow}`);
     });
 
     await runPageSuite(browser, baseUrl, 'logic', async (page) => {
