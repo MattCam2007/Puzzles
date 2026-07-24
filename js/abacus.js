@@ -63,6 +63,21 @@ function placeLabel(rodIdx, S) { return E.placeLabel(rodIdx, S); }
 function el(cls) { const d = document.createElement('div'); d.className = cls; return d; }
 function u(units) { return `calc(var(--u) * ${units})`; }
 
+/* D4 fix: beads were plain unfocusable <div>s — invisible to assistive
+   tech and keyboard users. Every bead is now a real toggle button
+   (tabindex, role, aria-pressed); Enter/Space fire the same
+   prefix-toggle logic as a tap. Descriptive aria-label text is filled
+   in live by renderBeads(), since it depends on current state. */
+function makeBeadAccessible(b, onActivate) {
+  b.tabIndex = 0;
+  b.setAttribute('role', 'button');
+  b.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    onActivate();
+  });
+}
+
 function buildAbacus() {
   fitAbacus();
   const S = E.STYLES[cfg.style];
@@ -75,6 +90,7 @@ function buildAbacus() {
   board.innerHTML = '';
   beadRefs = [];
   rodEls = [];
+  keyCursor = null; // rebuilt DOM invalidates any previous rod-cursor index
 
   const ab = el('abacus ' + (S.kind === 'vertical' ? 'vertical' : 'rows'));
   ab.style.borderWidth = u(S.frame);
@@ -101,6 +117,11 @@ function buildAbacus() {
         const b = el('bead');
         b.style.width = u(S.beadW);
         b.style.height = u(S.beadH);
+        makeBeadAccessible(b, () => {
+          const st = rodState[r];
+          st.h = (i < st.h) ? i : i + 1;
+          onBeadMoved();
+        });
         refs.h.push(b);
         rod.appendChild(b);
       }
@@ -108,6 +129,11 @@ function buildAbacus() {
         const b = el('bead');
         b.style.width = u(S.beadW);
         b.style.height = u(S.beadH);
+        makeBeadAccessible(b, () => {
+          const st = rodState[r];
+          st.e = (i < st.e) ? i : i + 1;
+          onBeadMoved();
+        });
         refs.e.push(b);
         rod.appendChild(b);
       }
@@ -137,6 +163,10 @@ function buildAbacus() {
         const b = el('bead' + ((i === 4 || i === 5) ? ' mid' : ''));
         b.style.width = u(S.beadW * 0.86);
         b.style.height = u(S.beadH);
+        makeBeadAccessible(b, () => {
+          rodState[r] = (i < rodState[r]) ? i : i + 1;
+          onBeadMoved();
+        });
         refs.push(b);
         row.appendChild(b);
       }
@@ -150,6 +180,12 @@ function buildAbacus() {
   renderBeads();
 }
 
+function setBeadA11y(b, active, label) {
+  b.classList.toggle('set', active);
+  b.setAttribute('aria-pressed', active ? 'true' : 'false');
+  b.setAttribute('aria-label', label);
+}
+
 function renderBeads() {
   const S = E.STYLES[cfg.style];
   if (S.kind === 'vertical') {
@@ -157,25 +193,31 @@ function renderBeads() {
     const earthTopUnits = heavenUnits + S.beamH;
     for (let r = 0; r < S.rods; r++) {
       const st = rodState[r], refs = beadRefs[r];
+      const place = placeLabel(r, S);
+      const digit = st.h * 5 + st.e;
       refs.h.forEach((b, i) => {
         // heaven bead i (0 = nearest beam): active rests on the beam
         const topUnits = i < st.h ? heavenUnits - (i + 1) * S.beadH : heavenUnits - (i + 2) * S.beadH;
         b.style.top = u(topUnits);
-        b.classList.toggle('set', i < st.h);
+        setBeadA11y(b, i < st.h,
+          `${place} rod reads ${digit}. Heaven bead ${i + 1} of ${S.heaven}, ${i < st.h ? 'active' : 'inactive'}.`);
       });
       refs.e.forEach((b, i) => {
         const topUnits = i < st.e ? earthTopUnits + i * S.beadH : earthTopUnits + (i + 1) * S.beadH;
         b.style.top = u(topUnits);
-        b.classList.toggle('set', i < st.e);
+        setBeadA11y(b, i < st.e,
+          `${place} rod reads ${digit}. Earth bead ${i + 1} of ${S.earth}, ${i < st.e ? 'active' : 'inactive'}.`);
       });
     }
   } else {
     const wUnits = (S.beads + 1) * S.beadW; // +1 slot reserved for the inactive-cluster gap
     for (let r = 0; r < S.rods; r++) {
+      const place = placeLabel(r, S);
       beadRefs[r].forEach((b, i) => {
         const leftUnits = i < rodState[r] ? i * S.beadW : wUnits - (S.beads - i) * S.beadW;
         b.style.left = u(leftUnits);
-        b.classList.toggle('set', i < rodState[r]);
+        setBeadA11y(b, i < rodState[r],
+          `${place} rod reads ${rodState[r]}. Bead ${i + 1} of ${S.beads}, ${i < rodState[r] ? 'active' : 'inactive'}.`);
       });
     }
   }
@@ -476,25 +518,50 @@ function clearAdvance() {
   if (advanceTimer) { clearTimeout(advanceTimer); advanceTimer = null; }
 }
 
+/* D12 fix: both timers derive elapsed time from a wall-clock timestamp
+   instead of counting setInterval ticks. A tick counter loses time
+   whenever the browser throttles a backgrounded/inactive tab (Chrome
+   commonly drops backgrounded timers to ~1 tick/minute) — the display
+   would silently fall behind real elapsed time and a trial could run
+   well past its nominal length. Deriving from Date.now() means the
+   moment the tab is foregrounded again and a tick finally fires, the
+   catch-up is exact — tickTimer()/tickTrial() are pulled out as their
+   own functions (rather than inline in startTimer()/startTrialCountdown())
+   so a test can invoke a single tick deterministically after faking a
+   large time jump. */
+let timerStartedAt = null;
+let secondsAtStart = 0;
+
+function tickTimer() {
+  seconds = secondsAtStart + Math.floor((Date.now() - timerStartedAt) / 1000);
+  updateTimerDisplay();
+  if (seconds % 5 === 0) saveGameState();
+}
+
 function startTimer() {
   stopTimer();
-  timerInterval = setInterval(() => {
-    seconds++;
-    updateTimerDisplay();
-    if (seconds % 5 === 0) saveGameState();
-  }, 1000);
+  timerStartedAt = Date.now();
+  secondsAtStart = seconds;
+  timerInterval = setInterval(tickTimer, 1000);
+}
+
+let trialStartedAt = null;
+let trialLeftAtStart = 0;
+
+function tickTrial() {
+  trialLeft = Math.max(0, trialLeftAtStart - Math.floor((Date.now() - trialStartedAt) / 1000));
+  updateTimerDisplay();
+  if (trialLeft <= 0) { endTrial(); return; }
+  saveGameState();
 }
 
 function startTrialCountdown() {
   trialRunning = true;
   $('#feedback').textContent = 'Go!';
   stopTimer();
-  timerInterval = setInterval(() => {
-    trialLeft--;
-    updateTimerDisplay();
-    if (trialLeft <= 0) endTrial();
-    else if (trialLeft % 5 === 0) saveGameState();
-  }, 1000);
+  trialStartedAt = Date.now();
+  trialLeftAtStart = trialLeft;
+  timerInterval = setInterval(tickTrial, 1000);
 }
 
 function endTrial() {
@@ -870,9 +937,13 @@ $$('.op-chip').forEach(chip => chip.addEventListener('click', () => {
 
 $$('[data-abacus-pick]').forEach(r => r.addEventListener('click', () => {
   if (cfg.style === r.dataset.abacusPick) return;
+  // D3: preserve the board's value across a style switch instead of
+  // silently wiping it — clamp to the new style's capacity if it
+  // doesn't fit (e.g. switching a 9-rod board down to 7-rod roman/schoty).
+  const oldValue = abacusValue();
   cfg.style = r.dataset.abacusPick;
   saveCfg();
-  rodState = freshState();
+  rodState = E.setValue(Math.min(oldValue, E.maxBoardValue(cfg.style)), cfg.style);
   buildAbacus();
   updateReadout();
   syncSettingsUI();
@@ -923,6 +994,57 @@ onToggle('togReadout', 'showReadout', updateModeUI);
 onToggle('togLabels', 'showLabels', () => $('#board').classList.toggle('no-labels', !cfg.showLabels));
 onToggle('togAutoClear', 'autoClear');
 onToggle('togRequireCheck', 'requireCheck', () => { updateModeUI(); updateQuestionUI(); });
+
+/* ═══════════════════════════════════════════
+   KEYBOARD (D10 fix)
+   Arrow keys move a highlighted rod cursor; digit keys 0-9 set that
+   rod directly to the matching decimal digit; C clears the board.
+   This is a fast path for sighted keyboard users on top of (not
+   instead of) the per-bead Tab/Enter/Space toggling wired in
+   makeBeadAccessible() above, which is what screen-reader users
+   actually navigate with.
+═══════════════════════════════════════════ */
+let keyCursor = null; // rod index highlighted for arrow/digit control
+
+function setKeyCursor(idx) {
+  const S = E.STYLES[cfg.style];
+  keyCursor = clamp(idx, 0, S.rods - 1);
+  rodEls.forEach((elm, i) => elm.classList.toggle('key-cursor', i === keyCursor));
+}
+
+function setRodDigit(rodIdx, digit) {
+  const S = E.STYLES[cfg.style];
+  if (S.kind === 'vertical') {
+    rodState[rodIdx] = { h: digit >= 5 ? 1 : 0, e: digit % 5 };
+  } else {
+    rodState[rodIdx] = digit;
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (shouldIgnoreGameKeys(e)) return;
+  if (e.key === 'ArrowLeft') {
+    setKeyCursor((keyCursor === null ? 0 : keyCursor) - 1);
+    e.preventDefault();
+    return;
+  }
+  if (e.key === 'ArrowRight') {
+    setKeyCursor((keyCursor === null ? -1 : keyCursor) + 1);
+    e.preventDefault();
+    return;
+  }
+  if (e.key >= '0' && e.key <= '9') {
+    if (keyCursor === null) setKeyCursor(E.STYLES[cfg.style].rods - 1); // default to the ones rod
+    setRodDigit(keyCursor, +e.key);
+    onBeadMoved();
+    e.preventDefault();
+    return;
+  }
+  if (e.key === 'c' || e.key === 'C') {
+    clearAbacus();
+    e.preventDefault();
+  }
+});
 
 /* ═══ BOOT ═══ */
 syncTopBar();

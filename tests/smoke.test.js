@@ -394,6 +394,33 @@ async function main() {
       report(`${name}: abacus style persists after reload`, cfgStyle === 'schoty' && schotyAfter === 70,
         `style=${cfgStyle} beads=${schotyAfter}`);
 
+      // D3 regression: switching abacus style must preserve the board's
+      // value (clamped to the new style's capacity) instead of silently
+      // wiping it to zero.
+      const d3 = await page.evaluate(() => {
+        cfg.style = 'soroban'; saveCfg();
+        rodState = freshState(); buildAbacus();
+        rodState[8] = { h: 1, e: 3 }; renderBeads(); updateReadout(); // = 8
+        const before = abacusValue();
+        document.querySelector('[data-abacus-pick="suanpan"]').click();
+        return { before, after: abacusValue() };
+      });
+      report(`${name}: D3 style switch preserves the board's value`,
+        d3.before === 8 && d3.after === 8, JSON.stringify(d3));
+
+      // D3, capacity-clamped case: switching to a smaller-capacity style
+      // (9-rod soroban -> 7-rod roman) must clamp rather than crash/wrap.
+      const d3clamp = await page.evaluate(() => {
+        cfg.style = 'soroban'; saveCfg();
+        rodState = freshState(); buildAbacus();
+        rodState = E.setValue(E.maxBoardValue('soroban'), 'soroban'); renderBeads(); updateReadout();
+        const before = abacusValue();
+        document.querySelector('[data-abacus-pick="roman"]').click();
+        return { before, after: abacusValue(), romanMax: E.maxBoardValue('roman') };
+      });
+      report(`${name}: D3 style switch clamps to the new style's capacity`,
+        d3clamp.after === d3clamp.romanMax, JSON.stringify(d3clamp));
+
       // D1 regression: an orphaned checkAnswer() advance timer must not
       // fire after New Game and silently swap the question the user is
       // now looking at.
@@ -585,6 +612,75 @@ async function main() {
         a15.cfgShape === 'faceted' && a15.cfgMaterial === 'jade' && a15.cfgFrame === 'rosewood' &&
         a15.domShape === 'faceted' && a15.domMaterial === 'jade' && a15.domFrame === 'rosewood',
         JSON.stringify(a15));
+
+      // D4/D10: beads are real focusable toggle buttons, and Enter/Space
+      // trigger the same prefix toggle as a tap.
+      const a11y = await page.evaluate(() => {
+        cfg.style = 'soroban'; saveCfg();
+        rodState = freshState(); buildAbacus(); updateReadout();
+        const bead = document.querySelector('#board .bead');
+        return {
+          tabIndex: bead.tabIndex, role: bead.getAttribute('role'),
+          ariaLabel: bead.getAttribute('aria-label'), ariaPressed: bead.getAttribute('aria-pressed'),
+        };
+      });
+      report(`${name}: D4 beads are focusable (tabindex 0)`, a11y.tabIndex === 0, `got ${a11y.tabIndex}`);
+      report(`${name}: D4 beads have role=button`, a11y.role === 'button', `got ${a11y.role}`);
+      report(`${name}: D4 beads have a descriptive aria-label`,
+        !!a11y.ariaLabel && a11y.ariaLabel.length > 5, `got "${a11y.ariaLabel}"`);
+      report(`${name}: D4 beads expose aria-pressed`, a11y.ariaPressed === 'false', `got ${a11y.ariaPressed}`);
+
+      const enterToggle = await page.evaluate(() => {
+        const bead = document.querySelector('#board .bead');
+        bead.focus();
+        bead.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+        return { pressed: bead.getAttribute('aria-pressed'), value: abacusValue() };
+      });
+      report(`${name}: D4 Enter on a focused bead toggles it`,
+        enterToggle.pressed === 'true' && enterToggle.value > 0, JSON.stringify(enterToggle));
+
+      // D10: arrow keys move a rod cursor, digit keys set that rod
+      // directly, C clears the whole board.
+      const kb = await page.evaluate(() => {
+        cfg.style = 'soroban'; saveCfg();
+        rodState = freshState(); buildAbacus(); updateReadout();
+      });
+      await page.keyboard.press('ArrowRight'); // cursor -> rod 0 (leftmost, 100M place)
+      for (let i = 0; i < 8; i++) await page.keyboard.press('ArrowRight'); // -> rod 8 (ones place)
+      await page.keyboard.press('7');
+      const afterDigit = await page.evaluate(() => ({ rod8: rodState[8], value: abacusValue() }));
+      report(`${name}: D10 arrow keys + digit set the cursored rod`,
+        afterDigit.value === 7 && afterDigit.rod8.h === 1 && afterDigit.rod8.e === 2, JSON.stringify(afterDigit));
+
+      await page.keyboard.press('c');
+      const afterClear = await page.evaluate(() => abacusValue());
+      report(`${name}: D10 'C' clears the board`, afterClear === 0, `got ${afterClear}`);
+
+      await checkKeyboardGuardOnSettings(page, name, {
+        serialize: () => abacusValue(),
+        keys: '5',
+        beforeType: () => { cfg.style = 'soroban'; saveCfg(); rodState = freshState(); buildAbacus(); updateReadout(); },
+      });
+
+      // D12 regression: a throttled/backgrounded tab can cause a
+      // setInterval tick to fire much later than 1000ms after the
+      // previous one. Faking a 10s jump and firing a single tick must
+      // drop the trial countdown by the full elapsed amount, not by 1 —
+      // proving the timer derives from a wall-clock timestamp rather
+      // than counting ticks.
+      const d12 = await page.evaluate(() => {
+        cfg.mode = 'trial'; cfg.trialSecs = 60; saveCfg();
+        startGame();
+        startTrialCountdown();
+        const before = trialLeft;
+        const realNow = Date.now;
+        Date.now = () => realNow() + 10000; // simulate a 10s-late tick
+        tickTrial();
+        Date.now = realNow;
+        return { before, after: trialLeft };
+      });
+      report(`${name}: D12 a single late tick drops the full elapsed time, not just 1s`,
+        d12.before - d12.after === 10, JSON.stringify(d12));
     });
 
     await runPageSuite(browser, baseUrl, 'abacus-layout', async (page) => {

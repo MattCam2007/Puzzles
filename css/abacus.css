@@ -318,6 +318,17 @@ body {
 .bead.set { filter: drop-shadow(0 calc(var(--u) * 0.06) calc(var(--u) * 0.09) rgba(0, 0, 0, 0.45)) saturate(1.2) brightness(1.08); }
 /* live-dragged beads track the pointer 1:1 — no transition lag */
 .bead.dragging { transition: none !important; }
+/* keyboard focus (Tab/Enter/Space toggling — see makeBeadAccessible() */
+.bead:focus-visible {
+  outline: calc(var(--u) * 0.06) solid var(--accent2);
+  outline-offset: calc(var(--u) * 0.04);
+}
+/* arrow-key rod cursor (see setKeyCursor() in js/abacus.js) */
+.rod.key-cursor .wire,
+.srow.key-cursor .wire {
+  background: var(--accent2) !important;
+  box-shadow: 0 0 calc(var(--u) * 0.3) var(--accent2);
+}
 
 /* bead silhouettes — geometry only, orthogonal to the material colour
    variables above. Never combine a shape selector with a material
